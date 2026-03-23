@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+server/node_modules/
+
+# Build output
+dist/
+.vite/
+
+# Environment files (never commit secrets)
+.env
+.env.local
+.env.*.local
+server/.env
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+
+# Railway / Vercel
+.vercel/
+
+# SQLite database files (never commit — contains user data)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite-journal

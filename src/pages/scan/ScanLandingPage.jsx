@@ -1,0 +1,201 @@
+/**
+ * ScanLandingPage — /scan
+ *
+ * Public entry point for the "first scan free" conversion flow.
+ * No account required. Captures email → triggers GitHub OAuth → /scan/repos.
+ */
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import {
+  Github, ShieldCheck, Zap, Clock, ArrowRight, Lock,
+  CheckCircle2, Sparkles, Code2, BarChart3,
+} from 'lucide-react'
+import {
+  getGitHubAuthUrl,
+  generateState,
+  LS_KEYS,
+} from '../../lib/oauthConfig'
+
+const TRUST_BADGES = [
+  { Icon: Lock,         text: 'We read commit metadata only — no source code stored' },
+  { Icon: ShieldCheck,  text: 'No account required to see your results' },
+  { Icon: Clock,        text: 'Results in under 60 seconds' },
+]
+
+const SOCIAL_PROOF_COMMITS = [
+  { sha: 'a3f8b2c', msg: 'experiment: try gradient checkpointing to reduce memory footprint', theme: 'ML / AI' },
+  { sha: 'c91d44e', msg: 'spike: evaluate raft consensus vs custom leader election', theme: 'Distributed' },
+  { sha: 'e7a120f', msg: 'investigate intermittent OOM in inference pipeline', theme: 'Research' },
+  { sha: '8b3d77a', msg: 'poc: zero-knowledge proof for user auth flow', theme: 'Security' },
+]
+
+export default function ScanLandingPage() {
+  const navigate = useNavigate()
+  const [email,   setEmail]   = useState('')
+  const [touched, setTouched] = useState(false)
+  const [busy,    setBusy]    = useState(false)
+
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+
+  function handleConnectGitHub(e) {
+    e.preventDefault()
+    setTouched(true)
+    if (!emailValid) return
+
+    setBusy(true)
+
+    // Persist email for the results page
+    localStorage.setItem('taxlift_scan_email', email)
+
+    // Signal to OAuthCallbackPage that this is a scan flow (redirect to /scan/repos)
+    sessionStorage.setItem('taxlift_scan_flow', 'true')
+
+    // Build GitHub OAuth URL and redirect
+    const state = generateState()
+    localStorage.setItem(LS_KEYS.OAUTH_STATE, `github:${state}`)
+    window.location.href = getGitHubAuthUrl(state)
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900">
+
+      {/* Nav */}
+      <nav className="flex items-center justify-between px-6 py-4 max-w-5xl mx-auto">
+        <button
+          onClick={() => navigate('/')}
+          className="flex items-center gap-2.5"
+        >
+          <div className="w-8 h-8 bg-indigo-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
+            <ShieldCheck size={16} className="text-white" />
+          </div>
+          <span className="text-white font-bold tracking-tight">TaxLift</span>
+        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate('/estimate')}
+            className="text-xs text-slate-400 hover:text-white transition-colors"
+          >
+            Use the estimator →
+          </button>
+          <button
+            onClick={() => navigate('/login')}
+            className="text-xs text-slate-300 border border-slate-600 hover:border-slate-400 px-3 py-1.5 rounded-lg transition-all"
+          >
+            Sign in
+          </button>
+        </div>
+      </nav>
+
+      {/* Hero */}
+      <div className="max-w-5xl mx-auto px-4 pt-14 pb-10 text-center">
+        <div className="inline-flex items-center gap-2 bg-indigo-500/20 text-indigo-300 text-xs font-medium px-3 py-1.5 rounded-full border border-indigo-500/30 mb-6">
+          <Sparkles size={12} /> Free · No account required · Results in 60 seconds
+        </div>
+
+        <h1 className="text-4xl sm:text-5xl font-bold text-white tracking-tight leading-tight mb-4">
+          See how much SR&ED your<br className="hidden sm:block" /> codebase qualifies for
+        </h1>
+
+        <p className="text-slate-400 text-lg max-w-xl mx-auto leading-relaxed mb-10">
+          Connect your GitHub repo. We scan your commit history for CRA-eligible
+          R&D signals and show you a credit estimate — before you spend a dime.
+        </p>
+
+        {/* Email + CTA */}
+        <form onSubmit={handleConnectGitHub} className="max-w-md mx-auto">
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-5 backdrop-blur-sm space-y-3">
+            <div>
+              <label className="block text-left text-xs font-medium text-slate-300 mb-1.5">
+                Work email <span className="text-slate-500">(to email you your full report)</span>
+              </label>
+              <input
+                type="email"
+                placeholder="you@yourcompany.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                onBlur={() => setTouched(true)}
+                className={`w-full bg-white/10 border rounded-xl px-4 py-3 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 transition-all ${
+                  touched && !emailValid
+                    ? 'border-red-500/60 focus:ring-red-500/30'
+                    : 'border-white/10 focus:ring-indigo-500/40 focus:border-indigo-500/50'
+                }`}
+              />
+              {touched && !emailValid && (
+                <p className="text-xs text-red-400 mt-1.5">Please enter a valid email address.</p>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              disabled={busy}
+              className="w-full flex items-center justify-center gap-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white font-semibold text-base py-3.5 rounded-xl transition-colors shadow-lg shadow-indigo-900/40"
+            >
+              {busy ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  Redirecting to GitHub…
+                </>
+              ) : (
+                <>
+                  <Github size={18} />
+                  Connect GitHub →
+                </>
+              )}
+            </button>
+
+            <p className="text-[11px] text-slate-500 text-center">
+              You'll be redirected to GitHub to authorize read-only access.
+              No code is stored — only commit messages and file names.
+            </p>
+          </div>
+        </form>
+
+        {/* Trust badges */}
+        <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mt-7">
+          {TRUST_BADGES.map(({ Icon, text }) => (
+            <span key={text} className="flex items-center gap-1.5 text-xs text-slate-500">
+              <Icon size={12} className="text-emerald-500 flex-shrink-0" />
+              {text}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Social proof: example qualifying commits */}
+      <div className="max-w-3xl mx-auto px-4 pb-16">
+        <p className="text-center text-xs text-slate-500 mb-4 uppercase tracking-wide font-medium">
+          Examples of commits that qualify for SR&ED
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {SOCIAL_PROOF_COMMITS.map(c => (
+            <div key={c.sha} className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-left">
+              <div className="flex items-center gap-2 mb-2">
+                <Code2 size={12} className="text-slate-500 flex-shrink-0" />
+                <span className="text-[10px] font-mono text-slate-600">{c.sha}</span>
+                <span className="ml-auto text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded px-1.5 py-0.5 font-medium">
+                  {c.theme}
+                </span>
+              </div>
+              <p className="text-[12px] text-slate-300 font-mono leading-relaxed">{c.msg}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Bottom stats band */}
+        <div className="mt-10 grid grid-cols-3 gap-4 max-w-xl mx-auto">
+          {[
+            { Icon: BarChart3, stat: '$187K',  label: 'Average SR&ED claim' },
+            { Icon: Zap,       stat: '2,400+', label: 'Companies scanned' },
+            { Icon: CheckCircle2, stat: '92%', label: 'Found qualifying commits' },
+          ].map(({ Icon, stat, label }) => (
+            <div key={label} className="text-center">
+              <Icon size={18} className="text-indigo-400 mx-auto mb-2" />
+              <p className="text-xl font-bold text-white">{stat}</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">{label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}

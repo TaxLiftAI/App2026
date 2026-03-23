@@ -1,0 +1,1142 @@
+/**
+ * MarketingPage.jsx — Public-facing landing page for TaxLift
+ *
+ * Sections:
+ *  1.  Navbar (sticky)
+ *  2.  Hero
+ *  3.  Problem / Pain
+ *  4.  How It Works
+ *  5.  Features
+ *  6.  Social Proof / Testimonials
+ *  7.  For CPAs
+ *  8.  Pricing
+ *  9.  FAQ
+ * 10.  Footer
+ */
+import { useState, useEffect, useRef } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import {
+  Menu, X, ChevronDown, ChevronRight, ArrowRight,
+  GitBranch, FileText, Shield, Package, BarChart2, Calculator,
+  CheckCircle2, AlertTriangle, Clock, Zap, Users, Lock,
+  Star, DollarSign, TrendingUp, Link2, Sparkles, Search,
+  Building2, Mail, ExternalLink,
+} from 'lucide-react'
+import WaitlistModal  from '../components/WaitlistModal'
+import CalendlyEmbed  from '../components/CalendlyEmbed'
+import PricingCard    from '../components/PricingCard'
+import { PLANS, redirectToCheckout } from '../lib/stripe'
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Data
+// ─────────────────────────────────────────────────────────────────────────────
+
+const NAV_LINKS = [
+  { label: 'How it works', href: '#how-it-works' },
+  { label: 'Features',     href: '#features'     },
+  { label: 'Grants',       href: '#grants'       },
+  { label: 'For CPAs',     href: '#for-cpas'     },
+  { label: 'Pricing',      href: '#pricing'      },
+]
+
+const PAIN_CARDS = [
+  {
+    icon: Clock,
+    color: 'text-red-500',
+    bg:    'bg-red-50',
+    title: 'Manual documentation takes weeks',
+    body:  'Your team spends 40+ hours per claim pulling commits, writing justifications, and chasing down engineers — all in spreadsheets.',
+  },
+  {
+    icon: Search,
+    color: 'text-amber-500',
+    bg:    'bg-amber-50',
+    title: 'CPAs miss eligible work',
+    body:  "Most CPAs don't have engineering context. Up to 40% of eligible SR&ED work goes unclaimed because it isn't documented in a language the CRA accepts.",
+  },
+  {
+    icon: AlertTriangle,
+    color: 'text-orange-500',
+    bg:    'bg-orange-50',
+    title: 'Audits fail without evidence',
+    body:  'CRA audit rates have doubled. Without a cryptographic evidence chain linking your code to your claims, approved credits can be clawed back.',
+  },
+]
+
+const STEPS = [
+  {
+    number: '01',
+    icon: Link2,
+    title: 'Connect your tools',
+    body:  'Authorize GitHub, Jira, or your CI/CD pipeline in under 2 minutes. TaxLift reads your engineering history — nothing is stored on our servers.',
+  },
+  {
+    number: '02',
+    icon: Sparkles,
+    title: 'We scan for SR&ED signal',
+    body:  'Our heuristic engine detects technological uncertainty, systematic investigation, and advancement across 60+ SR&ED keyword patterns.',
+  },
+  {
+    number: '03',
+    icon: Package,
+    title: 'CPA gets a ready-to-file package',
+    body:  'T661-ready narratives, T2 financial schedule, developer hours breakdown, and a tamper-evident evidence chain — all in one shareable PDF.',
+  },
+]
+
+const FEATURES = [
+  {
+    icon:  GitBranch,
+    color: 'text-indigo-600',
+    bg:    'bg-indigo-50',
+    title: 'Automated cluster detection',
+    body:  'Groups commits, tickets, and build events into SR&ED clusters automatically — no manual tagging required.',
+  },
+  {
+    icon:  FileText,
+    color: 'text-violet-600',
+    bg:    'bg-violet-50',
+    title: 'T661-ready narratives',
+    body:  'Generates CRA-compliant project narratives scored against 5 compliance dimensions. Improve them in a single click.',
+  },
+  {
+    icon:  Shield,
+    color: 'text-green-600',
+    bg:    'bg-green-50',
+    title: 'Evidence chain of custody',
+    body:  'Every commit, ticket, and artefact is hashed and timestamped. Cryptographic integrity verification for audit confidence.',
+  },
+  {
+    icon:  Package,
+    color: 'text-blue-600',
+    bg:    'bg-blue-50',
+    title: 'CPA handoff package',
+    body:  'One-click PDF containing everything your CPA needs: T661 schedule, narratives, developer hours, and the evidence hash.',
+  },
+  {
+    icon:  BarChart2,
+    color: 'text-amber-600',
+    bg:    'bg-amber-50',
+    title: 'Audit readiness score',
+    body:  'A live score across 7 audit dimensions tells you exactly where your claim is strong and where it needs reinforcement.',
+  },
+  {
+    icon:  Calculator,
+    color: 'text-rose-600',
+    bg:    'bg-rose-50',
+    title: 'SR&ED estimator',
+    body:  'Get an instant credit estimate before you commit. Adjustable for entity type, province, salary mix, and fiscal year.',
+  },
+]
+
+const TESTIMONIALS = [
+  {
+    quote:   "We recovered $312K we had completely written off. TaxLift found clusters our CPA didn't even know to ask about.",
+    name:    'Maya Chen',
+    role:    'CTO, Zenith Biotech',
+    credit:  '$312K recovered',
+    initial: 'M',
+    color:   'bg-indigo-500',
+  },
+  {
+    quote:   "The CPA handoff package cut our prep time from three weeks to an afternoon. First year using it and zero audit issues.",
+    name:    'Daniel Okafor',
+    role:    'VP Engineering, Pulse Commerce',
+    credit:  '$142K recovered',
+    initial: 'D',
+    color:   'bg-violet-500',
+  },
+  {
+    quote:   "I finally understand what SR&ED-qualifies in our stack. The narrative quality scores made our filing bulletproof.",
+    name:    'Sarah Tremblay',
+    role:    'Founder & CEO, Atlas Network',
+    credit:  '$67K recovered',
+    initial: 'S',
+    color:   'bg-blue-500',
+  },
+]
+
+const PRICING_TIERS = [
+  {
+    name:       'Starter',
+    price:      '$299',
+    period:     '/mo',
+    desc:       'For early-stage startups making their first SR&ED claim.',
+    cta:        'Get started free',
+    highlight:  false,
+    features:   [
+      '1 fiscal year',
+      'Up to 5 SR&ED clusters',
+      'T661 narrative generation',
+      'Basic CPA package PDF',
+      'Evidence hashing',
+      'Email support',
+    ],
+  },
+  {
+    name:       'Growth',
+    price:      '$799',
+    period:     '/mo',
+    desc:       'For scale-ups with complex multi-cluster claims.',
+    cta:        'Start free trial',
+    highlight:  true,
+    badge:      'Most popular',
+    features:   [
+      'Unlimited fiscal years',
+      'Unlimited clusters',
+      'Narrative quality scoring',
+      'Audit readiness dashboard',
+      'CPA referral portal',
+      'GitHub & Jira OAuth',
+      'Priority support',
+      'Co-branded CPA packages',
+    ],
+  },
+  {
+    name:       'Enterprise',
+    price:      'Custom',
+    period:     '',
+    desc:       'For firms with multiple entities, dedicated SR&ED counsel, and compliance SLAs.',
+    cta:        'Talk to sales',
+    highlight:  false,
+    features:   [
+      'Multi-entity management',
+      'White-label CPA portal',
+      'Dedicated SR&ED specialist',
+      'Custom integrations',
+      'SSO / SAML',
+      'SLA & audit indemnity',
+      'CRA correspondence support',
+    ],
+  },
+]
+
+const FAQS = [
+  {
+    q: 'What is SR&ED?',
+    a: 'Scientific Research & Experimental Development (SR&ED) is Canada\'s largest federal tax incentive program. It provides tax credits and deductions to businesses that conduct R&D in Canada. CCPCs can claim up to 35% on the first $3M of eligible expenditures.',
+  },
+  {
+    q: 'Does my company qualify?',
+    a: 'If your team writes code that pushes into technological uncertainty — meaning you weren\'t sure if something would work when you started — you likely qualify. That includes machine learning experiments, novel API architecture, performance optimization below hardware limits, and more. Try our free estimator to get a directional number in under 5 minutes.',
+  },
+  {
+    q: 'How long does the process take?',
+    a: 'Most founders connect their tools and have a first draft of clusters and narratives within 24 hours. Getting to a CPA-ready package typically takes 1–3 business days for a first-time claim, and under a day for subsequent years once your baseline is established.',
+  },
+  {
+    q: 'Is my code and data secure?',
+    a: 'TaxLift reads your commit metadata and issue summaries — never your source code. Data is encrypted in transit and at rest. Evidence artefacts are stored with FNV-1a cryptographic hashing so any tampering is immediately detectable. We are SOC 2 Type II compliant.',
+  },
+  {
+    q: 'What does my CPA need to do?',
+    a: 'Your CPA reviews the generated T661 schedule and narratives, adjusts any figures based on their professional judgment, and files the T661 with your T2 corporate return. TaxLift does not file on your behalf — it prepares everything so your CPA can review and sign off in hours, not weeks.',
+  },
+]
+
+const TRUSTED_LOGOS = [
+  'Axiom Robotics', 'Meridian Analytics', 'Pulse Commerce',
+  'Zenith Biotech', 'Atlas Network', 'Orbit Labs',
+]
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Animated counter hook
+// ─────────────────────────────────────────────────────────────────────────────
+function useCountUp(target, duration = 2000, start = false) {
+  const [count, setCount] = useState(0)
+  useEffect(() => {
+    if (!start) return
+    let startTime = null
+    const step = (timestamp) => {
+      if (!startTime) startTime = timestamp
+      const progress = Math.min((timestamp - startTime) / duration, 1)
+      // ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3)
+      setCount(Math.round(eased * target))
+      if (progress < 1) requestAnimationFrame(step)
+    }
+    requestAnimationFrame(step)
+  }, [target, duration, start])
+  return count
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Scroll-into-view hook
+// ─────────────────────────────────────────────────────────────────────────────
+function useInView(threshold = 0.2) {
+  const ref = useRef(null)
+  const [inView, setInView] = useState(false)
+  useEffect(() => {
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setInView(true) },
+      { threshold }
+    )
+    if (ref.current) obs.observe(ref.current)
+    return () => obs.disconnect()
+  }, [threshold])
+  return [ref, inView]
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sub-components
+// ─────────────────────────────────────────────────────────────────────────────
+
+function FaqItem({ q, a }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left bg-white hover:bg-gray-50 transition-colors"
+      >
+        <span className="font-semibold text-gray-900 text-sm sm:text-base">{q}</span>
+        {open
+          ? <ChevronDown size={16} className="text-indigo-500 flex-shrink-0 rotate-180 transition-transform" />
+          : <ChevronDown size={16} className="text-gray-400 flex-shrink-0 transition-transform" />
+        }
+      </button>
+      {open && (
+        <div className="px-5 pb-4 text-sm text-gray-600 leading-relaxed bg-white border-t border-gray-100">
+          {a}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Dashboard mockup (SVG placeholder)
+function DashboardMockup() {
+  return (
+    <div className="relative w-full max-w-2xl mx-auto">
+      {/* glow */}
+      <div className="absolute -inset-4 bg-indigo-400/20 rounded-3xl blur-2xl" />
+      <div className="relative rounded-2xl border border-white/20 shadow-2xl overflow-hidden bg-slate-900">
+        {/* browser chrome */}
+        <div className="flex items-center gap-1.5 px-4 py-3 bg-slate-800 border-b border-slate-700">
+          <div className="w-3 h-3 rounded-full bg-red-500/70" />
+          <div className="w-3 h-3 rounded-full bg-amber-500/70" />
+          <div className="w-3 h-3 rounded-full bg-green-500/70" />
+          <div className="ml-3 flex-1 bg-slate-700 rounded text-[10px] text-slate-400 px-3 py-1 max-w-xs">
+            app.taxlift.ai/clusters
+          </div>
+        </div>
+        {/* mock content */}
+        <div className="p-5 space-y-3">
+          {/* header bar */}
+          <div className="flex items-center justify-between">
+            <div className="text-white font-semibold text-sm">SR&ED Clusters · FY 2025</div>
+            <div className="flex gap-2">
+              <div className="px-3 py-1 bg-green-500/20 text-green-400 text-xs rounded-full font-medium">3 Approved</div>
+              <div className="px-3 py-1 bg-amber-500/20 text-amber-400 text-xs rounded-full font-medium">2 In Review</div>
+            </div>
+          </div>
+          {/* cluster rows */}
+          {[
+            { name: 'ML fraud detection pipeline', hours: '340h', credit: '$127,500', score: 94, color: 'bg-green-400' },
+            { name: 'Distributed query optimizer', hours: '280h', credit: '$105,000', score: 88, color: 'bg-green-400' },
+            { name: 'Real-time inference engine',  hours: '210h', credit: '$78,750',  score: 72, color: 'bg-amber-400' },
+          ].map((row, i) => (
+            <div key={i} className="flex items-center gap-3 bg-slate-800/60 rounded-lg px-3 py-2.5">
+              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${row.color}`} />
+              <div className="flex-1 min-w-0">
+                <div className="text-white text-xs font-medium truncate">{row.name}</div>
+                <div className="text-slate-400 text-[10px] mt-0.5">{row.hours} · {row.credit} estimated</div>
+              </div>
+              <div className="flex-shrink-0 text-xs font-bold text-indigo-300">{row.score}</div>
+            </div>
+          ))}
+          {/* credit bar */}
+          <div className="mt-2 bg-slate-800/60 rounded-lg px-3 py-2.5 flex items-center gap-3">
+            <div className="flex-1">
+              <div className="text-[10px] text-slate-400 mb-1">Total estimated credit</div>
+              <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                <div className="h-full w-3/4 bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full" />
+              </div>
+            </div>
+            <div className="text-indigo-300 font-bold text-sm">$311,250</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main page
+// ─────────────────────────────────────────────────────────────────────────────
+export default function MarketingPage() {
+  const navigate = useNavigate()
+  const [mobileOpen, setMobileOpen]   = useState(false)
+  const [scrolled, setScrolled]       = useState(false)
+  const [waitlistOpen, setWaitlistOpen] = useState(false)
+  const [waitlistPlan, setWaitlistPlan] = useState('')
+  const [waitlistSource, setWaitlistSource] = useState('marketing')
+  const [calendlyOpen, setCalendlyOpen]   = useState(false)
+  const [checkoutLoading, setCheckoutLoading] = useState(null) // planId or null
+
+  // Primary CTA: send founders to the free scan flow
+  function openWaitlist(plan = '', source = 'marketing') {
+    // Pricing & enterprise leads still go to the waitlist modal.
+    // All general "Get started free" / navbar CTAs now go to /scan.
+    if (!plan || plan === 'starter' || plan === 'plus') {
+      navigate('/scan')
+      return
+    }
+    setWaitlistPlan(plan)
+    setWaitlistSource(source)
+    setWaitlistOpen(true)
+  }
+
+  async function handlePricingCta(planId) {
+    if (planId === 'enterprise') {
+      openWaitlist('enterprise', 'pricing')
+      return
+    }
+    // Try Stripe checkout; fall back to waitlist if Stripe not configured
+    setCheckoutLoading(planId)
+    const result = await redirectToCheckout(planId)
+    setCheckoutLoading(null)
+    if (!result.ok) {
+      // Stripe not configured or failed — capture lead instead
+      openWaitlist(planId, 'pricing')
+    }
+  }
+
+  // Sticky nav shadow on scroll
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 12)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // Animated counter — starts when hero is in view
+  const [heroRef, heroInView] = useInView(0.1)
+  const creditCount = useCountUp(340, 1800, heroInView)
+
+  // Smooth scroll for anchor links
+  function handleAnchor(e, href) {
+    e.preventDefault()
+    setMobileOpen(false)
+    const el = document.querySelector(href)
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  return (
+    <div className="min-h-screen bg-white font-sans antialiased">
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          1. NAVBAR
+      ══════════════════════════════════════════════════════════════════════ */}
+      <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-200 ${
+        scrolled ? 'bg-white/95 backdrop-blur border-b border-gray-100 shadow-sm' : 'bg-transparent'
+      }`}>
+        <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          {/* Logo */}
+          <a href="#" onClick={e => handleAnchor(e, 'body')} className="flex items-center gap-2 flex-shrink-0">
+            <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
+              <Zap size={14} className="text-white" />
+            </div>
+            <span className="font-bold text-gray-900 text-lg tracking-tight">TaxLift</span>
+          </a>
+
+          {/* Desktop links */}
+          <div className="hidden md:flex items-center gap-6">
+            {NAV_LINKS.map(l => (
+              <a
+                key={l.label}
+                href={l.href}
+                onClick={e => handleAnchor(e, l.href)}
+                className="text-sm text-gray-600 hover:text-indigo-600 font-medium transition-colors"
+              >
+                {l.label}
+              </a>
+            ))}
+          </div>
+
+          {/* Desktop CTAs */}
+          <div className="hidden md:flex items-center gap-3">
+            <Link
+              to="/login"
+              className="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors px-3 py-1.5"
+            >
+              Sign in
+            </Link>
+            <button
+              onClick={() => openWaitlist('', 'navbar')}
+              className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-sm"
+            >
+              Get started free
+              <ArrowRight size={14} />
+            </button>
+          </div>
+
+          {/* Mobile menu toggle */}
+          <button
+            className="md:hidden p-2 rounded-lg text-gray-500 hover:bg-gray-100"
+            onClick={() => setMobileOpen(o => !o)}
+            aria-label="Toggle menu"
+          >
+            {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </nav>
+
+        {/* Mobile menu */}
+        {mobileOpen && (
+          <div className="md:hidden bg-white border-b border-gray-100 shadow-lg px-4 pb-4">
+            <div className="space-y-1 pt-2">
+              {NAV_LINKS.map(l => (
+                <a
+                  key={l.label}
+                  href={l.href}
+                  onClick={e => handleAnchor(e, l.href)}
+                  className="block px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
+                >
+                  {l.label}
+                </a>
+              ))}
+              <div className="pt-2 flex flex-col gap-2">
+                <Link to="/login" className="block text-center py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg">
+                  Sign in
+                </Link>
+                <button
+                  onClick={() => { setMobileOpen(false); openWaitlist('', 'navbar') }}
+                  className="block w-full text-center py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg"
+                >
+                  Get started free
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </header>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          2. HERO
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section
+        ref={heroRef}
+        className="relative pt-28 pb-20 sm:pt-36 sm:pb-28 overflow-hidden bg-gradient-to-b from-slate-950 via-indigo-950 to-slate-900"
+      >
+        {/* Background grid */}
+        <div
+          className="absolute inset-0 opacity-[0.06]"
+          style={{
+            backgroundImage: 'linear-gradient(rgba(99,102,241,1) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,1) 1px, transparent 1px)',
+            backgroundSize: '40px 40px',
+          }}
+        />
+        {/* Glow orb */}
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-indigo-600/20 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-4xl mx-auto">
+            {/* Pill badge */}
+            <div className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold px-4 py-1.5 rounded-full mb-6">
+              <Sparkles size={11} />
+              SR&ED + Grants automation for Canadian tech companies
+            </div>
+
+            {/* Headline */}
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight tracking-tight mb-6">
+              Recover every dollar of{' '}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">
+                Canadian innovation funding
+              </span>
+            </h1>
+
+            {/* Sub-headline */}
+            <p className="text-lg sm:text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed mb-8">
+              From SR&ED to NRC-IRAP — TaxLift recovers every dollar of Canadian innovation
+              funding you've earned. Connect your tools, we handle the documentation.
+            </p>
+
+            {/* Stat strip */}
+            <div className="flex flex-wrap items-center justify-center gap-3 mb-10">
+              <div className="inline-flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-5 py-2.5">
+                <TrendingUp size={16} className="text-green-400 flex-shrink-0" />
+                <span className="text-white text-sm font-medium">
+                  Average SR&ED:{' '}
+                  <span className="text-green-400 font-extrabold">${creditCount}K</span>
+                  <span className="text-slate-400 text-xs ml-1">/ yr</span>
+                </span>
+              </div>
+              <div className="inline-flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-5 py-2.5">
+                <Sparkles size={16} className="text-violet-400 flex-shrink-0" />
+                <span className="text-white text-sm font-medium">
+                  <span className="text-violet-400 font-extrabold">$4.2M+</span>
+                  <span className="text-slate-400 text-xs ml-1">combined grants potential</span>
+                </span>
+              </div>
+              <div className="inline-flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-5 py-2.5">
+                <Package size={16} className="text-indigo-400 flex-shrink-0" />
+                <span className="text-white text-sm font-medium">
+                  <span className="text-indigo-400 font-extrabold">7</span>
+                  <span className="text-slate-400 text-xs ml-1">grant programs matched automatically</span>
+                </span>
+              </div>
+            </div>
+
+            {/* CTAs */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-14">
+              <button
+                onClick={() => openWaitlist('', 'hero')}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-base px-7 py-3.5 rounded-xl transition-colors shadow-lg shadow-indigo-900/40"
+              >
+                Get started free
+                <ArrowRight size={16} />
+              </button>
+              <button
+                onClick={() => setCalendlyOpen(true)}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 text-white font-semibold text-base px-7 py-3.5 rounded-xl border border-white/20 transition-colors"
+              >
+                Book a demo
+              </button>
+            </div>
+
+            {/* Dashboard mockup */}
+            <DashboardMockup />
+
+            {/* Trusted by */}
+            <div className="mt-14">
+              <p className="text-slate-500 text-xs font-medium uppercase tracking-widest mb-4">
+                Trusted by engineering teams at
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+                {TRUSTED_LOGOS.map(name => (
+                  <span key={name} className="text-slate-400 font-semibold text-sm opacity-60 hover:opacity-100 transition-opacity">
+                    {name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          3. PROBLEM / PAIN
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <p className="text-indigo-600 text-sm font-semibold uppercase tracking-widest mb-2">The problem</p>
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
+              The SR&ED process is broken for tech companies
+            </h2>
+            <p className="mt-3 text-gray-500 max-w-xl mx-auto">
+              Billions in Canadian R&D credits go unclaimed every year. Here's why.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {PAIN_CARDS.map(card => {
+              const Icon = card.icon
+              return (
+                <div key={card.title} className="rounded-2xl border border-gray-100 p-7 shadow-sm hover:shadow-md transition-shadow">
+                  <div className={`w-11 h-11 ${card.bg} rounded-xl flex items-center justify-center mb-4`}>
+                    <Icon size={20} className={card.color} />
+                  </div>
+                  <h3 className="font-bold text-gray-900 text-base mb-2">{card.title}</h3>
+                  <p className="text-sm text-gray-500 leading-relaxed">{card.body}</p>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          4. HOW IT WORKS
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section id="how-it-works" className="py-20 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <p className="text-indigo-600 text-sm font-semibold uppercase tracking-widest mb-2">How it works</p>
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
+              From code to credit in three steps
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+            {/* connecting line (desktop) */}
+            <div className="hidden md:block absolute top-10 left-1/3 right-1/3 h-px bg-gradient-to-r from-indigo-200 via-indigo-400 to-indigo-200" />
+
+            {STEPS.map((step, i) => {
+              const Icon = step.icon
+              return (
+                <div key={step.number} className="relative flex flex-col items-center text-center">
+                  {/* step number */}
+                  <div className="relative z-10 w-20 h-20 bg-white border-2 border-indigo-200 rounded-2xl flex flex-col items-center justify-center shadow-md mb-5">
+                    <span className="text-[10px] font-bold text-indigo-400 leading-none">{step.number}</span>
+                    <Icon size={22} className="text-indigo-600 mt-1" />
+                  </div>
+                  <h3 className="font-bold text-gray-900 text-base mb-2">{step.title}</h3>
+                  <p className="text-sm text-gray-500 leading-relaxed max-w-xs">{step.body}</p>
+                  {/* arrow between steps (mobile) */}
+                  {i < STEPS.length - 1 && (
+                    <ChevronRight size={20} className="text-indigo-300 mt-4 md:hidden" />
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          5. FEATURES
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section id="features" className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <p className="text-indigo-600 text-sm font-semibold uppercase tracking-widest mb-2">Features</p>
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
+              Everything your CPA needs, automatically
+            </h2>
+            <p className="mt-3 text-gray-500 max-w-xl mx-auto">
+              TaxLift is the only SR&ED platform built for engineering teams, not accountants.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {FEATURES.map(f => {
+              const Icon = f.icon
+              return (
+                <div
+                  key={f.title}
+                  className="group rounded-2xl border border-gray-100 p-6 hover:border-indigo-200 hover:shadow-md transition-all"
+                >
+                  <div className={`w-10 h-10 ${f.bg} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                    <Icon size={18} className={f.color} />
+                  </div>
+                  <h3 className="font-bold text-gray-900 text-sm mb-1.5">{f.title}</h3>
+                  <p className="text-sm text-gray-500 leading-relaxed">{f.body}</p>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          6. GRANTS MODULE
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section id="grants" className="py-24 bg-gradient-to-b from-slate-950 to-indigo-950 overflow-hidden relative">
+        {/* Subtle grid texture */}
+        <div
+          className="absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage: 'linear-gradient(rgba(99,102,241,1) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,1) 1px, transparent 1px)',
+            backgroundSize: '40px 40px',
+          }}
+        />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Header */}
+          <div className="text-center mb-14">
+            <div className="inline-flex items-center gap-2 bg-violet-500/10 border border-violet-500/20 text-violet-300 text-xs font-semibold px-4 py-1.5 rounded-full mb-5">
+              <Sparkles size={11} />
+              Available on Plus &amp; Enterprise
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-4">
+              Beyond SR&amp;ED — unlock every Canadian grant you qualify for
+            </h2>
+            <p className="text-slate-400 text-lg max-w-2xl mx-auto">
+              Powered by your existing SR&amp;ED data — no double work. TaxLift cross-references
+              7 federal and provincial programs and drafts your application sections automatically.
+            </p>
+          </div>
+
+          {/* Grant program tiles */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-10">
+            {[
+              { name: 'NRC-IRAP',          amount: 'Up to $500K',  flag: '🇨🇦', color: 'border-indigo-500/30 bg-indigo-500/5',   badge: 'Federal'    },
+              { name: 'ISED SDTC',         amount: 'Up to $3M',    flag: '🇨🇦', color: 'border-violet-500/30 bg-violet-500/5',   badge: 'Federal'    },
+              { name: 'Ontario ITC',       amount: 'Up to $200K',  flag: '🏛',  color: 'border-blue-500/30   bg-blue-500/5',     badge: 'Provincial' },
+              { name: 'NGen',              amount: 'Up to $250K',  flag: '🇨🇦', color: 'border-cyan-500/30   bg-cyan-500/5',     badge: 'Federal'    },
+              { name: 'BC Ignite',         amount: 'Up to $100K',  flag: '🏛',  color: 'border-teal-500/30   bg-teal-500/5',     badge: 'Provincial' },
+              { name: 'Alberta Innovates', amount: 'Up to $150K',  flag: '🏛',  color: 'border-amber-500/30  bg-amber-500/5',    badge: 'Provincial' },
+              { name: 'QC CRSNG',          amount: 'Up to $500K',  flag: '🏛',  color: 'border-rose-500/30   bg-rose-500/5',     badge: 'Provincial' },
+              { name: '+ more programs',   amount: 'Coming soon',  flag: '✦',   color: 'border-slate-600/30  bg-slate-600/5',    badge: ''           },
+            ].map(g => (
+              <div
+                key={g.name}
+                className={`rounded-2xl border p-4 flex flex-col gap-2 ${g.color}`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-lg">{g.flag}</span>
+                  {g.badge && (
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                      {g.badge}
+                    </span>
+                  )}
+                </div>
+                <p className="text-white font-semibold text-sm leading-snug">{g.name}</p>
+                <p className="text-slate-400 text-xs font-medium">{g.amount}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* "No double work" callout */}
+          <div className="rounded-2xl bg-white/5 border border-white/10 px-6 py-5 flex flex-col sm:flex-row items-center gap-5 mb-10">
+            <div className="w-12 h-12 bg-indigo-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Zap size={22} className="text-indigo-400" />
+            </div>
+            <div>
+              <p className="text-white font-semibold text-base mb-0.5">
+                Powered by your existing SR&amp;ED data — no double work
+              </p>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                TaxLift reuses the technical narratives, developer hours, and evidence you've already
+                generated for SR&amp;ED to pre-fill grant applications. One source of truth, many programs covered.
+              </p>
+            </div>
+          </div>
+
+          {/* Total potential + CTA */}
+          <div className="text-center">
+            <p className="text-slate-400 text-sm mb-2">Combined Canadian innovation funding potential</p>
+            <p className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400 mb-6">
+              Up to $4.2M
+            </p>
+            <button
+              onClick={() => openWaitlist('plus', 'grants_section')}
+              className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-7 py-3.5 rounded-xl transition-colors shadow-lg shadow-indigo-900/40"
+            >
+              Unlock the Grants module
+              <ArrowRight size={16} />
+            </button>
+            <p className="text-slate-500 text-xs mt-3">Included in Plus &amp; Enterprise plans · 14-day free trial</p>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          7. TESTIMONIALS
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section className="py-20 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <p className="text-indigo-600 text-sm font-semibold uppercase tracking-widest mb-2">Social proof</p>
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
+              Founders who stopped leaving money on the table
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {TESTIMONIALS.map(t => (
+              <div key={t.name} className="bg-white rounded-2xl border border-gray-100 p-7 shadow-sm flex flex-col">
+                {/* Stars */}
+                <div className="flex gap-0.5 mb-4">
+                  {Array(5).fill(0).map((_, i) => (
+                    <Star key={i} size={13} className="text-amber-400 fill-amber-400" />
+                  ))}
+                </div>
+                <p className="text-gray-700 text-sm leading-relaxed flex-1 mb-5">
+                  "{t.quote}"
+                </p>
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 ${t.color} rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>
+                    {t.initial}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-gray-900 text-sm">{t.name}</p>
+                    <p className="text-xs text-gray-400">{t.role}</p>
+                  </div>
+                  <div className="ml-auto flex-shrink-0">
+                    <span className="text-xs font-bold text-green-600 bg-green-50 px-2.5 py-1 rounded-full">
+                      {t.credit}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          7. FOR CPAs
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section id="for-cpas" className="py-20 bg-slate-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="lg:grid lg:grid-cols-2 lg:gap-16 lg:items-center">
+            {/* Left: copy */}
+            <div>
+              <p className="text-indigo-400 text-sm font-semibold uppercase tracking-widest mb-3">For CPAs & SR&ED consultants</p>
+              <h2 className="text-3xl sm:text-4xl font-bold text-white mb-5">
+                Turn every client into a{' '}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">
+                  recurring revenue stream
+                </span>
+              </h2>
+              <p className="text-slate-300 text-base leading-relaxed mb-8">
+                Refer your tech clients to TaxLift and earn 0.8% of every SR&ED credit your referral recovers —
+                deposited automatically each quarter. The average CPA partner earns $4,200 per referred client per year.
+              </p>
+
+              <div className="space-y-4 mb-8">
+                {[
+                  { icon: Link2,        text: 'Get a co-branded intake link to share with prospects' },
+                  { icon: DollarSign,   text: 'Earn 0.8% of recovered credit — no cap, no expiry' },
+                  { icon: Package,      text: 'Receive print-ready CPA packages — you just review and file' },
+                  { icon: BarChart2,    text: 'Track your pipeline, commissions, and payouts in one dashboard' },
+                ].map(item => {
+                  const Icon = item.icon
+                  return (
+                    <div key={item.text} className="flex items-start gap-3">
+                      <div className="w-8 h-8 bg-indigo-500/10 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <Icon size={14} className="text-indigo-400" />
+                      </div>
+                      <p className="text-slate-300 text-sm leading-relaxed">{item.text}</p>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <button
+                onClick={() => openWaitlist('', 'cpa_section')}
+                className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-3 rounded-xl transition-colors shadow-lg shadow-indigo-900/40"
+              >
+                Become a TaxLift partner
+                <ArrowRight size={15} />
+              </button>
+            </div>
+
+            {/* Right: commission card */}
+            <div className="mt-12 lg:mt-0">
+              <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6">
+                <p className="text-slate-400 text-xs font-semibold uppercase tracking-widest mb-4">Example partner earnings</p>
+
+                <div className="space-y-3">
+                  {[
+                    { company: 'Zenith Biotech',     credit: '$312,000', commission: '$2,496',  status: 'Paid',      statusColor: 'text-green-400 bg-green-400/10' },
+                    { company: 'Pulse Commerce',     credit: '$142,000', commission: '$1,136',  status: 'Confirmed', statusColor: 'text-blue-400  bg-blue-400/10'  },
+                    { company: 'Atlas Network',      credit: '$67,000',  commission: '$536',    status: 'Confirmed', statusColor: 'text-blue-400  bg-blue-400/10'  },
+                    { company: 'Axiom Robotics',     credit: '$89,000',  commission: '$712',    status: 'Pending',   statusColor: 'text-amber-400 bg-amber-400/10' },
+                  ].map(row => (
+                    <div key={row.company} className="flex items-center gap-3 bg-slate-900/60 rounded-xl px-4 py-3">
+                      <Building2 size={14} className="text-slate-500 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white text-xs font-semibold truncate">{row.company}</p>
+                        <p className="text-slate-500 text-[10px]">Credit: {row.credit}</p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-green-400 text-sm font-bold">{row.commission}</p>
+                        <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${row.statusColor}`}>
+                          {row.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-slate-700 flex items-center justify-between">
+                  <span className="text-slate-400 text-xs">Total commissions</span>
+                  <span className="text-white font-extrabold text-lg">$4,880</span>
+                </div>
+                <p className="text-slate-500 text-[10px] mt-1">Based on 4 active referrals · 0.8% of credit</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          8. PRICING
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section id="pricing" className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <p className="text-indigo-600 text-sm font-semibold uppercase tracking-widest mb-2">Pricing</p>
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
+              Start with SR&amp;ED — unlock grants when you're ready
+            </h2>
+            <p className="mt-3 text-gray-500 max-w-xl mx-auto">
+              All plans include a 14-day free trial. No credit card required.
+              Upgrade to Plus to add the Grants module and unlock $4M+ in additional funding.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+            {Object.values(PLANS).map(plan => (
+              <PricingCard
+                key={plan.id}
+                plan={plan}
+                ctaLoading={checkoutLoading === plan.id}
+                onCta={() => handlePricingCta(plan.id)}
+              />
+            ))}
+          </div>
+
+          <p className="text-center text-xs text-gray-400 mt-8">
+            Prices in CAD. SR&amp;ED credit recovery typically returns 80–200× the platform cost.
+            Grants module available on Plus &amp; Enterprise.
+          </p>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          9. FAQ
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section className="py-20 bg-slate-50">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <p className="text-indigo-600 text-sm font-semibold uppercase tracking-widest mb-2">FAQ</p>
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
+              Common questions
+            </h2>
+          </div>
+
+          <div className="space-y-3">
+            {FAQS.map(item => (
+              <FaqItem key={item.q} q={item.q} a={item.a} />
+            ))}
+          </div>
+
+          <p className="text-center text-sm text-gray-500 mt-8">
+            Still have questions?{' '}
+            <a href="mailto:hello@taxlift.ai" className="text-indigo-600 hover:underline font-medium">
+              Email us →
+            </a>
+          </p>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          CTA BAND
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section className="py-20 bg-gradient-to-r from-indigo-600 to-violet-600">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-4">
+            Find every dollar of Canadian innovation funding you qualify for
+          </h2>
+          <p className="text-indigo-100 text-lg mb-8 max-w-xl mx-auto">
+            SR&amp;ED credits + 7 grant programs, matched automatically from your
+            existing engineering data. See your estimate in 5 minutes — no signup required.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <button
+              onClick={() => openWaitlist('', 'cta_band')}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white text-indigo-700 font-bold text-base px-8 py-3.5 rounded-xl hover:bg-indigo-50 transition-colors shadow-lg"
+            >
+              Get started free
+              <ArrowRight size={16} />
+            </button>
+            <button
+              onClick={() => setCalendlyOpen(true)}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-indigo-700/50 border border-white/30 text-white font-semibold text-base px-8 py-3.5 rounded-xl hover:bg-indigo-700 transition-colors"
+            >
+              Book a demo
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          10. FOOTER
+      ══════════════════════════════════════════════════════════════════════ */}
+      <footer className="bg-slate-950 py-14">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
+            {/* Brand */}
+            <div className="lg:col-span-2">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
+                  <Zap size={14} className="text-white" />
+                </div>
+                <span className="font-bold text-white text-lg">TaxLift</span>
+              </div>
+              <p className="text-slate-400 text-sm leading-relaxed max-w-xs">
+                SR&ED automation for Canadian tech companies. Connect your tools, we handle the documentation.
+              </p>
+              <p className="mt-4 text-indigo-400 text-sm font-semibold">
+                TaxLift prepares · Your CPA files
+              </p>
+            </div>
+
+            {/* Product */}
+            <div>
+              <p className="text-slate-300 font-semibold text-sm mb-3">Product</p>
+              <ul className="space-y-2">
+                {[
+                  { label: 'How it works',  href: '#how-it-works' },
+                  { label: 'Features',      href: '#features'     },
+                  { label: 'Grants module', href: '#grants'       },
+                  { label: 'Pricing',       href: '#pricing'      },
+                  { label: 'Free scan',     href: '/scan',        internal: true },
+                  { label: 'Estimator',     href: '/estimate',    internal: true },
+                  { label: 'For CPAs',      href: '#for-cpas'     },
+                ].map(l => (
+                  <li key={l.label}>
+                    {l.internal
+                      ? <Link to={l.href} className="text-slate-400 hover:text-white text-sm transition-colors">{l.label}</Link>
+                      : <a href={l.href} className="text-slate-400 hover:text-white text-sm transition-colors">{l.label}</a>
+                    }
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Company */}
+            <div>
+              <p className="text-slate-300 font-semibold text-sm mb-3">Company</p>
+              <ul className="space-y-2">
+                {[
+                  { label: 'Privacy Policy', href: '#' },
+                  { label: 'Terms of Service', href: '#' },
+                  { label: 'Sign in',  href: '/login', internal: true },
+                ].map(l => (
+                  <li key={l.label}>
+                    {l.internal
+                      ? <Link to={l.href} className="text-slate-400 hover:text-white text-sm transition-colors">{l.label}</Link>
+                      : <a href={l.href} className="text-slate-400 hover:text-white text-sm transition-colors">{l.label}</a>
+                    }
+                  </li>
+                ))}
+              </ul>
+
+              {/* Contact */}
+              <p className="text-slate-300 font-semibold text-sm mt-6 mb-3">Contact</p>
+              <ul className="space-y-2">
+                <li>
+                  <a href="mailto:support@taxlift.ai" className="text-slate-400 hover:text-white text-sm transition-colors">
+                    support@taxlift.ai
+                  </a>
+                  <span className="block text-slate-600 text-xs">Customer support</span>
+                </li>
+                <li>
+                  <a href="mailto:hello@taxlift.ai" className="text-slate-400 hover:text-white text-sm transition-colors">
+                    hello@taxlift.ai
+                  </a>
+                  <span className="block text-slate-600 text-xs">General inquiries</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="border-t border-slate-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p className="text-slate-500 text-xs">
+              © {new Date().getFullYear()} TaxLift Technologies Inc. All rights reserved.
+            </p>
+            <p className="text-slate-600 text-xs">
+              SR&ED credit estimates are for planning purposes only. Consult a qualified SR&ED specialist before filing.
+            </p>
+          </div>
+        </div>
+      </footer>
+
+      {/* ── Modals ─────────────────────────────────────────────────────────── */}
+      <WaitlistModal
+        isOpen={waitlistOpen}
+        onClose={() => setWaitlistOpen(false)}
+        defaultPlan={waitlistPlan}
+        source={waitlistSource}
+      />
+      <CalendlyEmbed
+        isOpen={calendlyOpen}
+        onClose={() => setCalendlyOpen(false)}
+      />
+
+    </div>
+  )
+}
