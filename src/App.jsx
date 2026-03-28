@@ -33,6 +33,7 @@ import ScanReposPage   from './pages/scan/ScanReposPage'
 import ScanRunningPage from './pages/scan/ScanRunningPage'
 import ScanResultsPage from './pages/scan/ScanResultsPage'
 import PricingPage         from './pages/PricingPage'
+import DemoPage            from './pages/DemoPage'
 import SignupPage          from './pages/SignupPage'
 import CheckoutSuccessPage from './pages/CheckoutSuccessPage'
 import CheckoutCancelPage  from './pages/CheckoutCancelPage'
@@ -248,6 +249,7 @@ function AppRoutes() {
       } />
 
       {/* Public routes — no auth required */}
+      <Route path="/demo"     element={<DemoPage />} />
       <Route path="/pricing"  element={<PricingPage />} />
       <Route path="/signup"   element={<SignupPage />} />
       <Route path="/estimate" element={<EstimatorPage />} />

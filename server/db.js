@@ -246,6 +246,14 @@ db.exec(`
   );
 `)
 
+// ── Onboarding migrations (safe ALTER TABLE — no-ops if columns already exist) ─
+try { db.exec('ALTER TABLE users ADD COLUMN onboarding_completed INTEGER NOT NULL DEFAULT 0') } catch { /* already exists */ }
+try { db.exec('ALTER TABLE company_profiles ADD COLUMN tech_stack TEXT NOT NULL DEFAULT \'[]\'') }    catch { /* already exists */ }
+try { db.exec('ALTER TABLE company_profiles ADD COLUMN sred_claimed TEXT NOT NULL DEFAULT \'not_sure\'') } catch { /* already exists */ }
+
+// Mark all seeded demo users as having completed onboarding so they go straight to the dashboard
+db.exec("UPDATE users SET onboarding_completed = 1 WHERE id IN ('u-001','u-002','u-003','u-cpa','u-005','u-dev')")
+
 // ── node:sqlite returns null-prototype objects; normalise to plain objects ─────
 // The node:sqlite rows have null prototypes. Wrap .get() / .all() so downstream
 // code can spread them and use Object.keys etc normally.

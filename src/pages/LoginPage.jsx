@@ -28,7 +28,7 @@ export default function LoginPage() {
     setLoading(true)
     const result = await loginWithCredentials(email, password)
     setLoading(false)
-    if (result.ok) navigate('/dashboard')
+    if (result.ok) navigate(result.onboarding_completed ? '/dashboard' : '/onboarding')
   }
 
   function handleDemoLogin() {

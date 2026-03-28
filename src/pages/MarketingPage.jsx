@@ -585,12 +585,13 @@ export default function MarketingPage() {
                 Get started free
                 <ArrowRight size={16} />
               </button>
-              <button
-                onClick={() => setCalendlyOpen(true)}
+              <Link
+                to="/demo"
                 className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 text-white font-semibold text-base px-7 py-3.5 rounded-xl border border-white/20 transition-colors"
               >
-                Book a demo
-              </button>
+                See a live demo
+                <ArrowRight size={16} />
+              </Link>
             </div>
 
             {/* Dashboard mockup */}
@@ -972,6 +973,18 @@ export default function MarketingPage() {
             Prices in CAD. SR&amp;ED credit recovery typically returns 80–200× the platform cost.
             Grants module available on Plus &amp; Enterprise.
           </p>
+
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-500">
+              Not ready to connect GitHub?{' '}
+              <Link
+                to="/demo"
+                className="text-indigo-600 hover:text-indigo-700 font-semibold hover:underline"
+              >
+                Try the demo first →
+              </Link>
+            </p>
+          </div>
         </div>
       </section>
 
@@ -1022,12 +1035,13 @@ export default function MarketingPage() {
               Get started free
               <ArrowRight size={16} />
             </button>
-            <button
-              onClick={() => setCalendlyOpen(true)}
+            <Link
+              to="/demo"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-indigo-700/50 border border-white/30 text-white font-semibold text-base px-8 py-3.5 rounded-xl hover:bg-indigo-700 transition-colors"
             >
-              Book a demo
-            </button>
+              See a live demo
+              <ArrowRight size={16} />
+            </Link>
           </div>
         </div>
       </section>

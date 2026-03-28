@@ -35,13 +35,15 @@ function normaliseRole(role) {
 // Shape a backend /me response into the same object shape as mock USERS
 function shapeBackendUser(me) {
   return {
-    id:         me.id,
-    name:       me.full_name ?? me.email,
-    email:      me.email,
-    role:       normaliseRole(me.role),
-    tenant_id:  me.tenant_id,
-    avatar:     me.avatar ?? null,
-    _fromApi:   true,
+    id:                   me.id,
+    name:                 me.full_name ?? me.email,
+    email:                me.email,
+    role:                 normaliseRole(me.role),
+    tenant_id:            me.tenant_id,
+    avatar:               me.avatar ?? null,
+    // SQLite returns 0/1 integers; coerce to boolean
+    onboarding_completed: me.onboarding_completed === 1 || me.onboarding_completed === true,
+    _fromApi:             true,
   }
 }
 
@@ -77,9 +79,10 @@ export function AuthProvider({ children }) {
       const data = await authApi.login(email, password)
       tokenStore.set(data.access_token)
       const me = await authApi.me()
-      setCurrentUser(shapeBackendUser(me))
+      const shaped = shapeBackendUser(me)
+      setCurrentUser(shaped)
       setIsDemoMode(false)
-      return { ok: true }
+      return { ok: true, onboarding_completed: shaped.onboarding_completed }
     } catch (err) {
       const msg = err instanceof ApiError
         ? err.message
@@ -127,6 +130,14 @@ export function AuthProvider({ children }) {
     setAuthError(null)
   }, [])
 
+  // ── Refresh current user from /me ────────────────────────────────────────
+  const refreshUser = useCallback(async () => {
+    try {
+      const me = await authApi.me()
+      setCurrentUser(shapeBackendUser(me))
+    } catch { /* ignore — token may have expired */ }
+  }, [])
+
   // Legacy shim — kept so any older call-site using login(userId) still works
   const login = loginDemo
 
@@ -140,6 +151,7 @@ export function AuthProvider({ children }) {
       loginDemo,
       loginWithCredentials,
       register,
+      refreshUser,
       logout,
     }}>
       {children}

@@ -38,7 +38,7 @@ router.post('/register', async (req, res) => {
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `).run(id, email.toLowerCase(), password_hash, full_name, firm_name, safeRole, tenant_id)
 
-  const user  = db.prepare('SELECT id, email, full_name, firm_name, role, tenant_id, created_at FROM users WHERE id = ?').get(id)
+  const user  = db.prepare('SELECT id, email, full_name, firm_name, role, tenant_id, onboarding_completed, created_at FROM users WHERE id = ?').get(id)
   const token = signToken({ id: user.id, email: user.email, role: user.role, tenant_id: user.tenant_id })
 
   res.status(201).json({ access_token: token, token_type: 'bearer', user })
@@ -71,13 +71,14 @@ router.post('/login', async (req, res) => {
     access_token: token,
     token_type:   'bearer',
     user: {
-      id:         user.id,
-      email:      user.email,
-      full_name:  user.full_name,
-      firm_name:  user.firm_name,
-      role:       user.role,
-      tenant_id:  user.tenant_id,
-      created_at: user.created_at,
+      id:                   user.id,
+      email:                user.email,
+      full_name:            user.full_name,
+      firm_name:            user.firm_name,
+      role:                 user.role,
+      tenant_id:            user.tenant_id,
+      onboarding_completed: user.onboarding_completed,
+      created_at:           user.created_at,
     },
   })
 })
@@ -85,13 +86,67 @@ router.post('/login', async (req, res) => {
 // ── GET /api/auth/me ──────────────────────────────────────────────────────────
 router.get('/me', requireAuth, (req, res) => {
   const user = db.prepare(
-    'SELECT id, email, full_name, firm_name, role, tenant_id, created_at FROM users WHERE id = ?'
+    'SELECT id, email, full_name, firm_name, role, tenant_id, onboarding_completed, created_at FROM users WHERE id = ?'
   ).get(req.user.id)
 
   if (!user) {
     return res.status(404).json({ message: 'User not found' })
   }
   res.json(user)
+})
+
+// ── PATCH /api/auth/onboarding-complete ──────────────────────────────────────
+router.patch('/onboarding-complete', requireAuth, (req, res) => {
+  db.prepare('UPDATE users SET onboarding_completed = 1 WHERE id = ?').run(req.user.id)
+  const user = db.prepare(
+    'SELECT id, email, full_name, firm_name, role, tenant_id, onboarding_completed, created_at FROM users WHERE id = ?'
+  ).get(req.user.id)
+  res.json(user)
+})
+
+// ── PATCH /api/auth/profile ───────────────────────────────────────────────────
+router.patch('/profile', requireAuth, (req, res) => {
+  const { company_name, fiscal_year_end, employee_count, tech_stack, sred_claimed } = req.body ?? {}
+
+  if (company_name) {
+    db.prepare('UPDATE users SET firm_name = ? WHERE id = ?').run(company_name, req.user.id)
+  }
+
+  const existing = db.prepare('SELECT id FROM company_profiles WHERE user_id = ?').get(req.user.id)
+  if (existing) {
+    db.prepare(`
+      UPDATE company_profiles
+      SET company_name    = COALESCE(?, company_name),
+          fiscal_year_end = COALESCE(?, fiscal_year_end),
+          employee_count  = COALESCE(?, employee_count),
+          tech_stack      = COALESCE(?, tech_stack),
+          sred_claimed    = COALESCE(?, sred_claimed)
+      WHERE user_id = ?
+    `).run(
+      company_name    ?? null,
+      fiscal_year_end ?? null,
+      employee_count  ?? null,
+      tech_stack      ? JSON.stringify(tech_stack) : null,
+      sred_claimed    ?? null,
+      req.user.id
+    )
+  } else {
+    const { v4: uuid } = require('../utils/uuid')
+    db.prepare(`
+      INSERT INTO company_profiles (id, user_id, company_name, fiscal_year_end, employee_count, tech_stack, sred_claimed)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      uuid(),
+      req.user.id,
+      company_name    ?? '',
+      fiscal_year_end ?? 'December',
+      employee_count  ?? 10,
+      tech_stack      ? JSON.stringify(tech_stack) : '[]',
+      sred_claimed    ?? 'not_sure'
+    )
+  }
+
+  res.json({ ok: true })
 })
 
 module.exports = router
