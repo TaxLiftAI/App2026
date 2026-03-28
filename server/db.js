@@ -6,9 +6,9 @@ const Database = require('better-sqlite3')
 const bcrypt   = require('bcryptjs')
 const path     = require('path')
 const fs       = require('fs')
+const crypto   = require('crypto')
 
 // ── Path resolution ──────────────────────────────────────────────────────────
-// Railway persists /data between deploys; fall back to /tmp for local dev.
 const DATA_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH || '/data'
 try { fs.mkdirSync(DATA_DIR, { recursive: true }) } catch {}
 const DB_PATH = path.join(DATA_DIR, 'taxlift.db')
@@ -163,15 +163,22 @@ db.exec(`
   );
 `)
 
-// ── Seed demo user (idempotent) ───────────────────────────────────────────────
-const existing = db.prepare('SELECT id FROM users WHERE email = ?').get('demo@taxlift.ai')
-if (!existing) {
-  const { v4: uuidv4 } = require('uuid')
-  const hash = bcrypt.hashSync('Demo1234!', 10)
-  db.prepare(`
-    INSERT INTO users (id, email, password_hash, full_name, firm_name, role, subscription_tier)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(uuidv4(), 'demo@taxlift.ai', hash, 'Demo User', 'TaxLift Demo', 'admin', 'growth')
+console.log('[db] Ready —', DB_PATH)
+
+// ── Seed demo user (idempotent, non-fatal) ────────────────────────────────────
+try {
+  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get('demo@taxlift.ai')
+  if (!existing) {
+    const id   = crypto.randomUUID()
+    const hash = bcrypt.hashSync('Demo1234!', 10)
+    db.prepare(`
+      INSERT INTO users (id, email, password_hash, full_name, firm_name, role, subscription_tier)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(id, 'demo@taxlift.ai', hash, 'Demo User', 'TaxLift Demo', 'admin', 'growth')
+    console.log('[db] Demo user seeded')
+  }
+} catch (e) {
+  console.warn('[db] Seed skipped:', e.message)
 }
 
 module.exports = db
