@@ -1,86 +1,140 @@
 /**
- * db.js — SQLite database bootstrap using Node 22's built-in node:sqlite
- *
- * Opens (or creates) taxlift.db, runs CREATE TABLE IF NOT EXISTS migrations,
- * then seeds with mock-matching data on the first run so the UI looks
- * identical to the frontend-only demo.
- *
- * Requires Node >= 22.5.0  (node:sqlite is stable in Node 22.10+)
+ * db.js — SQLite database bootstrap (better-sqlite3)
+ * Complete schema derived from ALL route files.
  */
-const { DatabaseSync } = require('node:sqlite')
-const bcrypt = require('bcryptjs')
-const path   = require('path')
-const fs     = require('fs')
+const Database = require('better-sqlite3')
+const bcrypt   = require('bcryptjs')
+const path     = require('path')
+const fs       = require('fs')
+const crypto   = require('crypto')
 
-// DB_PATH controls where the SQLite file lives.
-// Railway: set DB_PATH=/app/data/taxlift.db and mount a persistent volume at /app/data
-// Local dev: defaults to /tmp/taxlift.db (fine for development)
-// Auto-creates the directory if it doesn't exist (e.g. on first Railway deploy).
-const _configuredPath = process.env.DB_PATH ?? '/tmp/taxlift.db'
-const _dir = path.dirname(_configuredPath)
-let DB_PATH = _configuredPath
-if (_dir !== '/tmp' && _dir !== '/') {
-  try {
-    fs.mkdirSync(_dir, { recursive: true })
-  } catch (e) {
-    console.warn(`[db] Could not create directory ${_dir} — falling back to /tmp/taxlift.db`)
-    DB_PATH = '/tmp/taxlift.db'
-  }
-}
-const db = new DatabaseSync(DB_PATH)
+const DATA_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH || '/data'
+try { fs.mkdirSync(DATA_DIR, { recursive: true }) } catch {}
+const DB_PATH = path.join(DATA_DIR, 'taxlift.db')
 
-// ── Pragmas ────────────────────────────────────────────────────────────────────
-// Avoid WAL on filesystems that don't support it (FUSE, network mounts)
-try { db.exec('PRAGMA journal_mode = WAL') } catch { /* fallback to default DELETE */ }
+const db = new Database(DB_PATH)
+try { db.exec('PRAGMA journal_mode = WAL') } catch {}
 db.exec('PRAGMA foreign_keys = ON')
 
-// ── Schema ─────────────────────────────────────────────────────────────────────
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
-    id                  TEXT PRIMARY KEY,
-    email               TEXT UNIQUE NOT NULL,
-    password_hash       TEXT NOT NULL,
-    full_name           TEXT NOT NULL DEFAULT '',
-    firm_name           TEXT NOT NULL DEFAULT '',
-    role                TEXT NOT NULL DEFAULT 'developer',
-    tenant_id           TEXT NOT NULL DEFAULT 'tenant-default',
-    subscription_tier   TEXT NOT NULL DEFAULT 'free',
-    stripe_customer_id  TEXT,
-    subscribed_at       TEXT,
-    created_at          TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+    id                   TEXT PRIMARY KEY,
+    email                TEXT UNIQUE NOT NULL,
+    password_hash        TEXT NOT NULL,
+    full_name            TEXT NOT NULL DEFAULT '',
+    firm_name            TEXT NOT NULL DEFAULT '',
+    role                 TEXT NOT NULL DEFAULT 'admin',
+    tenant_id            TEXT,
+    subscription_tier    TEXT NOT NULL DEFAULT 'free',
+    stripe_customer_id   TEXT,
+    subscribed_at        TEXT,
+    github_token         TEXT,
+    atlassian_token      TEXT,
+    onboarding_complete  INTEGER NOT NULL DEFAULT 0,
+    created_at           TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS company_profiles (
+    id               TEXT PRIMARY KEY,
+    user_id          TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    business_number  TEXT NOT NULL DEFAULT '',
+    company_name     TEXT NOT NULL DEFAULT '',
+    province         TEXT NOT NULL DEFAULT 'ON',
+    employee_count   INTEGER NOT NULL DEFAULT 10,
+    fiscal_year_end  TEXT NOT NULL DEFAULT 'December',
+    industry_domain  TEXT NOT NULL DEFAULT '',
+    created_at       TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at       TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(user_id)
   );
 
   CREATE TABLE IF NOT EXISTS clients (
-    id                       TEXT PRIMARY KEY,
-    user_id                  TEXT NOT NULL REFERENCES users(id),
-    company_name             TEXT NOT NULL,
-    industry                 TEXT NOT NULL DEFAULT '',
-    fiscal_year_end          TEXT NOT NULL DEFAULT 'December',
-    filing_deadline          TEXT NOT NULL DEFAULT '',
-    primary_contact          TEXT NOT NULL DEFAULT '',
-    primary_contact_email    TEXT NOT NULL DEFAULT '',
-    clusters_total           INTEGER NOT NULL DEFAULT 0,
-    clusters_approved        INTEGER NOT NULL DEFAULT 0,
-    clusters_pending_review  INTEGER NOT NULL DEFAULT 0,
-    avg_readiness_score      INTEGER NOT NULL DEFAULT 0,
-    estimated_credit_cad     REAL    NOT NULL DEFAULT 0,
-    documents_count          INTEGER NOT NULL DEFAULT 0,
-    last_activity_at         TEXT,
-    status                   TEXT NOT NULL DEFAULT 'onboarded',
-    notes                    TEXT NOT NULL DEFAULT '',
-    created_at               TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+    id                      TEXT PRIMARY KEY,
+    user_id                 TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    company_name            TEXT NOT NULL,
+    industry                TEXT NOT NULL DEFAULT '',
+    fiscal_year_end         TEXT,
+    filing_deadline         TEXT,
+    primary_contact         TEXT NOT NULL DEFAULT '',
+    primary_contact_email   TEXT NOT NULL DEFAULT '',
+    status                  TEXT NOT NULL DEFAULT 'active',
+    notes                   TEXT NOT NULL DEFAULT '',
+    clusters_total          INTEGER NOT NULL DEFAULT 0,
+    clusters_approved       INTEGER NOT NULL DEFAULT 0,
+    clusters_pending_review INTEGER NOT NULL DEFAULT 0,
+    estimated_credit_cad    REAL NOT NULL DEFAULT 0,
+    avg_readiness_score     REAL NOT NULL DEFAULT 0,
+    documents_count         INTEGER NOT NULL DEFAULT 0,
+    last_activity_at        TEXT NOT NULL DEFAULT (datetime('now')),
+    created_at              TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
   CREATE TABLE IF NOT EXISTS clusters (
-    id           TEXT PRIMARY KEY,
-    client_id    TEXT NOT NULL REFERENCES clients(id),
-    name         TEXT NOT NULL,
-    theme        TEXT NOT NULL DEFAULT '',
-    hours        REAL NOT NULL DEFAULT 0,
-    credit_cad   REAL NOT NULL DEFAULT 0,
-    status       TEXT NOT NULL DEFAULT 'pending',
-    narrative    TEXT NOT NULL DEFAULT '',
-    created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+    id          TEXT PRIMARY KEY,
+    client_id   TEXT REFERENCES clients(id) ON DELETE SET NULL,
+    name        TEXT NOT NULL,
+    theme       TEXT NOT NULL DEFAULT '',
+    hours       INTEGER NOT NULL DEFAULT 0,
+    credit_cad  REAL NOT NULL DEFAULT 0,
+    narrative   TEXT NOT NULL DEFAULT '',
+    status      TEXT NOT NULL DEFAULT 'draft',
+    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS sred_projects (
+    id                    TEXT PRIMARY KEY,
+    user_id               TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title                 TEXT NOT NULL DEFAULT '',
+    technical_uncertainty TEXT NOT NULL DEFAULT '',
+    work_performed        TEXT NOT NULL DEFAULT '',
+    status                TEXT NOT NULL DEFAULT 'draft',
+    created_at            TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at            TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS sred_expenditures (
+    id          TEXT PRIMARY KEY,
+    project_id  TEXT NOT NULL REFERENCES sred_projects(id) ON DELETE CASCADE,
+    category    TEXT NOT NULL DEFAULT '',
+    amount      REAL NOT NULL DEFAULT 0,
+    description TEXT NOT NULL DEFAULT '',
+    period      TEXT NOT NULL DEFAULT '',
+    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS sred_team_members (
+    id               TEXT PRIMARY KEY,
+    project_id       TEXT NOT NULL REFERENCES sred_projects(id) ON DELETE CASCADE,
+    name             TEXT NOT NULL DEFAULT '',
+    role             TEXT NOT NULL DEFAULT '',
+    time_percentage  REAL NOT NULL DEFAULT 0,
+    qualifications   TEXT NOT NULL DEFAULT '',
+    created_at       TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS free_scans (
+    id               TEXT PRIMARY KEY,
+    email            TEXT NOT NULL,
+    repos_json       TEXT NOT NULL DEFAULT '[]',
+    clusters_json    TEXT NOT NULL DEFAULT '[]',
+    estimated_credit REAL NOT NULL DEFAULT 0,
+    commit_count     INTEGER NOT NULL DEFAULT 0,
+    cluster_count    INTEGER NOT NULL DEFAULT 0,
+    hours_total      INTEGER NOT NULL DEFAULT 0,
+    user_id          TEXT,
+    created_at       TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS drip_emails (
+    id             TEXT PRIMARY KEY,
+    email          TEXT NOT NULL,
+    scan_id        TEXT NOT NULL DEFAULT '',
+    sequence_step  INTEGER NOT NULL,
+    send_after     TEXT NOT NULL,
+    status         TEXT NOT NULL DEFAULT 'pending',
+    sent_at        TEXT,
+    created_at     TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
   CREATE TABLE IF NOT EXISTS leads (
@@ -90,161 +144,79 @@ db.exec(`
     company       TEXT NOT NULL DEFAULT '',
     plan_interest TEXT NOT NULL DEFAULT '',
     source        TEXT NOT NULL DEFAULT 'marketing',
-    created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS free_scans (
-    id               TEXT PRIMARY KEY,
-    email            TEXT NOT NULL DEFAULT '',
-    repos_json       TEXT NOT NULL DEFAULT '[]',
-    clusters_json    TEXT NOT NULL DEFAULT '[]',
-    estimated_credit REAL NOT NULL DEFAULT 0,
-    commit_count     INTEGER NOT NULL DEFAULT 0,
-    cluster_count    INTEGER NOT NULL DEFAULT 0,
-    hours_total      REAL NOT NULL DEFAULT 0,
-    user_id          TEXT,
-    created_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS drip_emails (
-    id            TEXT PRIMARY KEY,
-    email         TEXT NOT NULL,
-    scan_id       TEXT NOT NULL,
-    sequence_step INTEGER NOT NULL,
-    send_after    TEXT NOT NULL,
-    sent_at       TEXT,
-    status        TEXT NOT NULL DEFAULT 'pending',
-    created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+    created_at    TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
   CREATE TABLE IF NOT EXISTS referrals (
-    id                   TEXT PRIMARY KEY,
-    referrer_user_id     TEXT NOT NULL REFERENCES users(id),
-    ref_code             TEXT NOT NULL,
-    company_name         TEXT NOT NULL,
-    industry             TEXT NOT NULL DEFAULT '',
-    fiscal_year          TEXT NOT NULL DEFAULT '',
-    primary_contact      TEXT NOT NULL DEFAULT '',
-    referral_status      TEXT NOT NULL DEFAULT 'scanning',
-    commission_status    TEXT NOT NULL DEFAULT 'pending',
-    estimated_credit_cad REAL    NOT NULL DEFAULT 0,
-    commission_cad       REAL    NOT NULL DEFAULT 0,
+    id                  TEXT PRIMARY KEY,
+    referrer_user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    ref_code            TEXT NOT NULL DEFAULT '',
+    company_name        TEXT NOT NULL DEFAULT '',
+    industry            TEXT NOT NULL DEFAULT '',
+    fiscal_year         TEXT NOT NULL DEFAULT '',
+    primary_contact     TEXT NOT NULL DEFAULT '',
+    status              TEXT NOT NULL DEFAULT 'pending',
+    credit_amount       REAL NOT NULL DEFAULT 0,
+    commission_amount   REAL NOT NULL DEFAULT 0,
+    commission_cad      REAL NOT NULL DEFAULT 0,
+    commission_status   TEXT NOT NULL DEFAULT 'pending',
     commission_confirmed INTEGER NOT NULL DEFAULT 0,
-    commission_paid      INTEGER NOT NULL DEFAULT 0,
-    paid_at              TEXT,
-    notes                TEXT NOT NULL DEFAULT '',
-    date_referred        TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
-    created_at           TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
-  );
-`)
-
-// ── Grants module schema ────────────────────────────────────────────────────────
-db.exec(`
-  -- SR&ED tables (read-only source data for Grants module)
-  CREATE TABLE IF NOT EXISTS sred_projects (
-    id                     TEXT PRIMARY KEY,
-    user_id                TEXT NOT NULL REFERENCES users(id),
-    title                  TEXT NOT NULL,
-    technical_uncertainty  TEXT NOT NULL DEFAULT '',
-    technical_advancement  TEXT NOT NULL DEFAULT '',
-    work_performed         TEXT NOT NULL DEFAULT '',
-    start_date             TEXT NOT NULL DEFAULT '',
-    end_date               TEXT NOT NULL DEFAULT '',
-    status                 TEXT NOT NULL DEFAULT 'filed',
-    created_at             TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+    commission_paid     INTEGER NOT NULL DEFAULT 0,
+    date_referred       TEXT NOT NULL DEFAULT (datetime('now')),
+    created_at          TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
-  CREATE TABLE IF NOT EXISTS sred_expenditures (
-    id          TEXT PRIMARY KEY,
-    project_id  TEXT NOT NULL REFERENCES sred_projects(id),
-    category    TEXT NOT NULL,
-    amount      REAL NOT NULL DEFAULT 0,
-    description TEXT NOT NULL DEFAULT '',
-    period      TEXT NOT NULL DEFAULT '',
-    created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+  CREATE TABLE IF NOT EXISTS eligibility_cache (
+    id        TEXT PRIMARY KEY,
+    user_id   TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    result    TEXT NOT NULL DEFAULT '[]',
+    cached_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(user_id)
   );
 
-  CREATE TABLE IF NOT EXISTS sred_team_members (
-    id               TEXT PRIMARY KEY,
-    project_id       TEXT NOT NULL REFERENCES sred_projects(id),
-    name             TEXT NOT NULL,
-    role             TEXT NOT NULL DEFAULT '',
-    time_percentage  REAL NOT NULL DEFAULT 100,
-    qualifications   TEXT NOT NULL DEFAULT '',
-    created_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
-  );
-
-  -- Company profile (extended from users for grant eligibility)
-  CREATE TABLE IF NOT EXISTS company_profiles (
-    id              TEXT PRIMARY KEY,
-    user_id         TEXT NOT NULL UNIQUE REFERENCES users(id),
-    business_number TEXT NOT NULL DEFAULT '',
-    company_name    TEXT NOT NULL DEFAULT '',
-    province        TEXT NOT NULL DEFAULT 'ON',
-    employee_count  INTEGER NOT NULL DEFAULT 10,
-    fiscal_year_end TEXT NOT NULL DEFAULT 'December',
-    industry_domain TEXT NOT NULL DEFAULT '',
-    created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
-  );
-
-  -- Gap fill answers (company-scoped, reused across all grant applications)
   CREATE TABLE IF NOT EXISTS gap_answers (
-    id               TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-    user_id          TEXT NOT NULL UNIQUE REFERENCES users(id),
-    market_desc      TEXT,
-    revenue_model    TEXT,
-    canadian_benefit TEXT,
-    differentiation  TEXT,
-    updated_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
-  );
-
-  -- Grant applications
-  CREATE TABLE IF NOT EXISTS grant_applications (
     id                TEXT PRIMARY KEY,
-    user_id           TEXT NOT NULL REFERENCES users(id),
-    grant_id          TEXT NOT NULL,
-    grant_name        TEXT NOT NULL,
-    sred_project_ids  TEXT NOT NULL DEFAULT '[]',
-    status            TEXT NOT NULL DEFAULT 'draft',
-    submitted_at      TEXT,
-    amount_requested  REAL,
-    amount_awarded    REAL,
-    notes             TEXT NOT NULL DEFAULT '',
-    created_at        TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+    user_id           TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    market_desc       TEXT NOT NULL DEFAULT '',
+    revenue_model     TEXT NOT NULL DEFAULT '',
+    canadian_benefit  TEXT NOT NULL DEFAULT '',
+    differentiation   TEXT NOT NULL DEFAULT '',
+    updated_at        TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(user_id)
   );
 
-  -- Application sections (6-8 rows per application)
+  CREATE TABLE IF NOT EXISTS grant_applications (
+    id               TEXT PRIMARY KEY,
+    user_id          TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    grant_id         TEXT NOT NULL DEFAULT '',
+    grant_name       TEXT NOT NULL DEFAULT '',
+    sred_project_ids TEXT NOT NULL DEFAULT '[]',
+    status           TEXT NOT NULL DEFAULT 'draft',
+    created_at       TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at       TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
   CREATE TABLE IF NOT EXISTS grant_sections (
     id             TEXT PRIMARY KEY,
-    application_id TEXT NOT NULL REFERENCES grant_applications(id),
+    application_id TEXT NOT NULL REFERENCES grant_applications(id) ON DELETE CASCADE,
     section_key    TEXT NOT NULL,
-    section_name   TEXT NOT NULL,
-    content        TEXT,
+    section_name   TEXT NOT NULL DEFAULT '',
     status         TEXT NOT NULL DEFAULT 'pending',
-    data_source    TEXT NOT NULL DEFAULT 'sred_only',
-    word_count     INTEGER,
-    feedback_note  TEXT,
-    approved_at    TEXT,
-    created_at     TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+    data_source    TEXT NOT NULL DEFAULT '',
+    created_at     TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at     TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
-  -- Section version history
   CREATE TABLE IF NOT EXISTS section_versions (
     id            TEXT PRIMARY KEY,
-    section_id    TEXT NOT NULL REFERENCES grant_sections(id),
-    content       TEXT NOT NULL,
-    feedback_note TEXT,
-    created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
-  );
-
-  -- Eligibility cache (30-day cache per user)
-  CREATE TABLE IF NOT EXISTS eligibility_cache (
-    id         TEXT PRIMARY KEY,
-    user_id    TEXT NOT NULL UNIQUE REFERENCES users(id),
-    result     TEXT NOT NULL,
-    cached_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+    section_id    TEXT NOT NULL REFERENCES grant_sections(id) ON DELETE CASCADE,
+    content       TEXT NOT NULL DEFAULT '',
+    feedback_note TEXT NOT NULL DEFAULT '',
+    created_at    TEXT NOT NULL DEFAULT (datetime('now'))
   );
 `)
+
+console.log('[db] Ready —', DB_PATH)
 
 // ── Onboarding migrations (safe ALTER TABLE — no-ops if columns already exist) ─
 try { db.exec('ALTER TABLE users ADD COLUMN onboarding_completed INTEGER NOT NULL DEFAULT 0') } catch { /* already exists */ }
@@ -254,24 +226,6 @@ try { db.exec('ALTER TABLE company_profiles ADD COLUMN sred_claimed TEXT NOT NUL
 // Mark all seeded demo users as having completed onboarding so they go straight to the dashboard
 db.exec("UPDATE users SET onboarding_completed = 1 WHERE id IN ('u-001','u-002','u-003','u-cpa','u-005','u-dev')")
 
-// ── node:sqlite returns null-prototype objects; normalise to plain objects ─────
-// The node:sqlite rows have null prototypes. Wrap .get() / .all() so downstream
-// code can spread them and use Object.keys etc normally.
-const _prepare = db.prepare.bind(db)
-db.prepare = function(sql) {
-  const stmt = _prepare(sql)
-  const origGet = stmt.get.bind(stmt)
-  const origAll = stmt.all.bind(stmt)
-  stmt.get = (...args) => {
-    const row = origGet(...args)
-    return row ? Object.assign({}, row) : row
-  }
-  stmt.all = (...args) => {
-    const rows = origAll(...args)
-    return rows.map(r => Object.assign({}, r))
-  }
-  return stmt
-}
 
 // ── Seed helper ────────────────────────────────────────────────────────────────
 function isEmpty(table) {
