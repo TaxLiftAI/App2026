@@ -224,7 +224,14 @@ try { db.exec('ALTER TABLE company_profiles ADD COLUMN tech_stack TEXT NOT NULL 
 try { db.exec('ALTER TABLE company_profiles ADD COLUMN sred_claimed TEXT NOT NULL DEFAULT \'not_sure\'') } catch { /* already exists */ }
 
 // Mark all seeded demo users as having completed onboarding so they go straight to the dashboard
-db.exec("UPDATE users SET onboarding_completed = 1 WHERE id IN ('u-001','u-002','u-003','u-cpa','u-005','u-dev')")
+db.exec("UPDATE users SET onboarding_completed = 1 WHERE id IN ('u-001','u-002','u-003','u-cpa','u-005','u-dev','u-demo')")
+
+// ── Ensure demo@taxlift.ai always exists (idempotent — safe to run on every boot) ─
+// Password: demo123
+db.prepare(`
+  INSERT OR IGNORE INTO users (id, email, password_hash, full_name, firm_name, role, tenant_id, onboarding_completed)
+  VALUES ('u-demo', 'demo@taxlift.ai', '$2a$10$19zhFBskimCkq66R1PkAMOBBmMFQWbQH9nN3wvYDUks1Csu/Pfwju', 'Demo User', 'TaxLift Demo', 'admin', 'tenant-demo', 1)
+`).run()
 
 
 // ── Seed helper ────────────────────────────────────────────────────────────────
@@ -252,6 +259,7 @@ function seed() {
     ['u-cpa', 'margaret.chen@crowe.ca',   '$2a$10$ozOEYq0HQLOl66mFlL8CfujVEAGYWFEdsu34P1.14KDKGHoiru/Nm',  'Margaret Chen', 'Crowe MacKay LLP',   'cpa',      'tenant-cpa',  '2024-09-01T00:00:00Z'],
     ['u-005', 'david.okafor@auditor.ca',  '$2a$10$/mXJOkSak5/BPDiF8gMsauEC.UqF/BhCqJhoKRhuLLRoxFWOsUd3.', 'David Okafor',  '',                   'auditor',  'tenant-acme', '2025-11-01T00:00:00Z'],
     ['u-dev', 'admin@taxlift.dev',        '$2a$10$90Ze1TBNf26jz2llHAtZhOOJgGfoL50nSvPCXDWOEXPgw3u5AmF2K', 'Dev Admin',     'TaxLift',            'admin',    'tenant-acme', now],
+    ['u-demo','demo@taxlift.ai',          '$2a$10$19zhFBskimCkq66R1PkAMOBBmMFQWbQH9nN3wvYDUks1Csu/Pfwju', 'Demo User',     'TaxLift Demo',       'admin',    'tenant-demo', now],
   ]
   users.forEach(u => insertUser.run(...u))
 
@@ -294,17 +302,17 @@ function seed() {
   const insertReferral = db.prepare(`
     INSERT INTO referrals
       (id, referrer_user_id, ref_code, company_name, industry, fiscal_year, primary_contact,
-       referral_status, commission_status, estimated_credit_cad, commission_cad,
-       commission_confirmed, commission_paid, paid_at, notes, date_referred, created_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+       status, commission_status, credit_amount, commission_cad,
+       commission_confirmed, commission_paid, date_referred, created_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
   `)
 
   const referrals = [
-    ['ref-001','u-cpa','REF-CROWE-001','Zenith Biotech Inc.',   'Life Sciences / Software','2024','Sophie Lamarche','filed',        'paid',     312000,2496,1,1,'2026-02-14T00:00:00Z','T661 filed 2026-02-01. CRA confirmation received. Commission invoice settled.',              '2025-10-08T00:00:00Z','2025-10-08T00:00:00Z'],
-    ['ref-002','u-cpa','REF-CROWE-002','Pulse Commerce Ltd.',  'E-commerce SaaS',          '2025','Remy Bouchard',  'package_ready','confirmed',142000,1136,1,0,null,                  'Package delivered. Awaiting CPA review and T661 sign-off.',                                  '2025-11-22T00:00:00Z','2025-11-22T00:00:00Z'],
-    ['ref-003','u-cpa','REF-CROWE-003','Atlas Network Systems','Network Infrastructure',   '2025','Jordan Kim',    'package_ready','confirmed', 67000, 536,1,0,null,                  'Package ready. 6 of 8 clusters approved. Final 2 under review.',                            '2025-12-10T00:00:00Z','2025-12-10T00:00:00Z'],
-    ['ref-004','u-cpa','REF-CROWE-004','Axiom Robotics Corp.', 'Industrial Automation',   '2025','Marcus Webb',   'in_review',    'pending',   89000, 712,0,0,null,                  'In active review. 4 clusters identified, 2 approved so far.',                               '2026-01-15T00:00:00Z','2026-01-15T00:00:00Z'],
-    ['ref-005','u-cpa','REF-CROWE-005','Meridian Analytics',   'Business Intelligence',   '2025','Chen Li',       'scanning',     'pending',       0,   0,0,0,null,                  'Just onboarded. GitHub and Jira connected. Initial scan in progress.',                      '2026-02-28T00:00:00Z','2026-02-28T00:00:00Z'],
+    ['ref-001','u-cpa','REF-CROWE-001','Zenith Biotech Inc.',   'Life Sciences / Software','2024','Sophie Lamarche','filed',        'paid',     312000,2496,1,1,'2025-10-08T00:00:00Z','2025-10-08T00:00:00Z'],
+    ['ref-002','u-cpa','REF-CROWE-002','Pulse Commerce Ltd.',   'E-commerce SaaS',         '2025','Remy Bouchard',  'package_ready','confirmed',142000,1136,1,0,'2025-11-22T00:00:00Z','2025-11-22T00:00:00Z'],
+    ['ref-003','u-cpa','REF-CROWE-003','Atlas Network Systems', 'Network Infrastructure',  '2025','Jordan Kim',    'package_ready','confirmed', 67000, 536,1,0,'2025-12-10T00:00:00Z','2025-12-10T00:00:00Z'],
+    ['ref-004','u-cpa','REF-CROWE-004','Axiom Robotics Corp.',  'Industrial Automation',   '2025','Marcus Webb',   'in_review',    'pending',   89000, 712,0,0,'2026-01-15T00:00:00Z','2026-01-15T00:00:00Z'],
+    ['ref-005','u-cpa','REF-CROWE-005','Meridian Analytics',    'Business Intelligence',   '2025','Chen Li',       'scanning',     'pending',       0,   0,0,0,'2026-02-28T00:00:00Z','2026-02-28T00:00:00Z'],
   ]
   referrals.forEach(r => insertReferral.run(...r))
 
@@ -324,33 +332,30 @@ function seed() {
   // ── SR&ED Projects ─────────────────────────────────────────────────────────
   const insertProject = db.prepare(`
     INSERT INTO sred_projects
-      (id, user_id, title, technical_uncertainty, technical_advancement, work_performed, start_date, end_date, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (id, user_id, title, technical_uncertainty, work_performed, status)
+    VALUES (?, ?, ?, ?, ?, ?)
   `)
   const projects = [
     [
       'sp-001', 'u-001',
       'ML Fraud Detection Engine',
       'It was technologically uncertain whether transformer-based architectures could achieve sub-50ms inference latency on commodity hardware for real-time payment fraud detection, given the non-stationary distribution of fraud patterns and the computational constraints of on-premise deployment.',
-      'We advanced the state of knowledge in applied machine learning for financial fraud detection by developing a novel hybrid architecture combining sparse attention mechanisms with adaptive feature quantisation, achieving 99.2% precision at a 0.8% false-positive rate — a 340% improvement over the prior baseline.',
       'The team designed and executed systematic experiments iterating on model architectures, training data pipelines, and inference optimisation strategies. Work included: (1) literature review of 47 published transformer variants; (2) controlled experiments across 12 architectural configurations; (3) development of custom CUDA kernels for low-latency inference; (4) integration testing under production-scale synthetic load.',
-      '2024-01-15', '2024-12-31', 'filed'
+      'filed'
     ],
     [
       'sp-002', 'u-001',
       'Distributed Query Optimizer Research',
       'The technical challenge was whether cost-based query optimisation could be extended to federated, heterogeneous data sources with partial statistics — a problem not solved by existing open-source optimisers which assume full cardinality metadata.',
-      'Advanced the practice of distributed query planning by developing an adaptive optimiser that infers partial statistics via Bayesian estimation, reducing cross-shard data movement by 68% on benchmark workloads.',
       'Systematic investigation across 3 experimental phases: baseline measurement, hypothesis formulation, and iterative prototype refinement. Experiments on 8-node cluster with 500GB+ synthetic TPC-DS datasets.',
-      '2024-03-01', '2024-11-30', 'filed'
+      'filed'
     ],
     [
       'sp-003', 'u-dev',
       'Automated SR&ED Classification System',
       'Uncertainty existed as to whether large language models could reliably classify mixed-activity software logs into SR&ED-eligible vs non-eligible activities at CPA-acceptable accuracy levels without extensive domain-specific fine-tuning.',
-      'Developed a prompt-chain approach with structured output validation achieving 94% agreement with experienced SR&ED practitioners on a 500-case benchmark, establishing a new automated baseline for the industry.',
       'Iterative prompt engineering, evaluation harness development, and systematic testing across 6 LLM configurations. Includes active learning loop for continuous improvement on edge cases.',
-      '2024-06-01', '2025-03-31', 'filed'
+      'filed'
     ],
   ]
   projects.forEach(p => insertProject.run(...p))
