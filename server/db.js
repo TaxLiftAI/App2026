@@ -7,7 +7,7 @@
  *
  * Requires Node >= 22.5.0  (node:sqlite is stable in Node 22.10+)
  */
-const { DatabaseSync } = require('node:sqlite')
+const Database = require('better-sqlite3')
 const bcrypt = require('bcryptjs')
 const path   = require('path')
 const fs     = require('fs')
@@ -28,11 +28,9 @@ if (_dir !== '/tmp' && _dir !== '/') {
     DB_PATH = '/tmp/taxlift.db'
   }
 }
-const db = new DatabaseSync(DB_PATH)
+const db = new Database(DB_PATH)
 
 
 // ── Pragmas ────────────────────────────────────────────────────────────────────
 // Avoid WAL on filesystems that don't support it (FUSE, network mounts)
 try { db.exec('PRAGMA journal_mode = WAL') } catch { /* fallback to default DELETE */ }
-db.exec('PRAGMA foreign_keys = ON')
-
