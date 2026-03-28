@@ -39,17 +39,24 @@ db.exec(`
   );
 
   CREATE TABLE IF NOT EXISTS clients (
-    id                     TEXT PRIMARY KEY,
-    user_id                TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    company_name           TEXT NOT NULL,
-    industry               TEXT NOT NULL DEFAULT '',
-    fiscal_year_end        TEXT,
-    filing_deadline        TEXT,
-    primary_contact        TEXT NOT NULL DEFAULT '',
-    primary_contact_email  TEXT NOT NULL DEFAULT '',
-    status                 TEXT NOT NULL DEFAULT 'active',
-    notes                  TEXT NOT NULL DEFAULT '',
-    created_at             TEXT NOT NULL DEFAULT (datetime('now'))
+    id                      TEXT PRIMARY KEY,
+    user_id                 TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    company_name            TEXT NOT NULL,
+    industry                TEXT NOT NULL DEFAULT '',
+    fiscal_year_end         TEXT,
+    filing_deadline         TEXT,
+    primary_contact         TEXT NOT NULL DEFAULT '',
+    primary_contact_email   TEXT NOT NULL DEFAULT '',
+    status                  TEXT NOT NULL DEFAULT 'active',
+    notes                   TEXT NOT NULL DEFAULT '',
+    clusters_total          INTEGER NOT NULL DEFAULT 0,
+    clusters_approved       INTEGER NOT NULL DEFAULT 0,
+    clusters_pending_review INTEGER NOT NULL DEFAULT 0,
+    estimated_credit_cad    REAL NOT NULL DEFAULT 0,
+    avg_readiness_score     REAL NOT NULL DEFAULT 0,
+    documents_count         INTEGER NOT NULL DEFAULT 0,
+    last_activity_at        TEXT NOT NULL DEFAULT (datetime('now')),
+    created_at              TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
   CREATE TABLE IF NOT EXISTS clusters (
