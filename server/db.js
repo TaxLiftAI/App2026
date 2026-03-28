@@ -273,22 +273,23 @@ function isEmpty(table) {
 function seed() {
   if (!isEmpty('users')) return   // already seeded
 
-  const hash = (pw) => bcrypt.hashSync(pw, 10)
   const now  = new Date().toISOString()
 
   // ── Users ──────────────────────────────────────────────────────────────────
+  // Passwords are pre-hashed (bcrypt cost 10) to avoid blocking startup.
+  // Plaintext passwords for dev login: Admin1234! / Reviewer123! / Dev12345! / Cpa12345! / Audit123!
   const insertUser = db.prepare(`
     INSERT INTO users (id, email, password_hash, full_name, firm_name, role, tenant_id, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `)
 
   const users = [
-    ['u-001', 'sarah.chen@acmecorp.com',  bcrypt.hashSync('Admin1234!',   10), 'Sarah Chen',    'Acme Corp',          'admin',    'tenant-acme', '2025-09-01T00:00:00Z'],
-    ['u-002', 'marcus.reid@acmecorp.com', bcrypt.hashSync('Reviewer123!', 10), 'Marcus Reid',   'Acme Corp',          'reviewer', 'tenant-acme', '2025-09-01T00:00:00Z'],
-    ['u-003', 'jordan.kim@acmecorp.com',  bcrypt.hashSync('Dev12345!',    10), 'Jordan Kim',    'Acme Corp',          'developer','tenant-acme', '2025-10-15T00:00:00Z'],
-    ['u-cpa', 'margaret.chen@crowe.ca',   bcrypt.hashSync('Cpa12345!',    10), 'Margaret Chen', 'Crowe MacKay LLP',   'cpa',      'tenant-cpa',  '2024-09-01T00:00:00Z'],
-    ['u-005', 'david.okafor@auditor.ca',  bcrypt.hashSync('Audit123!',    10), 'David Okafor',  '',                   'auditor',  'tenant-acme', '2025-11-01T00:00:00Z'],
-    ['u-dev', 'admin@taxlift.dev',        bcrypt.hashSync('Admin1234!',   10), 'Dev Admin',     'TaxLift',            'admin',    'tenant-acme', now],
+    ['u-001', 'sarah.chen@acmecorp.com',  '$2a$10$90Ze1TBNf26jz2llHAtZhOOJgGfoL50nSvPCXDWOEXPgw3u5AmF2K', 'Sarah Chen',    'Acme Corp',          'admin',    'tenant-acme', '2025-09-01T00:00:00Z'],
+    ['u-002', 'marcus.reid@acmecorp.com', '$2a$10$FZqXEDDDA/tU0ORKOp3Y0e0hfW.BS8XUJbeWiu5WDGlqMkCrJIZ.m', 'Marcus Reid',   'Acme Corp',          'reviewer', 'tenant-acme', '2025-09-01T00:00:00Z'],
+    ['u-003', 'jordan.kim@acmecorp.com',  '$2a$10$STZz0FVIaHbzLUDIeQIH3eYApLvueNsxb5n.vjLHFgyeRvcCRi.eG', 'Jordan Kim',    'Acme Corp',          'developer','tenant-acme', '2025-10-15T00:00:00Z'],
+    ['u-cpa', 'margaret.chen@crowe.ca',   '$2a$10$ozOEYq0HQLOl66mFlL8CfujVEAGYWFEdsu34P1.14KDKGHoiru/Nm',  'Margaret Chen', 'Crowe MacKay LLP',   'cpa',      'tenant-cpa',  '2024-09-01T00:00:00Z'],
+    ['u-005', 'david.okafor@auditor.ca',  '$2a$10$/mXJOkSak5/BPDiF8gMsauEC.UqF/BhCqJhoKRhuLLRoxFWOsUd3.', 'David Okafor',  '',                   'auditor',  'tenant-acme', '2025-11-01T00:00:00Z'],
+    ['u-dev', 'admin@taxlift.dev',        '$2a$10$90Ze1TBNf26jz2llHAtZhOOJgGfoL50nSvPCXDWOEXPgw3u5AmF2K', 'Dev Admin',     'TaxLift',            'admin',    'tenant-acme', now],
   ]
   users.forEach(u => insertUser.run(...u))
 

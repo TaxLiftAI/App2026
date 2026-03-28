@@ -2,13 +2,15 @@
  * OAuth proxy routes — server-side token exchange so the browser
  * never needs to handle client_secret.
  *
- *   GET /api/oauth/github/callback?code=&state=
- *   GET /api/oauth/atlassian/callback?code=&state=
- *   GET /api/oauth/github/repos          (proxy, requires Bearer token in header)
- *   GET /api/oauth/github/commits?repo=  (proxy)
- *   GET /api/oauth/github/user           (proxy)
- *   GET /api/oauth/atlassian/resources   (proxy — lists accessible Jira sites)
- *   GET /api/oauth/atlassian/issues?cloudId=&projectKey= (proxy)
+ *   GET  /api/oauth/github/callback?code=&state=   ← GitHub server-side redirect target
+ *   POST /api/oauth/github/exchange  { code }      ← browser SPA exchange (OAuthCallbackPage)
+ *   GET  /api/oauth/atlassian/callback?code=&state=
+ *   POST /api/oauth/jira/exchange  { code, verifier } ← browser SPA exchange (OAuthCallbackPage)
+ *   GET  /api/oauth/github/repos          (proxy, requires Bearer token in header)
+ *   GET  /api/oauth/github/commits?repo=  (proxy)
+ *   GET  /api/oauth/github/user           (proxy)
+ *   GET  /api/oauth/atlassian/resources   (proxy — lists accessible Jira sites)
+ *   GET  /api/oauth/atlassian/issues?cloudId=&projectKey= (proxy)
  */
 const router = require('express').Router()
 const axios  = require('axios')
@@ -26,6 +28,47 @@ function missingEnv(...keys) {
 // ── GitHub callback — exchange code for access token ─────────────────────────
 router.get('/github/callback', optionalAuth, async (req, res) => {
   const { code, state } = req.query
+  if (!code) return res.status(400).json({ message: 'code is required' })
+
+  const missing = missingEnv('GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET')
+  if (missing.length) {
+    return res.status(503).json({
+      message: `GitHub OAuth not configured. Missing env vars: ${missing.join(', ')}`,
+      demo: true,
+    })
+  }
+
+  try {
+    const resp = await axios.post(
+      'https://github.com/login/oauth/access_token',
+      {
+        client_id:     cfg('GITHUB_CLIENT_ID'),
+        client_secret: cfg('GITHUB_CLIENT_SECRET'),
+        code,
+      },
+      { headers: { Accept: 'application/json' } }
+    )
+
+    if (resp.data.error) {
+      return res.status(400).json({ message: resp.data.error_description ?? resp.data.error })
+    }
+
+    res.json({
+      access_token: resp.data.access_token,
+      scope:        resp.data.scope,
+      token_type:   resp.data.token_type,
+    })
+  } catch (err) {
+    res.status(502).json({ message: 'GitHub token exchange failed', detail: err.message })
+  }
+})
+
+// ── GitHub exchange — POST alias used by the browser SPA ─────────────────────
+// The GET /github/callback route above is used when GitHub redirects back to the
+// server directly.  OAuthCallbackPage.jsx calls this POST endpoint instead, so
+// the browser can send the code in a JSON body (avoids CORS issues with GitHub).
+router.post('/github/exchange', async (req, res) => {
+  const { code } = req.body ?? {}
   if (!code) return res.status(400).json({ message: 'code is required' })
 
   const missing = missingEnv('GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET')
@@ -84,6 +127,49 @@ router.get('/atlassian/callback', optionalAuth, async (req, res) => {
         code,
         redirect_uri:  cfg('ATLASSIAN_REDIRECT_URI') || `${req.protocol}://${req.get('host')}/oauth/callback`,
       },
+      { headers: { 'Content-Type': 'application/json' } }
+    )
+
+    res.json({
+      access_token:  resp.data.access_token,
+      refresh_token: resp.data.refresh_token,
+      expires_in:    resp.data.expires_in,
+      token_type:    resp.data.token_type,
+    })
+  } catch (err) {
+    const detail = err.response?.data ?? err.message
+    res.status(502).json({ message: 'Atlassian token exchange failed', detail })
+  }
+})
+
+// ── Jira/Atlassian exchange — POST alias used by the browser SPA ──────────────
+// OAuthCallbackPage.jsx calls POST /api/oauth/jira/exchange with { code, verifier }.
+// The PKCE code_verifier is forwarded to Atlassian so the S256 challenge can be verified.
+router.post('/jira/exchange', async (req, res) => {
+  const { code, verifier } = req.body ?? {}
+  if (!code) return res.status(400).json({ message: 'code is required' })
+
+  const missing = missingEnv('ATLASSIAN_CLIENT_ID', 'ATLASSIAN_CLIENT_SECRET')
+  if (missing.length) {
+    return res.status(503).json({
+      message: `Atlassian OAuth not configured. Missing env vars: ${missing.join(', ')}`,
+      demo: true,
+    })
+  }
+
+  try {
+    const body = {
+      grant_type:    'authorization_code',
+      client_id:     cfg('ATLASSIAN_CLIENT_ID'),
+      client_secret: cfg('ATLASSIAN_CLIENT_SECRET'),
+      code,
+      redirect_uri:  cfg('ATLASSIAN_REDIRECT_URI') || `${req.protocol}://${req.get('host')}/oauth/callback`,
+    }
+    if (verifier) body.code_verifier = verifier
+
+    const resp = await axios.post(
+      'https://auth.atlassian.com/oauth/token',
+      body,
       { headers: { 'Content-Type': 'application/json' } }
     )
 

@@ -4,7 +4,8 @@
  */
 import { useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { CheckCircle2, ArrowRight, GitBranch, Users, Package } from 'lucide-react'
+import { CheckCircle2, ArrowRight, GitBranch, Users, Package, UserPlus } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 
 const PLAN_LABELS = {
   starter:    'Starter',
@@ -38,7 +39,8 @@ const NEXT_STEPS = [
 
 export default function CheckoutSuccessPage() {
   const [params] = useSearchParams()
-  const plan     = params.get('plan') ?? 'starter'
+  const { currentUser } = useAuth()
+  const plan      = params.get('plan') ?? 'starter'
   const planLabel = PLAN_LABELS[plan] ?? 'your plan'
 
   // Scroll to top
@@ -66,18 +68,33 @@ export default function CheckoutSuccessPage() {
             A confirmation receipt has been sent to your email.
           </p>
 
-          <Link
-            to="/dashboard"
-            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-3.5 rounded-xl transition-colors shadow-md"
-          >
-            Go to dashboard
-            <ArrowRight size={16} />
-          </Link>
+          {currentUser ? (
+            <Link
+              to="/dashboard"
+              className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-3.5 rounded-xl transition-colors shadow-md"
+            >
+              Go to dashboard <ArrowRight size={16} />
+            </Link>
+          ) : (
+            <div className="space-y-3">
+              <Link
+                to={`/signup?plan=${plan}&from=checkout`}
+                className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-3.5 rounded-xl transition-colors shadow-md"
+              >
+                <UserPlus size={16} /> Create your account
+              </Link>
+              <p className="text-slate-400 text-xs text-center">
+                Already have an account?{' '}
+                <Link to="/login" className="text-indigo-400 hover:underline">Sign in →</Link>
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Next steps */}
-        <h2 className="text-white font-bold text-lg mb-4 text-center">
-          Here's what to do next
+        {currentUser && (
+        <><h2 className="text-white font-bold text-lg mb-4 text-center">
+          Here\u2019s what to do next
         </h2>
         <div className="space-y-3">
           {NEXT_STEPS.map((step, i) => {
@@ -106,7 +123,8 @@ export default function CheckoutSuccessPage() {
               </div>
             )
           })}
-        </div>
+        </div></>
+        )}
 
         <p className="text-center text-slate-500 text-xs mt-8">
           Need help?{' '}

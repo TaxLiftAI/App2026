@@ -89,6 +89,25 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
+  // ── Register new account ──────────────────────────────────────────────────
+  const register = useCallback(async ({ email, password, full_name = '', firm_name = '' }) => {
+    setAuthError(null)
+    try {
+      const data = await authApi.register({ email, password, full_name, firm_name })
+      tokenStore.set(data.access_token)
+      const me = await authApi.me()
+      setCurrentUser(shapeBackendUser(me))
+      setIsDemoMode(false)
+      return { ok: true, user: shapeBackendUser(me) }
+    } catch (err) {
+      const msg = err instanceof ApiError
+        ? err.message
+        : 'Unable to connect to the server.'
+      setAuthError(msg)
+      return { ok: false, error: msg }
+    }
+  }, [])
+
   // ── Demo / mock login ─────────────────────────────────────────────────────
   const loginDemo = useCallback((userId) => {
     const user = USERS.find(u => u.id === userId)
@@ -120,6 +139,7 @@ export function AuthProvider({ children }) {
       login,            // legacy demo shim
       loginDemo,
       loginWithCredentials,
+      register,
       logout,
     }}>
       {children}

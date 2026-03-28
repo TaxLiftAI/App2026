@@ -47,56 +47,127 @@ router.post('/', (req, res) => {
 })
 
 // ── GET /api/leads ─────────────────────────────────────────────────────────────
-// Admin only. Returns paginated leads list.
+// Admin only. Returns paginated leads list, enriched with free_scan data.
+// Query params:
+//   page, limit, search, plan, source
+//   min_credit  — filter to leads with estimated_credit >= this value
+//   sort        — 'credit' | 'date' (default: credit desc, then date desc)
 router.get('/', requireAuth, requireAdmin, (req, res) => {
   const page  = Math.max(1, parseInt(req.query.page  ?? '1',  10))
   const limit = Math.min(200, Math.max(1, parseInt(req.query.limit ?? '50', 10)))
   const offset = (page - 1) * limit
 
-  const search       = req.query.search ?? ''
-  const plan_filter  = req.query.plan   ?? ''
-  const source_filter = req.query.source ?? ''
+  const search        = req.query.search     ?? ''
+  const plan_filter   = req.query.plan       ?? ''
+  const source_filter = req.query.source     ?? ''
+  const min_credit    = parseFloat(req.query.min_credit ?? '0') || 0
+  const sort          = req.query.sort === 'date' ? 'date' : 'credit'
 
+  // Base query — LEFT JOIN free_scans to surface credit estimates
+  // Uses MAX so each lead row is unique even if there are multiple scans per email
   let where  = 'WHERE 1=1'
   const args = []
 
   if (search) {
-    where += ' AND (email LIKE ? OR name LIKE ? OR company LIKE ?)'
+    where += ' AND (l.email LIKE ? OR l.name LIKE ? OR l.company LIKE ?)'
     const like = `%${search}%`
     args.push(like, like, like)
   }
   if (plan_filter) {
-    where += ' AND plan_interest = ?'
+    where += ' AND l.plan_interest = ?'
     args.push(plan_filter)
   }
   if (source_filter) {
-    where += ' AND source = ?'
+    where += ' AND l.source = ?'
     args.push(source_filter)
   }
+  if (min_credit > 0) {
+    where += ' AND COALESCE(fs_agg.estimated_credit, 0) >= ?'
+    args.push(min_credit)
+  }
 
-  const total = db.prepare(`SELECT COUNT(*) as n FROM leads ${where}`).get(...args).n
-  const rows  = db.prepare(`
-    SELECT id, email, name, company, plan_interest, source, created_at
-    FROM leads ${where}
-    ORDER BY created_at DESC
+  const orderBy = sort === 'date'
+    ? 'ORDER BY l.created_at DESC'
+    : 'ORDER BY COALESCE(fs_agg.estimated_credit, 0) DESC, l.created_at DESC'
+
+  // Subquery aggregates best scan per email
+  const scanSubquery = `
+    SELECT email,
+           MAX(estimated_credit) as estimated_credit,
+           MAX(cluster_count)    as cluster_count,
+           MAX(commit_count)     as commit_count,
+           MAX(id)               as scan_id,
+           MAX(created_at)       as scanned_at
+    FROM free_scans
+    GROUP BY email
+  `
+
+  const countSql = `
+    SELECT COUNT(*) as n
+    FROM leads l
+    LEFT JOIN (${scanSubquery}) fs_agg ON fs_agg.email = l.email
+    ${where}
+  `
+  const dataSql = `
+    SELECT
+      l.id, l.email, l.name, l.company, l.plan_interest, l.source, l.created_at,
+      COALESCE(fs_agg.estimated_credit, 0) as estimated_credit,
+      COALESCE(fs_agg.cluster_count,    0) as cluster_count,
+      COALESCE(fs_agg.commit_count,     0) as commit_count,
+      fs_agg.scan_id,
+      fs_agg.scanned_at
+    FROM leads l
+    LEFT JOIN (${scanSubquery}) fs_agg ON fs_agg.email = l.email
+    ${where}
+    ${orderBy}
     LIMIT ? OFFSET ?
-  `).all(...args, limit, offset)
+  `
 
-  res.json({ leads: rows, total, page, limit, pages: Math.ceil(total / limit) })
+  const total = db.prepare(countSql).get(...args).n
+  const rows  = db.prepare(dataSql).all(...args, limit, offset)
+
+  // Compute summary stats for the admin dashboard header
+  const statsRows = db.prepare(`
+    SELECT
+      COUNT(DISTINCT l.id) as total_leads,
+      COUNT(DISTINCT CASE WHEN l.source = 'free_scan' OR fs_agg.scan_id IS NOT NULL THEN l.id END) as scan_leads,
+      COUNT(DISTINCT CASE WHEN COALESCE(fs_agg.estimated_credit, 0) >= 100000 THEN l.id END) as hot_leads,
+      COALESCE(MAX(fs_agg.estimated_credit), 0) as top_credit
+    FROM leads l
+    LEFT JOIN (${scanSubquery}) fs_agg ON fs_agg.email = l.email
+  `).get()
+
+  res.json({
+    leads:  rows,
+    total,
+    page,
+    limit,
+    pages:  Math.ceil(total / limit),
+    stats:  statsRows,
+  })
 })
 
 // ── GET /api/leads/export ──────────────────────────────────────────────────────
-// CSV export — admin only.
+// CSV export — admin only. Includes scan credit data.
 router.get('/export', requireAuth, requireAdmin, (req, res) => {
   const rows = db.prepare(`
-    SELECT id, email, name, company, plan_interest, source, created_at
-    FROM leads
-    ORDER BY created_at DESC
+    SELECT
+      l.id, l.email, l.name, l.company, l.plan_interest, l.source, l.created_at,
+      COALESCE(fs_agg.estimated_credit, 0) as estimated_credit,
+      COALESCE(fs_agg.cluster_count, 0) as cluster_count,
+      fs_agg.scanned_at
+    FROM leads l
+    LEFT JOIN (
+      SELECT email, MAX(estimated_credit) as estimated_credit,
+             MAX(cluster_count) as cluster_count, MAX(created_at) as scanned_at
+      FROM free_scans GROUP BY email
+    ) fs_agg ON fs_agg.email = l.email
+    ORDER BY COALESCE(fs_agg.estimated_credit, 0) DESC, l.created_at DESC
   `).all()
 
   const escape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
 
-  const header = ['ID', 'Email', 'Name', 'Company', 'Plan Interest', 'Source', 'Created At']
+  const header = ['ID', 'Email', 'Name', 'Company', 'Plan Interest', 'Source', 'Estimated Credit (CAD)', 'Clusters', 'Scanned At', 'Lead Captured At']
   const lines  = [
     header.join(','),
     ...rows.map(r => [
@@ -106,6 +177,9 @@ router.get('/export', requireAuth, requireAdmin, (req, res) => {
       escape(r.company),
       escape(r.plan_interest),
       escape(r.source),
+      escape(r.estimated_credit ? Math.round(r.estimated_credit) : ''),
+      escape(r.cluster_count || ''),
+      escape(r.scanned_at || ''),
       escape(r.created_at),
     ].join(',')),
   ]

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { ShieldCheck, ChevronDown, Loader2, AlertCircle, FlaskConical } from 'lucide-react'
 import { useAuth, DEMO_PERSONAS } from '../context/AuthContext'
 import Button from '../components/ui/Button'
@@ -171,7 +171,15 @@ export default function LoginPage() {
           )}
 
           {/* Footer note */}
-          <div className="mt-5 pt-4 border-t border-gray-100">
+          <div className="mt-5 pt-4 border-t border-gray-100 space-y-2">
+            {mode === 'real' && (
+              <p className="text-xs text-gray-500 text-center">
+                Don\u2019t have an account?{' '}
+                <Link to="/signup" className="text-indigo-600 hover:underline font-medium">
+                  Create one free →
+                </Link>
+              </p>
+            )}
             <p className="text-[10px] text-gray-400 text-center leading-relaxed">
               {mode === 'demo'
                 ? 'Demo mode uses synthetic data. No data is sent to a server.'

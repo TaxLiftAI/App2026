@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -55,17 +55,33 @@ export default function DashboardPage() {
     }
   }, [clusters])
 
-  // Pending free scan auto-association banner
+  // Pending free scan — load from sessionStorage, then auto-associate with account
   const [pendingScan, setPendingScan] = useState(null)
+  const associatedRef = useRef(false) // prevent double-fire in StrictMode
+
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem('taxlift_scan_results')
-      if (raw) {
-        const scan = JSON.parse(raw)
-        if (scan && scan.clusters?.length > 0) setPendingScan(scan)
-      }
+      if (!raw) return
+      const scan = JSON.parse(raw)
+      if (scan?.clusters?.length > 0) setPendingScan(scan)
     } catch { /* ignore */ }
   }, [])
+
+  // When a real (non-demo) user lands on the dashboard with a pending scan,
+  // associate the scan with their account so it appears in the admin view.
+  useEffect(() => {
+    if (!pendingScan?.scanId) return
+    if (!currentUser?.id || !currentUser?._fromApi) return // real API user only
+    if (associatedRef.current) return
+    associatedRef.current = true
+
+    fetch(`/api/scan/free/${pendingScan.scanId}/associate`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: currentUser.id }),
+    }).catch(() => { /* fire-and-forget */ })
+  }, [pendingScan, currentUser])
 
   const breakdown = useMemo(() => {
     if (!clusters) return []

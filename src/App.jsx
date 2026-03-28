@@ -32,6 +32,8 @@ import ScanLandingPage from './pages/scan/ScanLandingPage'
 import ScanReposPage   from './pages/scan/ScanReposPage'
 import ScanRunningPage from './pages/scan/ScanRunningPage'
 import ScanResultsPage from './pages/scan/ScanResultsPage'
+import PricingPage         from './pages/PricingPage'
+import SignupPage          from './pages/SignupPage'
 import CheckoutSuccessPage from './pages/CheckoutSuccessPage'
 import CheckoutCancelPage  from './pages/CheckoutCancelPage'
 import AdminLeadsPage      from './pages/AdminLeadsPage'
@@ -246,6 +248,8 @@ function AppRoutes() {
       } />
 
       {/* Public routes — no auth required */}
+      <Route path="/pricing"  element={<PricingPage />} />
+      <Route path="/signup"   element={<SignupPage />} />
       <Route path="/estimate" element={<EstimatorPage />} />
       <Route path="/share/:token" element={<ShareableSummaryPage />} />
       <Route path="/cpa-review/:token" element={<CpaReviewPage />} />
