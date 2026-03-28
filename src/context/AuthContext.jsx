@@ -13,7 +13,7 @@ import { auth as authApi, token as tokenStore, ApiError } from '../lib/api'
 
 const AuthContext = createContext(null)
 
-// ─── Demo personas ────────────────────────────────────────────────────────────
+// ─── Demo personas ─────────────────────────────────────────────────────────────────────────────────
 export const DEMO_PERSONAS = [
   { label: 'Sarah Chen — Admin',     userId: 'u-001', role: 'Admin'    },
   { label: 'Marcus Reid — Reviewer', userId: 'u-002', role: 'Reviewer' },
@@ -34,9 +34,11 @@ function normaliseRole(role) {
 
 // Shape a backend /me response into the same object shape as mock USERS
 function shapeBackendUser(me) {
+  const displayName = me.full_name || me.email || 'User'
   return {
     id:                   me.id,
-    name:                 me.full_name ?? me.email,
+    name:                 displayName,
+    display_name:         displayName,
     email:                me.email,
     role:                 normaliseRole(me.role),
     tenant_id:            me.tenant_id,
@@ -53,7 +55,7 @@ export function AuthProvider({ children }) {
   const [authLoading, setAuthLoading]   = useState(true)   // true during initial session restore
   const [authError,   setAuthError]     = useState(null)
 
-  // ── Restore session from stored JWT on mount ──────────────────────────────
+  // ── Restore session from stored JWT on mount ────────────────────────────────────────────────
   useEffect(() => {
     const stored = tokenStore.get()
     if (!stored) {
@@ -72,7 +74,7 @@ export function AuthProvider({ children }) {
       .finally(() => setAuthLoading(false))
   }, [])
 
-  // ── Real login ────────────────────────────────────────────────────────────
+  // ── Real login ──────────────────────────────────────────────────────────────────────────────
   const loginWithCredentials = useCallback(async (email, password) => {
     setAuthError(null)
     try {
@@ -92,7 +94,7 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  // ── Register new account ──────────────────────────────────────────────────
+  // ── Register new account ──────────────────────────────────────────────────────────────────────
   const register = useCallback(async ({ email, password, full_name = '', firm_name = '' }) => {
     setAuthError(null)
     try {
@@ -111,7 +113,7 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  // ── Demo / mock login ─────────────────────────────────────────────────────
+  // ── Demo / mock login ─────────────────────────────────────────────────────────────────
   const loginDemo = useCallback((userId) => {
     const user = USERS.find(u => u.id === userId)
     if (user) {
@@ -122,7 +124,7 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  // ── Logout ────────────────────────────────────────────────────────────────
+  // ── Logout ────────────────────────────────────────────────────────────────────────────────────
   const logout = useCallback(() => {
     tokenStore.clear()
     setCurrentUser(null)
@@ -130,7 +132,7 @@ export function AuthProvider({ children }) {
     setAuthError(null)
   }, [])
 
-  // ── Refresh current user from /me ────────────────────────────────────────
+  // ── Refresh current user from /me ────────────────────────────────────────────────
   const refreshUser = useCallback(async () => {
     try {
       const me = await authApi.me()
