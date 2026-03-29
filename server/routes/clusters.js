@@ -1,8 +1,9 @@
 /**
  * Cluster routes
- *   GET  /api/clusters/:id      — get cluster detail
- *   PUT  /api/clusters/:id      — update cluster (narrative edits, status)
- *   POST /api/clusters          — create cluster under a client
+ *   GET  /api/clusters          -- list clusters for the logged-in user (via clients)
+ *   GET  /api/clusters/:id      -- get cluster detail
+ *   PUT  /api/clusters/:id      -- update cluster (narrative edits, status)
+ *   POST /api/clusters          -- create cluster under a client
  */
 const router = require('express').Router()
 const { v4: uuid } = require('../utils/uuid')
@@ -11,7 +12,27 @@ const { requireAuth } = require('../middleware/auth')
 
 router.use(requireAuth)
 
-// ── GET /api/clusters/:id ─────────────────────────────────────────────────────
+// -- GET /api/clusters (list) -------------------------------------------------
+router.get('/', (req, res) => {
+  const { status, limit = 200 } = req.query
+  let sql = `
+    SELECT cl.*, c.company_name, c.industry
+    FROM clusters cl
+    JOIN clients c ON cl.client_id = c.id
+    WHERE c.user_id = ?
+  `
+  const params = [req.user.id]
+  if (status && status !== 'All') {
+    sql += ' AND cl.status = ?'
+    params.push(status)
+  }
+  sql += ' ORDER BY cl.created_at DESC LIMIT ?'
+  params.push(Number(limit) || 200)
+  const rows = db.prepare(sql).all(...params)
+  res.json(rows)
+})
+
+// -- GET /api/clusters/:id ----------------------------------------------------
 router.get('/:id', (req, res) => {
   const cluster = db.prepare(`
     SELECT cl.*, c.company_name, c.industry, c.user_id
@@ -24,7 +45,7 @@ router.get('/:id', (req, res) => {
   res.json(cluster)
 })
 
-// ── POST /api/clusters ────────────────────────────────────────────────────────
+// -- POST /api/clusters -------------------------------------------------------
 router.post('/', (req, res) => {
   const { client_id, name, theme = '', hours = 0, credit_cad = 0, narrative = '' } = req.body ?? {}
 
@@ -43,14 +64,13 @@ router.post('/', (req, res) => {
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `).run(id, client_id, name.trim(), theme, Number(hours), Number(credit_cad), narrative)
 
-  // Update aggregates on the parent client
   updateClientAggregates(client_id)
 
   const cluster = db.prepare('SELECT * FROM clusters WHERE id = ?').get(id)
   res.status(201).json(cluster)
 })
 
-// ── PUT /api/clusters/:id ─────────────────────────────────────────────────────
+// -- PUT /api/clusters/:id ----------------------------------------------------
 router.put('/:id', (req, res) => {
   const cluster = db.prepare(`
     SELECT cl.*, c.user_id FROM clusters cl
@@ -70,18 +90,17 @@ router.put('/:id', (req, res) => {
     return res.status(400).json({ message: 'No updatable fields provided' })
   }
 
-  const setClauses = Object.keys(updates).map(k => `${k} = ?`).join(', ')
+  const setClauses = Object.keys(updates).map(k => k + ' = ?').join(', ')
   const values     = [...Object.values(updates), req.params.id]
-  db.prepare(`UPDATE clusters SET ${setClauses} WHERE id = ?`).run(...values)
+  db.prepare('UPDATE clusters SET ' + setClauses + ' WHERE id = ?').run(...values)
 
-  // Recompute parent client aggregates
   updateClientAggregates(cluster.client_id)
 
   const updated = db.prepare('SELECT * FROM clusters WHERE id = ?').get(req.params.id)
   res.json(updated)
 })
 
-// ── DELETE /api/clusters/:id ──────────────────────────────────────────────────
+// -- DELETE /api/clusters/:id -------------------------------------------------
 router.delete('/:id', (req, res) => {
   const cluster = db.prepare(`
     SELECT cl.client_id, c.user_id FROM clusters cl
@@ -96,7 +115,7 @@ router.delete('/:id', (req, res) => {
   res.status(204).send()
 })
 
-// ── Helper: recompute client aggregate columns ─────────────────────────────────
+// -- Helper: recompute client aggregate columns --------------------------------
 function updateClientAggregates(clientId) {
   const agg = db.prepare(`
     SELECT
