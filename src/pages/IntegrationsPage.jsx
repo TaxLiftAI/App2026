@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Github, ExternalLink, RefreshCw, AlertTriangle, CheckCircle2, Clock, XCircle, Plus } from 'lucide-react'
-import { INTEGRATIONS } from '../data/mockData'
+import { useIntegrations } from '../hooks'
 import { formatDateTime } from '../lib/utils'
 import { IntegrationBadge } from '../components/ui/Badge'
 import Card, { CardHeader } from '../components/ui/Card'
@@ -37,7 +37,7 @@ const STATUS_ICONS = {
 
 export default function IntegrationsPage() {
   const navigate = useNavigate()
-  const [integrations, setIntegrations] = useState(INTEGRATIONS)
+  const { data: integrations = [], refetch: refetchIntegrations } = useIntegrations()
   const [refreshing, setRefreshing] = useState(null)
 
   function handleRefresh(integration) {
