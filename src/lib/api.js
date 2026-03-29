@@ -112,6 +112,7 @@ export const clients = {
 
 // ── Clusters ──────────────────────────────────────────────────────────────────
 export const clusters = {
+  list:   (params)        => get('/api/clusters',     { params }),
   get:    (id)            => get(`/api/clusters/${id}`),
   create: (payload)       => post('/api/clusters',   { body: payload }),
   update: (id, payload)   => put(`/api/clusters/${id}`, { body: payload }),
