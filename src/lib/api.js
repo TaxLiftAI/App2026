@@ -142,6 +142,11 @@ export const leads = {
   export:  ()        => `${BASE_URL}/api/leads/export`, // returns URL for direct link
 }
 
+// ── Integrations ──────────────────────────────────────────────────────────────
+export const integrations = {
+  list: () => get('/api/integrations'),
+}
+
 // ── OAuth proxy ───────────────────────────────────────────────────────────────
 export const oauthProxy = {
   githubCallback:     (code, state) => get('/api/oauth/github/callback',    { params: { code, state } }),
@@ -233,4 +238,4 @@ export async function isServerReachable() {
   return _reachableCache
 }
 
-export default { auth, clients, clusters, referrals, billing, leads, oauthProxy, health, grants, token, isServerReachable }
+export default { auth, clients, clusters, referrals, billing, leads, integrations, oauthProxy, health, grants, token, isServerReachable }
