@@ -12,7 +12,10 @@ let stripePromise = null
 
 export function getStripe() {
   const key = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY
-  if (!key || key.startsWith('pk_test_placeholder')) return null
+  if (!key || key.startsWith('pk_test_placeholder')) {
+    if (import.meta.env.PROD) console.warn('[stripe] VITE_STRIPE_PUBLISHABLE_KEY is not set — Stripe Elements will be unavailable.')
+    return null
+  }
   if (!stripePromise) stripePromise = loadStripe(key)
   return stripePromise
 }
@@ -38,7 +41,7 @@ export const PLANS = {
     highlighted: false,
     badge:       null,
     grantsIncluded: false,
-    priceId:     import.meta.env.VITE_STRIPE_PRICE_STARTER ?? 'price_starter_placeholder',
+    priceId:     import.meta.env.VITE_STRIPE_PRICE_STARTER ?? null,
   },
   plus: {
     id:          'plus',
@@ -60,7 +63,7 @@ export const PLANS = {
     highlighted: true,
     badge:       'Most popular',
     grantsIncluded: true,
-    priceId:     import.meta.env.VITE_STRIPE_PRICE_PLUS ?? 'price_plus_placeholder',
+    priceId:     import.meta.env.VITE_STRIPE_PRICE_PLUS ?? null,
   },
   enterprise: {
     id:          'enterprise',
