@@ -46,12 +46,13 @@ export default function DashboardPage() {
   const stats = useMemo(() => {
     if (!clusters) return { total: 0, approved: 0, pending: 0, totalHours: 0, totalCreditCAD: 0 }
     const approved = clusters.filter(c => c.status === 'Approved')
+    const pipeline = clusters.filter(c => !['Rejected', 'Merged'].includes(c.status))
     return {
       total: clusters.length,
       approved: approved.length,
       pending: clusters.filter(c => !['Approved','Rejected','Merged'].includes(c.status)).length,
-      totalHours: approved.reduce((s, c) => s + (c.aggregate_time_hours ?? 0), 0),
-      totalCreditCAD: approved.reduce((s, c) => s + (c.estimated_credit_cad ?? 0), 0),
+      totalHours: pipeline.reduce((s, c) => s + (c.aggregate_time_hours ?? 0), 0),
+      totalCreditCAD: pipeline.reduce((s, c) => s + (c.estimated_credit_cad ?? 0), 0),
     }
   }, [clusters])
 
@@ -200,7 +201,7 @@ export default function DashboardPage() {
         <StatCard
           label="Total Eligible Hours"
           value={formatHours(stats.totalHours)}
-          sub="across approved clusters"
+          sub="across all pipeline clusters"
           icon={Clock}
           iconColor="text-blue-600"
           iconBg="bg-blue-50"
@@ -208,7 +209,7 @@ export default function DashboardPage() {
         <StatCard
           label="Estimated Credit (CAD)"
           value={formatCurrency(stats.totalCreditCAD)}
-          sub="approved & calculated"
+          sub="pipeline estimate"
           icon={DollarSign}
           iconColor="text-emerald-600"
           iconBg="bg-emerald-50"
