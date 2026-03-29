@@ -74,6 +74,7 @@ router.post('/login', async (req, res) => {
       id:                   user.id,
       email:                user.email,
       full_name:            user.full_name,
+      display_name:         user.full_name,
       firm_name:            user.firm_name,
       role:                 user.role,
       tenant_id:            user.tenant_id,
@@ -92,7 +93,7 @@ router.get('/me', requireAuth, (req, res) => {
   if (!user) {
     return res.status(404).json({ message: 'User not found' })
   }
-  res.json(user)
+  res.json({ ...user, display_name: user.full_name })
 })
 
 // ── PATCH /api/auth/onboarding-complete ──────────────────────────────────────
@@ -101,7 +102,7 @@ router.patch('/onboarding-complete', requireAuth, (req, res) => {
   const user = db.prepare(
     'SELECT id, email, full_name, firm_name, role, tenant_id, onboarding_completed, created_at FROM users WHERE id = ?'
   ).get(req.user.id)
-  res.json(user)
+  res.json({ ...user, display_name: user.full_name })
 })
 
 // ── PATCH /api/auth/profile ───────────────────────────────────────────────────
