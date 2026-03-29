@@ -111,7 +111,7 @@ export default function UsersPage() {
                 <td className="px-5 py-3.5">
                   <div className="flex items-center gap-3">
                     <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-700 flex-shrink-0">
-                      {user.display_name.charAt(0)}
+                      {user.display_name?.charAt(0)?.toUpperCase() ?? '?'}
                     </div>
                     <span className="text-sm font-medium text-gray-900">{user.display_name}</span>
                   </div>
