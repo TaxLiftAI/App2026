@@ -77,15 +77,12 @@ app.use('/api/proposals',  require('./routes/proposals'))
 app.use('/api/integrations', require('./routes/integrations'))
 app.use('/api/admin',      require('./routes/admin'))
 
-// ── Health check ──────────────────────────────────────────────────────────────
-app.get('/health', (req, res) => {
-  res.json({
-    status:    'ok',
-    service:   'taxlift-api',
-    version:   '1.0.0',
-    timestamp: new Date().toISOString(),
-  })
-})
+// ── Health check (both /health and /api/health are valid) ────────────────────
+function healthHandler(_req, res) {
+  res.json({ status: 'ok', service: 'taxlift-api', version: '1.0.0', timestamp: new Date().toISOString() })
+}
+app.get('/health',     healthHandler)
+app.get('/api/health', healthHandler)
 
 // ── 404 handler ───────────────────────────────────────────────────────────────
 app.use((req, res) => {
@@ -117,7 +114,11 @@ app.listen(PORT, () => {
   console.log(`    GET  /health                          → health check\n`)
 
   if (!process.env.JWT_SECRET) {
-    console.warn('⚠️   JWT_SECRET not set — using insecure default. Set it in server/.env for production.')
+    if (process.env.NODE_ENV === 'production') {
+      console.error('❌ FATAL: JWT_SECRET is not set. Refusing to start without a secure secret — add it to Railway Variables.')
+      process.exit(1)
+    }
+    console.warn('⚠️  JWT_SECRET not set — using insecure default. Set it in server/.env for local dev.')
     process.env.JWT_SECRET = 'taxlift-dev-secret-change-me-in-production'
   }
   if (!process.env.GITHUB_CLIENT_ID) {
