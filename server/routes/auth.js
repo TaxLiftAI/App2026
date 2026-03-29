@@ -20,6 +20,9 @@ router.post('/register', async (req, res) => {
   if (password.length < 8) {
     return res.status(400).json({ message: 'Password must be at least 8 characters' })
   }
+  if (!/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+    return res.status(400).json({ message: 'Password must contain at least one uppercase letter and one number' })
+  }
 
   const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase())
   if (existing) {
@@ -41,7 +44,7 @@ router.post('/register', async (req, res) => {
   const user  = db.prepare('SELECT id, email, full_name, firm_name, role, tenant_id, onboarding_completed, created_at FROM users WHERE id = ?').get(id)
   const token = signToken({ id: user.id, email: user.email, role: user.role, tenant_id: user.tenant_id })
 
-  res.status(201).json({ access_token: token, token_type: 'bearer', user })
+  res.status(201).json({ access_token: token, token_type: 'bearer', user: { ...user, display_name: user.full_name } })
 })
 
 // ── POST /api/auth/login ──────────────────────────────────────────────────────
