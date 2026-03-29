@@ -13,10 +13,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ShieldCheck, CheckCircle2, Loader2 } from 'lucide-react'
-import { getStoredToken } from '../../lib/oauthConfig'
-import { scanCommits }    from '../../lib/sredScanner'
+import { getStoredToken }   from '../../lib/oauthConfig'
+import { scanCommits, scoreMessageOnly } from '../../lib/sredScanner'
 
-// ── Demo fallback data ────────────────────────────────────────────────────────
+// Max per-commit detail fetches per repo — stays well within GitHub's 60 req/min
+// unauthenticated or 5000/hr authenticated rate limit.
+const MAX_DIFF_FETCHES = 30
+
+// ── Demo fallback data ────────────────────────────────────────────────────────────────────────────
 // Shown when GitHub is unreachable / token not available.
 const DEMO_RESULTS = {
   clusters: [
@@ -75,7 +79,7 @@ const DEMO_RESULTS = {
   is_demo: true,
 }
 
-// ── Progress steps ────────────────────────────────────────────────────────────
+// ── Progress steps ──────────────────────────────────────────────────────────────────────────────
 const STEPS = [
   { label: 'Connecting to GitHub',           sub: 'Verifying OAuth token…' },
   { label: 'Scanning commits',               sub: 'Fetching recent commit history…' },
@@ -101,7 +105,7 @@ export default function ScanRunningPage() {
     const email = localStorage.getItem('taxlift_scan_email') ?? ''
     const token = getStoredToken('github')
 
-    // ── Step 0: connecting ────────────────────────────────────────────────────
+    // ── Step 0: connecting ─────────────────────────────────────────────────────────────────────────────
     setStep(0)
     await delay(600)
 
@@ -110,7 +114,7 @@ export default function ScanRunningPage() {
     let isDemo        = false
 
     if (!token || repos.length === 0) {
-      // ── Demo mode ─────────────────────────────────────────────────────────
+      // ── Demo mode ───────────────────────────────────────────────────────────────────────────────
       isDemo = true
       setStep(1)
       await delay(800)
@@ -121,14 +125,17 @@ export default function ScanRunningPage() {
       allClusters  = DEMO_RESULTS.clusters
       totalCommits = DEMO_RESULTS.commit_count
     } else {
-      // ── Real scan ─────────────────────────────────────────────────────────
+      // ── Real scan ───────────────────────────────────────────────────────────────────────────────
       setStep(1)
 
       for (const repoFullName of repos) {
         try {
+          const headers = { Authorization: `token ${token}`, Accept: 'application/vnd.github+json' }
+
+          // Step 1: fetch commit list (no diffs — fast)
           const res = await fetch(
             `https://api.github.com/repos/${repoFullName}/commits?per_page=200`,
-            { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github+json' } }
+            { headers }
           )
           if (!res.ok) continue
           const commits = await res.json()
@@ -137,8 +144,38 @@ export default function ScanRunningPage() {
           totalCommits += commits.length
           setStep(2)
 
+          // Step 2: pre-screen by message score, then enrich top candidates with diffs
+          // Sort by message score descending, take the top MAX_DIFF_FETCHES that score ≥ 1
+          const candidates = commits
+            .map(c => ({ c, msgScore: scoreMessageOnly(c) }))
+            .filter(({ msgScore }) => msgScore >= 1)
+            .sort((a, b) => b.msgScore - a.msgScore)
+            .slice(0, MAX_DIFF_FETCHES)
+
+          // Fetch per-commit details (files + patch) for each candidate
+          const enriched = new Map()
+          await Promise.allSettled(
+            candidates.map(async ({ c }) => {
+              try {
+                const dr = await fetch(
+                  `https://api.github.com/repos/${repoFullName}/commits/${c.sha}`,
+                  { headers }
+                )
+                if (dr.ok) {
+                  const detail = await dr.json()
+                  enriched.set(c.sha, detail)
+                }
+              } catch { /* ignore individual failures */ }
+            })
+          )
+
+          // Merge enriched diff data back into commit list
+          const enrichedCommits = commits.map(c =>
+            enriched.has(c.sha) ? { ...c, files: enriched.get(c.sha).files ?? [] } : c
+          )
+
           const repoName = repoFullName.split('/')[1]
-          const clusters = scanCommits(commits, repoName)
+          const clusters = scanCommits(enrichedCommits, repoName)
           if (clusters) allClusters.push(...clusters)
         } catch (err) {
           console.warn(`[ScanRunningPage] Failed to scan ${repoFullName}:`, err.message)
@@ -164,7 +201,7 @@ export default function ScanRunningPage() {
       await delay(500)
     }
 
-    // ── Step 4: calculate + save ──────────────────────────────────────────────
+    // ── Step 4: calculate + save ───────────────────────────────────────────────────────────────────────
     setStep(4)
 
     const totalHours  = allClusters.reduce((s, c) => s + (c.aggregate_time_hours ?? 0), 0)
