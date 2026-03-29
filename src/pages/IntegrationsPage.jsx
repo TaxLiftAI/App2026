@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Github, ExternalLink, RefreshCw, AlertTriangle, CheckCircle2, Clock, XCircle, Plus } from 'lucide-react'
 import { useIntegrations } from '../hooks'
+import { BASE_URL } from '../lib/api'
 import { formatDateTime } from '../lib/utils'
 import { IntegrationBadge } from '../components/ui/Badge'
 import Card, { CardHeader } from '../components/ui/Card'
@@ -43,11 +44,7 @@ export default function IntegrationsPage() {
   function handleRefresh(integration) {
     setRefreshing(integration)
     setTimeout(() => {
-      setIntegrations(prev => prev.map(i =>
-        i.integration === integration
-          ? { ...i, status: 'healthy', last_sync_at: new Date().toISOString(), error_detail: null }
-          : i
-      ))
+      refetchIntegrations()
       setRefreshing(null)
     }, 1800)
   }
@@ -153,8 +150,8 @@ export default function IntegrationsPage() {
         <CardHeader title="Webhook Endpoints" subtitle="Register these URLs in your tools to enable real-time event ingestion" />
         <div className="space-y-3">
           {[
-            { label: 'GitHub Webhook', url: 'https://api.taxlift.ai/api/v1/webhooks/github' },
-            { label: 'Jira Webhook',   url: 'https://api.taxlift.ai/api/v1/webhooks/jira'   },
+            { label: 'GitHub Webhook', url: `${BASE_URL}/api/webhooks/github` },
+            { label: 'Jira Webhook',   url: `${BASE_URL}/api/webhooks/jira` },
           ].map(wh => (
             <div key={wh.label} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
               <span className="text-xs font-medium text-gray-700 w-32">{wh.label}</span>
