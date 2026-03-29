@@ -74,6 +74,7 @@ app.use('/api/referrals', require('./routes/referrals'))
 app.use('/api/grants',   require('./routes/grants'))
 app.use('/api/scan',       require('./routes/scan'))
 app.use('/api/proposals',  require('./routes/proposals'))
+app.use('/api/integrations', require('./routes/integrations'))
 app.use('/api/admin',      require('./routes/admin'))
 
 // ── Health check ──────────────────────────────────────────────────────────────
