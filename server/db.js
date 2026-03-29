@@ -240,7 +240,9 @@ function isEmpty(table) {
 }
 
 function seed() {
-  if (!isEmpty('users')) return   // already seeded
+  // Guard on a specific seeded record so the boot-time INSERT OR IGNORE
+  // for demo@taxlift.ai does not prevent the full seed from running.
+  if (db.prepare("SELECT id FROM users WHERE id = 'u-001'").get()) return
 
   const now  = new Date().toISOString()
 
@@ -290,11 +292,11 @@ function seed() {
   `)
 
   const clusters = [
-    ['clus-001','cli-001','ML Fraud Detection Pipeline',     'MachineLearning',        340,127500,'approved', 'The team undertook systematic investigation into novel ML architectures for real-time fraud detection.', '2026-01-12T00:00:00Z'],
-    ['clus-002','cli-001','Distributed Query Optimizer',     'PerformanceOptimization',280,105000,'approved', 'Systematic experimentation with query plan generation under distributed constraints.', '2026-01-25T00:00:00Z'],
-    ['clus-003','cli-001','Real-time Inference Engine',      'SystemsEngineering',     210, 78750,'in_review','',                                                                                '2026-02-05T00:00:00Z'],
-    ['clus-004','cli-002','Kubernetes Auto-scaler Research', 'CloudInfrastructure',    180, 67500,'approved', 'Investigation into predictive horizontal pod autoscaling using custom metrics.', '2026-01-10T00:00:00Z'],
-    ['clus-005','cli-002','Zero-downtime Migration Protocol','SystemsEngineering',     120, 45000,'approved', 'Developed novel online schema migration tooling for PostgreSQL under sustained write load.', '2026-01-20T00:00:00Z'],
+    ['clus-001','cli-001','ML Fraud Detection Pipeline',     'MachineLearning',        340,127500,'Approved', 'The team undertook systematic investigation into novel ML architectures for real-time fraud detection.', '2026-01-12T00:00:00Z'],
+    ['clus-002','cli-001','Distributed Query Optimizer',     'PerformanceOptimization',280,105000,'Approved', 'Systematic experimentation with query plan generation under distributed constraints.', '2026-01-25T00:00:00Z'],
+    ['clus-003','cli-001','Real-time Inference Engine',      'SystemsEngineering',     210, 78750,'In Review','',                                                                                '2026-02-05T00:00:00Z'],
+    ['clus-004','cli-002','Kubernetes Auto-scaler Research', 'CloudInfrastructure',    180, 67500,'Approved', 'Investigation into predictive horizontal pod autoscaling using custom metrics.', '2026-01-10T00:00:00Z'],
+    ['clus-005','cli-002','Zero-downtime Migration Protocol','SystemsEngineering',     120, 45000,'Approved', 'Developed novel online schema migration tooling for PostgreSQL under sustained write load.', '2026-01-20T00:00:00Z'],
   ]
   clusters.forEach(c => insertCluster.run(...c))
 
