@@ -9,7 +9,7 @@ import { useApiData, useMutation } from './useApi'
 import * as api from '../lib/api'
 import {
   CLUSTERS, EVIDENCE_SNAPSHOTS, NARRATIVES, DOCUMENTS,
-  USERS, getVaultStats,
+  USERS, getVaultStats, INTEGRATIONS,
 } from '../data/mockData'
 
 // ─── Helper: normalise a backend cluster to the same shape as mock data ────────
@@ -244,4 +244,12 @@ export function useVaultStats() {
     }
   }, [docs])
   return { data: stats, loading, usingMock }
+}
+
+// ─── Integrations ─────────────────────────────────────────────────────────────
+export function useIntegrations() {
+  return useApiData(
+    () => api.integrations.list(),
+    INTEGRATIONS
+  )
 }
