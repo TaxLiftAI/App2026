@@ -90,7 +90,7 @@ export default function Sidebar() {
         <div className="px-3 py-4 border-t border-slate-800">
           <div className="flex items-center gap-3 px-3 py-2">
             <div className="w-7 h-7 rounded-full bg-indigo-500 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
-              {currentUser.display_name.charAt(0)}
+              {currentUser.display_name?.charAt(0)?.toUpperCase() ?? '?'}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-white text-xs font-medium truncate">{currentUser.display_name}</p>
