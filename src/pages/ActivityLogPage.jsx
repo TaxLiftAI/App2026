@@ -252,7 +252,7 @@ export default function ActivityLogPage() {
                             {user ? (
                               <>
                                 <div className="w-4 h-4 rounded-full bg-indigo-100 flex items-center justify-center text-[9px] font-bold text-indigo-700">
-                                  {user.display_name.charAt(0)}
+                                  {user.display_name?.charAt(0)?.toUpperCase() ?? '?'}
                                 </div>
                                 <span className="font-medium text-gray-700">{user.display_name}</span>
                                 <span className="text-gray-300">·</span>
