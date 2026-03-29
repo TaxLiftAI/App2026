@@ -188,7 +188,7 @@ function InterviewStatusPanel({ clusterId }) {
           {developer && (
             <span className="flex items-center gap-1.5 text-xs text-gray-600">
               <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center text-[9px] font-bold text-white">
-                {developer.display_name.charAt(0)}
+                {developer.display_name?.charAt(0)?.toUpperCase() ?? '?'}
               </div>
               {developer.display_name}
             </span>
