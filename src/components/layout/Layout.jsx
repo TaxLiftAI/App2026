@@ -5,18 +5,18 @@ import Sidebar from './Sidebar'
 import Header from './Header'
 import CommandPalette from '../ui/CommandPalette'
 import KeyboardShortcutsModal from '../ui/KeyboardShortcutsModal'
-import { INTEGRATIONS } from '../../data/mockData'
+import { useIntegrations } from '../../hooks'
 
 // ── Integration degraded / expired banner ─────────────────────────────────────
-function IntegrationBanner({ onDismiss }) {
-  const degradedIntegrations = INTEGRATIONS.filter(
+function IntegrationBanner({ integrations = [], onDismiss }) {
+  const degradedIntegrations = integrations.filter(
     i => i.status === 'degraded' || i.status === 'expired'
   )
 
   if (degradedIntegrations.length === 0) return null
 
   const names = degradedIntegrations.map(
-    i => i.integration.charAt(0).toUpperCase() + i.integration.slice(1)
+    i => (i.integration?.charAt(0)?.toUpperCase() ?? '') + (i.integration?.slice(1) ?? '')
   )
 
   const isSingle = names.length === 1
@@ -53,6 +53,7 @@ export default function Layout({ children }) {
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const [paletteOpen, setPaletteOpen]   = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const { data: integrations = [] } = useIntegrations()
 
   // Global Cmd+K / Ctrl+K and ? listeners
   useEffect(() => {
@@ -73,7 +74,7 @@ export default function Layout({ children }) {
     return () => document.removeEventListener('keydown', handle)
   }, [])
 
-  const hasDegraded = INTEGRATIONS.some(
+  const hasDegraded = integrations.some(
     i => i.status === 'degraded' || i.status === 'expired'
   )
   const showBanner = hasDegraded && !bannerDismissed
@@ -86,7 +87,7 @@ export default function Layout({ children }) {
       <KeyboardShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
 
       {showBanner && (
-        <IntegrationBanner onDismiss={() => setBannerDismissed(true)} />
+        <IntegrationBanner integrations={integrations} onDismiss={() => setBannerDismissed(true)} />
       )}
 
       {/* pt-14 = header height (3.5rem). When banner shows, add h-10 (2.5rem) → pt-24 = 6rem */}
