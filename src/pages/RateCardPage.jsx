@@ -80,7 +80,7 @@ function RateCardRow({ user, initialCard, onSave }) {
       <td className="px-5 py-3.5">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
-            {user.display_name.charAt(0)}
+            {user.display_name?.charAt(0)?.toUpperCase() ?? '?'}
           </div>
           <div>
             <p className="text-sm font-medium text-gray-900">{user.display_name}</p>
