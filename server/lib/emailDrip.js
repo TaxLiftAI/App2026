@@ -332,7 +332,7 @@ async function sendDripEmail(row) {
   if (!transport) {
     // No SMTP config — log only
     console.log(`[emailDrip] [LOG-ONLY] Would send step ${row.sequence_step} to ${row.email}: "${mail.subject}"`)
-    db.prepare(`UPDATE drip_emails SET status = 'sent', sent_at = ? WHERE id = ?`)
+    db.prepare(`UPDATE drip_emails SET status = 'skipped', sent_at = ? WHERE id = ?`)
       .run(new Date().toISOString(), row.id)
     return
   }
@@ -390,6 +390,9 @@ function startDripScheduler() {
     processPendingEmails().catch(err => console.error('[emailDrip] poll error:', err.message))
   }, POLL_INTERVAL_MS)
 
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
+    console.warn('[emailDrip] ⚠️  SMTP not configured (SMTP_HOST/SMTP_USER/SMTP_PASS missing) — emails will be logged but NOT delivered. Set these in Railway Variables.')
+  }
   console.log(`[emailDrip] Scheduler started — polling every ${POLL_INTERVAL_MS / 60000} minutes`)
 }
 
