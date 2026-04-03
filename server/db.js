@@ -222,6 +222,8 @@ console.log('[db] Ready —', DB_PATH)
 try { db.exec('ALTER TABLE users ADD COLUMN onboarding_completed INTEGER NOT NULL DEFAULT 0') } catch { /* already exists */ }
 try { db.exec('ALTER TABLE company_profiles ADD COLUMN tech_stack TEXT NOT NULL DEFAULT \'[]\'') }    catch { /* already exists */ }
 try { db.exec('ALTER TABLE company_profiles ADD COLUMN sred_claimed TEXT NOT NULL DEFAULT \'not_sure\'') } catch { /* already exists */ }
+// ── Grants migrations ─────────────────────────────────────────────────────────
+try { db.exec('ALTER TABLE gap_answers ADD COLUMN has_university_partner INTEGER DEFAULT NULL') } catch { /* already exists */ }
 
 // Mark all seeded demo users as having completed onboarding so they go straight to the dashboard
 db.exec("UPDATE users SET onboarding_completed = 1 WHERE id IN ('u-001','u-002','u-003','u-cpa','u-005','u-dev','u-demo')")

@@ -24,7 +24,7 @@ function getStripe() {
 // ── Price IDs map — override with real Stripe Price IDs in .env ───────────────
 const PRICE_IDS = {
   starter: process.env.STRIPE_PRICE_STARTER ?? 'price_starter_placeholder',
-  plus:    process.env.STRIPE_PRICE_PLUS    ?? 'price_plus_placeholder',
+  growth:  process.env.STRIPE_PRICE_GROWTH  ?? 'price_growth_placeholder',
   // enterprise handled via contact form, no Stripe ID
 }
 

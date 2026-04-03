@@ -1,6 +1,6 @@
 /**
  * S3 — Gap Fill Interview
- * 4-question commercial context interview.
+ * 5-question commercial context interview.
  * One question at a time. Progress bar.
  * Answers stored at company level — fill once, reused forever.
  */
@@ -11,8 +11,19 @@ import { grants as grantsApi } from '../../lib/api'
 
 const QUESTIONS = [
   {
-    key: 'market_desc',
+    key: 'has_university_partner',
     number: 1,
+    type: 'yesno',
+    title: 'University or College Partnership',
+    prompt: 'Do you have (or can you establish) a research partnership with a Canadian university or college?',
+    subtext: 'This unlocks Mitacs Accelerate — $15K–$60K in co-funded research internships with a 4–8 week turnaround.',
+    hint: 'Even if you don\'t have a partner today, Mitacs has a free matchmaking service at mitacs.ca. Answer yes if you\'re open to forming one.',
+    srEdNote: 'Your existing R&D project descriptions are used to match you with suitable university researchers.',
+    usedIn: 'Mitacs Accelerate eligibility scoring',
+  },
+  {
+    key: 'market_desc',
+    number: 2,
     title: 'Target Market & Problem',
     prompt: 'Describe your target market and the problem you\'re solving.',
     subtext: 'Who is your ideal customer? What pain point are you addressing?',
@@ -23,7 +34,7 @@ const QUESTIONS = [
   },
   {
     key: 'revenue_model',
-    number: 2,
+    number: 3,
     title: 'Revenue Model & Traction',
     prompt: 'How does your company generate revenue?',
     subtext: 'Describe your business model and current commercial traction.',
@@ -34,7 +45,7 @@ const QUESTIONS = [
   },
   {
     key: 'canadian_benefit',
-    number: 3,
+    number: 4,
     title: 'Canadian Economic Benefit',
     prompt: 'What Canadian economic benefit does this project create?',
     subtext: 'Jobs, IP ownership, Canadian customers, export intent, partnerships.',
@@ -45,7 +56,7 @@ const QUESTIONS = [
   },
   {
     key: 'differentiation',
-    number: 4,
+    number: 5,
     title: 'Competitive Differentiation',
     prompt: 'What makes your solution unique vs. existing alternatives?',
     subtext: 'Why are existing solutions inadequate? What\'s your key advantage?',
@@ -62,7 +73,10 @@ export default function GapFillInterview() {
   const applicationId = searchParams.get('application')
 
   const [step, setStep]         = useState(0)
-  const [answers, setAnswers]   = useState({ market_desc: '', revenue_model: '', canadian_benefit: '', differentiation: '' })
+  const [answers, setAnswers]   = useState({
+    has_university_partner: null,
+    market_desc: '', revenue_model: '', canadian_benefit: '', differentiation: '',
+  })
   const [saving, setSaving]     = useState(false)
   const [saved, setSaved]       = useState(false)
   const [loading, setLoading]   = useState(true)
@@ -74,6 +88,8 @@ export default function GapFillInterview() {
       .then(existing => {
         if (existing) {
           setAnswers(prev => ({
+            has_university_partner: existing.has_university_partner != null
+              ? Boolean(existing.has_university_partner) : prev.has_university_partner,
             market_desc:      existing.market_desc      || prev.market_desc,
             revenue_model:    existing.revenue_model    || prev.revenue_model,
             canadian_benefit: existing.canadian_benefit || prev.canadian_benefit,
@@ -87,8 +103,11 @@ export default function GapFillInterview() {
 
   const currentQ = QUESTIONS[step]
   const isLastStep = step === QUESTIONS.length - 1
-  const currentAnswer = answers[currentQ.key] || ''
-  const canAdvance = currentAnswer.trim().length >= 20
+  const currentAnswer = answers[currentQ.key] ?? ''
+  const isYesNo = currentQ.type === 'yesno'
+  const canAdvance = isYesNo
+    ? currentAnswer !== null && currentAnswer !== ''
+    : String(currentAnswer).trim().length >= 20
 
   function handleChange(val) {
     setAnswers(prev => ({ ...prev, [currentQ.key]: val }))
@@ -138,7 +157,7 @@ export default function GapFillInterview() {
           </button>
           <div>
             <h1 className="text-lg font-bold text-gray-900">Gap Fill Interview</h1>
-            <p className="text-xs text-gray-500">4 questions · answers saved permanently · reused for all future applications</p>
+            <p className="text-xs text-gray-500">5 questions · answers saved permanently · reused for all future applications</p>
           </div>
         </div>
 
@@ -186,24 +205,51 @@ export default function GapFillInterview() {
             <span><strong>SR&ED reused:</strong> {currentQ.srEdNote}</span>
           </div>
 
-          <textarea
-            value={currentAnswer}
-            onChange={e => handleChange(e.target.value)}
-            rows={5}
-            placeholder={currentQ.placeholder}
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-          />
+          {isYesNo ? (
+            <div className="flex gap-3">
+              {[{ val: true, label: 'Yes', desc: 'We have or can establish a university partnership' },
+                { val: false, label: 'No', desc: 'Not currently applicable for us' }].map(opt => (
+                <button
+                  key={String(opt.val)}
+                  onClick={() => handleChange(opt.val)}
+                  className={`flex-1 flex flex-col items-center gap-1.5 px-4 py-4 rounded-xl border-2 text-sm font-semibold transition-all ${
+                    currentAnswer === opt.val
+                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-indigo-300'
+                  }`}
+                >
+                  <span className="text-xl">{opt.val ? '✓' : '✗'}</span>
+                  <span>{opt.label}</span>
+                  <span className="text-xs font-normal text-gray-500 text-center">{opt.desc}</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <textarea
+              value={currentAnswer}
+              onChange={e => handleChange(e.target.value)}
+              rows={5}
+              placeholder={currentQ.placeholder}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
+          )}
 
           <div className="flex items-center justify-between text-xs">
-            <span className={currentAnswer.length < 20 ? 'text-gray-400' : 'text-green-600'}>
-              {currentAnswer.trim().split(/\s+/).filter(Boolean).length} words
-              {currentAnswer.length < 20 && ' (minimum 20 characters)'}
-            </span>
+            {isYesNo ? (
+              <span className={currentAnswer !== null && currentAnswer !== '' ? 'text-green-600' : 'text-gray-400'}>
+                {currentAnswer !== null && currentAnswer !== '' ? 'Answer selected ✓' : 'Select an option above'}
+              </span>
+            ) : (
+              <span className={String(currentAnswer).length < 20 ? 'text-gray-400' : 'text-green-600'}>
+                {String(currentAnswer).trim().split(/\s+/).filter(Boolean).length} words
+                {String(currentAnswer).length < 20 && ' (minimum 20 characters)'}
+              </span>
+            )}
             <button
               onClick={() => setShowHint(!showHint)}
               className="flex items-center gap-1 text-gray-400 hover:text-indigo-500"
             >
-              <Info size={12} /> {showHint ? 'Hide' : 'Show'} example
+              <Info size={12} /> {showHint ? 'Hide' : 'Show'} {isYesNo ? 'tip' : 'example'}
             </button>
           </div>
 

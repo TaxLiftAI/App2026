@@ -13,12 +13,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ShieldCheck, CheckCircle2, Loader2 } from 'lucide-react'
-import { getStoredToken }   from '../../lib/oauthConfig'
-import { scanCommits, scoreMessageOnly } from '../../lib/sredScanner'
-
-// Max per-commit detail fetches per repo — stays well within GitHub's 60 req/min
-// unauthenticated or 5000/hr authenticated rate limit.
-const MAX_DIFF_FETCHES = 30
+import { getStoredToken } from '../../lib/oauthConfig'
+import { scanCommits }    from '../../lib/sredScanner'
 
 // ── Demo fallback data ────────────────────────────────────────────────────────────────────────────
 // Shown when GitHub is unreachable / token not available.
@@ -130,12 +126,9 @@ export default function ScanRunningPage() {
 
       for (const repoFullName of repos) {
         try {
-          const headers = { Authorization: `token ${token}`, Accept: 'application/vnd.github+json' }
-
-          // Step 1: fetch commit list (no diffs — fast)
           const res = await fetch(
             `https://api.github.com/repos/${repoFullName}/commits?per_page=200`,
-            { headers }
+            { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github+json' } }
           )
           if (!res.ok) continue
           const commits = await res.json()
@@ -144,38 +137,8 @@ export default function ScanRunningPage() {
           totalCommits += commits.length
           setStep(2)
 
-          // Step 2: pre-screen by message score, then enrich top candidates with diffs
-          // Sort by message score descending, take the top MAX_DIFF_FETCHES that score ≥ 1
-          const candidates = commits
-            .map(c => ({ c, msgScore: scoreMessageOnly(c) }))
-            .filter(({ msgScore }) => msgScore >= 1)
-            .sort((a, b) => b.msgScore - a.msgScore)
-            .slice(0, MAX_DIFF_FETCHES)
-
-          // Fetch per-commit details (files + patch) for each candidate
-          const enriched = new Map()
-          await Promise.allSettled(
-            candidates.map(async ({ c }) => {
-              try {
-                const dr = await fetch(
-                  `https://api.github.com/repos/${repoFullName}/commits/${c.sha}`,
-                  { headers }
-                )
-                if (dr.ok) {
-                  const detail = await dr.json()
-                  enriched.set(c.sha, detail)
-                }
-              } catch { /* ignore individual failures */ }
-            })
-          )
-
-          // Merge enriched diff data back into commit list
-          const enrichedCommits = commits.map(c =>
-            enriched.has(c.sha) ? { ...c, files: enriched.get(c.sha).files ?? [] } : c
-          )
-
           const repoName = repoFullName.split('/')[1]
-          const clusters = scanCommits(enrichedCommits, repoName)
+          const clusters = scanCommits(commits, repoName)
           if (clusters) allClusters.push(...clusters)
         } catch (err) {
           console.warn(`[ScanRunningPage] Failed to scan ${repoFullName}:`, err.message)

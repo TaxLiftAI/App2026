@@ -34,11 +34,9 @@ function normaliseRole(role) {
 
 // Shape a backend /me response into the same object shape as mock USERS
 function shapeBackendUser(me) {
-  const displayName = me.full_name || me.email || 'User'
   return {
     id:                   me.id,
-    name:                 displayName,
-    display_name:         displayName,
+    name:                 me.full_name ?? me.email,
     email:                me.email,
     role:                 normaliseRole(me.role),
     tenant_id:            me.tenant_id,

@@ -23,9 +23,7 @@
  */
 
 // ── Minimum score to count a commit as SR&ED-qualifying ───────────────────────
-export const QUALIFY_THRESHOLD          = 3   // full scoring (msg + files + diff)
-export const QUALIFY_THRESHOLD_MSG_ONLY = 2   // message-only scoring (no diff available)
-export const WEAK_SIGNAL_THRESHOLD      = 1   // borderline — shown as "potential" cluster
+export const QUALIFY_THRESHOLD = 3
 
 // ── SR&ED signal keywords ──────────────────────────────────────────────────────
 // Sourced from CRA SR&ED terminology and common engineering language that signals
@@ -37,83 +35,50 @@ export const SRED_KEYWORDS = [
   'prototype', 'proof of concept', 'poc', 'spike',
   'uncertain', 'uncertainty', 'unknown', 'undefined behavior', 'unpredictable',
   'feasibility', 'feasible', 'evaluate', 'evaluating',
-  'trial', 'attempt', 'ablation', 'ablation study',
 
   // Research language
   'research', 'r&d', 'novel', 'innovative', 'new approach',
   'breakthrough', 'first-of-its-kind', 'state of the art',
   'literature review', 'peer-reviewed', 'academic',
-  'baseline', 'evaluation', 'systematic', 'investigation',
-  'exploration', 'feasibility study', 'proof of value',
-
-  // LLM / Generative AI (modern high-value terms)
-  'llm', 'large language model', 'gpt', 'claude', 'gemini', 'llama',
-  'generative ai', 'gen ai', 'foundation model', 'language model',
-  'prompt engineering', 'prompt tuning', 'prompt optimization',
-  'rag', 'retrieval augmented', 'retrieval-augmented',
-  'agent', 'agentic', 'multi-agent', 'tool use', 'function calling',
-  'context window', 'token limit', 'hallucination', 'grounding',
-  'chain of thought', 'few-shot', 'zero-shot', 'in-context learning',
-  'fine-tune', 'fine-tuning', 'lora', 'qlora', 'peft', 'rlhf',
 
   // ML / AI (high-value, frequently qualifying)
   'machine learning', 'ml model', 'neural network', 'deep learning',
-  'transformer', 'attention mechanism', 'pre-training',
+  'transformer', 'attention mechanism', 'fine-tuning', 'pre-training',
   'reinforcement learning', 'training pipeline', 'model training',
   'nlp', 'natural language', 'computer vision', 'object detection',
   'embedding', 'vector', 'inference', 'quantization',
   'hyperparameter', 'gradient', 'backprop',
-  'vector database', 'vector store', 'semantic search', 'similarity search',
-  'diffusion model', 'stable diffusion', 'image generation',
-  'multimodal', 'vision language', 'speech recognition',
-  'model evaluation', 'eval', 'benchmark suite',
-  'overfitting', 'regularization', 'dropout', 'batch norm',
-  'data augmentation', 'synthetic data', 'dataset curation',
-  'feature engineering', 'feature extraction', 'dimensionality reduction',
-  'model compression', 'knowledge distillation', 'pruning',
-  'wasm', 'webassembly', 'edge inference', 'on-device',
 
   // Algorithm & optimization
   'algorithm', 'heuristic', 'optimization', 'optimise', 'optimize',
   'approximation', 'complexity', 'convergence', 'search space',
   'genetic algorithm', 'simulated annealing', 'monte carlo',
-  'dynamic programming', 'graph traversal', 'pathfinding',
 
   // Performance research
   'latency', 'throughput', 'bottleneck', 'profiling',
   'benchmark', 'benchmarking', 'measure performance',
   'reduce latency', 'improve throughput', 'cold start',
-  'performance regression', 'perf regression', 'tail latency',
-  'p99', 'p95', 'percentile', 'flame graph', 'cpu profile',
-  'memory leak', 'memory pressure', 'oom', 'out of memory',
 
   // Distributed systems & infrastructure research
-  'distributed system', 'consensus', 'fault tolerance',
+  'distributed system', 'consensus', 'fault tolerance', 'availability',
   'replication', 'sharding', 'partitioning', 'coordination',
   'concurrent', 'parallelism', 'race condition', 'deadlock',
   'eventual consistency', 'cap theorem', 'raft', 'paxos',
-  'idempotency', 'at-least-once', 'exactly-once', 'saga pattern',
-  'service mesh', 'circuit breaker', 'backpressure',
 
   // Security & cryptography research
   'encryption', 'cryptography', 'zero-knowledge', 'zkp',
   'homomorphic', 'differential privacy', 'secure computation',
   'vulnerability', 'exploit', 'threat model',
-  'fuzzing', 'fuzz testing', 'formal verification', 'model checking',
-  'tls', 'mtls', 'certificate pinning',
 
   // Compiler & runtime research
   'compiler', 'parser', 'codegen', 'bytecode', 'jit',
   'ahead-of-time', 'runtime', 'interpreter', 'ast', 'llvm',
-  'garbage collection', 'memory model', 'type system', 'type inference',
-  'static analysis', 'symbolic execution',
+  'garbage collection', 'memory model',
 
   // Process indicators (systematic investigation)
   'root cause', 'root cause analysis', 'intermittent', 'reproduce bug',
-  'debug unknown', 'unexpected behavior',
+  'debug unknown', 'undefined', 'unexpected behavior',
   'workaround', 'edge case', 'failure mode',
-  'non-deterministic', 'flaky', 'heisenbug',
-  'regression', 'bisect', 'debug',
 ]
 
 // ── File-path patterns that strongly suggest R&D work ─────────────────────────
@@ -175,25 +140,21 @@ const THEMES = [
   },
 ]
 
-// ── Scoring helpers ──────────────────────────────────────────────────────────────────────────────
+// ── Scoring helpers ────────────────────────────────────────────────────────────
 
 /**
- * Score commit message text (subject + body). Cap at 3 pts.
+ * Score commit message text. Cap at 3 pts.
  * Each unique keyword hit = 1 pt; very explicit terms count double.
- * Scans the full message, not just the subject line, because developers
- * frequently write terse subjects but detailed technical bodies.
  */
 function scoreMessage(msg) {
   if (!msg) return 0
-  const lower = msg.toLowerCase()   // full message — subject + body
+  const lower = msg.toLowerCase()
   let pts = 0
   for (const kw of SRED_KEYWORDS) {
     if (lower.includes(kw)) {
       // High-signal terms worth 2 pts
       const highSignal = ['experiment', 'hypothesis', 'r&d', 'proof of concept',
-        'poc', 'research', 'prototype', 'spike', 'uncertain', 'investigate',
-        'ablation', 'llm', 'rag', 'fine-tune', 'fine-tuning', 'exploratory',
-        'feasibility', 'proof of value'].includes(kw)
+        'poc', 'research', 'prototype', 'spike', 'uncertain', 'investigate'].includes(kw)
       pts += highSignal ? 2 : 1
       if (pts >= 3) return 3  // cap
     }
@@ -244,17 +205,14 @@ function scorePatch(files) {
 
 /**
  * Full commit scoring using all three dimensions.
- * When no diff/files are available (list endpoint), falls back to message-only
- * scoring with a lower effective threshold (QUALIFY_THRESHOLD_MSG_ONLY).
  *
  * @param {object} commit  GitHub commit object, optionally enriched with .files
- * @returns {{ total: number, msgScore: number, fnScore: number, patchScore: number, hasDiff: boolean }}
+ * @returns {{ total: number, msgScore: number, fnScore: number, patchScore: number }}
  */
 export function scoreCommitFull(commit) {
   const msg        = commit.commit?.message ?? commit.message ?? ''
   const files      = commit.files ?? null
-  const hasDiff    = Array.isArray(files) && files.length > 0
-  const msgScore   = scoreMessage(msg)    // full message — subject + body
+  const msgScore   = scoreMessage(msg.split('\n')[0])       // subject line only
   const fnScore    = scoreFilenames(files)
   const patchScore = scorePatch(files)
   return {
@@ -262,26 +220,16 @@ export function scoreCommitFull(commit) {
     msgScore,
     fnScore,
     patchScore,
-    hasDiff,
   }
 }
 
 /**
  * Quick message-only score — used to pre-screen commits before fetching diffs.
- * A commit scoring ≥ 1 on message alone is worth fetching the full diff for.
+ * A commit scoring ≥ 2 on message alone is worth fetching the full diff for.
  */
 export function scoreMessageOnly(commit) {
   const msg = commit.commit?.message ?? commit.message ?? ''
-  return scoreMessage(msg)
-}
-
-/**
- * Determine the qualifying threshold for a scored commit based on data availability.
- * If we have diff data, require the full QUALIFY_THRESHOLD (3).
- * If message-only, use the lower QUALIFY_THRESHOLD_MSG_ONLY (2).
- */
-export function effectiveThreshold(hasDiff) {
-  return hasDiff ? QUALIFY_THRESHOLD : QUALIFY_THRESHOLD_MSG_ONLY
+  return scoreMessage(msg.split('\n')[0])
 }
 
 function detectTheme(text) {
@@ -295,7 +243,7 @@ function detectTheme(text) {
   return best.name
 }
 
-// ── Credit estimation helpers ──────────────────────────────────────────────────────
+// ── Credit estimation helpers ──────────────────────────────────────────────────
 // Proxies only — actual T661 calculations use the proxy method with real salaries.
 
 /** Rough estimate: 2h eligible R&D per qualifying commit (conservative for CRA) */
@@ -331,14 +279,14 @@ function estimateRisk(texts) {
   return 7
 }
 
-// ── Legacy text scorer (kept for backward compat with any callers) ─────────────────
+// ── Legacy text scorer (kept for backward compat with any callers) ─────────────
 export function scoreText(text) {
   if (!text) return 0
   const lower = text.toLowerCase()
   return SRED_KEYWORDS.reduce((n, kw) => n + (lower.includes(kw) ? 1 : 0), 0)
 }
 
-// ── GitHub commit scanning ────────────────────────────────────────────────────────────────
+// ── GitHub commit scanning ─────────────────────────────────────────────────────
 /**
  * scanCommits — analyse GitHub commit objects and return SR&ED candidate clusters.
  *
@@ -356,73 +304,38 @@ export function scoreText(text) {
  */
 export function scanCommits(commits, repoName) {
   const qualifying = []
-  const weakSignal = []
 
   for (const c of commits) {
-    const { total, msgScore, fnScore, patchScore, hasDiff } = scoreCommitFull(c)
-    const threshold = effectiveThreshold(hasDiff)
-    const msg       = c.commit?.message ?? c.message ?? ''
-    const subject   = msg.split('\n')[0].slice(0, 120)
-
-    const entry = {
-      message:    subject,
-      fullMsg:    msg.slice(0, 500),
-      sha:        c.sha ?? null,
-      date:       c.commit?.author?.date ?? c.date ?? new Date().toISOString(),
-      score:      total,
-      msgScore,
-      fnScore,
-      patchScore,
-      hasDiff,
-      files:      (c.files ?? []).map(f => f.filename).filter(Boolean).slice(0, 5),
+    const { total, msgScore, fnScore, patchScore } = scoreCommitFull(c)
+    if (total >= QUALIFY_THRESHOLD) {
+      const msg = c.commit?.message ?? c.message ?? ''
+      qualifying.push({
+        message:    msg.split('\n')[0].slice(0, 120),  // subject line, capped
+        sha:        c.sha ?? null,
+        date:       c.commit?.author?.date ?? c.date ?? new Date().toISOString(),
+        score:      total,
+        msgScore,
+        fnScore,
+        patchScore,
+        files:      (c.files ?? []).map(f => f.filename).filter(Boolean).slice(0, 5),
+      })
     }
-
-    if (total >= threshold) {
-      qualifying.push(entry)
-    } else if (total >= WEAK_SIGNAL_THRESHOLD) {
-      weakSignal.push(entry)
-    }
-  }
-
-  // Group qualifying commits by theme
-  const groups = {}
-  for (const item of qualifying) {
-    const theme = detectTheme(item.fullMsg || item.message)
-    if (!groups[theme]) groups[theme] = []
-    groups[theme].push(item)
-  }
-
-  // If no qualifying commits but weak signal exists, surface a single "Potential" cluster
-  if (qualifying.length === 0 && weakSignal.length > 0) {
-    const topWeak = [...weakSignal].sort((a, b) => b.score - a.score).slice(0, 8)
-    const hours   = estimateHoursFromCommits(topWeak.length)
-    const credit  = estimateCredit(hours)
-    return [{
-      id:                   `gh-${repoName.replace(/\W+/g, '-')}-potential`,
-      business_component:   `${repoName} · Potential R&D Activity`,
-      status:               'Needs Review',
-      aggregate_time_hours: hours,
-      estimated_credit_cad: credit,
-      risk_score:           8,
-      stale_context:        false,
-      created_at:           topWeak[0]?.date ?? new Date().toISOString(),
-      _source:              'github',
-      _theme:               'Potential R&D Activity',
-      _repo:                repoName,
-      _weak:                true,
-      _signals:             topWeak.map(it => it.message),
-      _commits:             topWeak.map(it => ({ sha: it.sha, message: it.message, score: it.score, files: it.files })),
-      _commitCount:         topWeak.length,
-      _totalScore:          topWeak.reduce((s, it) => s + it.score, 0),
-    }]
   }
 
   if (qualifying.length === 0) return null
 
+  // Group by theme using commit messages
+  const groups = {}
+  for (const item of qualifying) {
+    const theme = detectTheme(item.message)
+    if (!groups[theme]) groups[theme] = []
+    groups[theme].push(item)
+  }
+
   return Object.entries(groups).map(([theme, items], i) => {
     const hours  = estimateHoursFromCommits(items.length)
     const credit = estimateCredit(hours)
-    const risk   = estimateRisk(items.map(it => it.fullMsg || it.message))
+    const risk   = estimateRisk(items.map(it => it.message))
 
     // Top 8 items by score for display, sorted highest-score first
     const topItems = [...items].sort((a, b) => b.score - a.score).slice(0, 8)
@@ -447,7 +360,7 @@ export function scanCommits(commits, repoName) {
   })
 }
 
-// ── Jira issue scanning ────────────────────────────────────────────────────────────────
+// ── Jira issue scanning ────────────────────────────────────────────────────────
 /**
  * scanIssues — analyse Jira issue objects and return SR&ED candidate clusters.
  *
@@ -497,7 +410,7 @@ export function scanIssues(issues, projectKey) {
   })
 }
 
-// ── Demo data ──────────────────────────────────────────────────────────────────────────────────
+// ── Demo data ──────────────────────────────────────────────────────────────────
 // Realistic SR&ED-qualifying commits for a SaaS company, used when OAuth token
 // exchange fails (no backend) so the scan still demonstrates real value.
 

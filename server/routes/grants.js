@@ -185,8 +185,57 @@ const GRANTS_DIRECTORY = [
       description: 'Province = Québec + qualified R&D expenditure'
     },
     sections: ['project_desc', 'innovation', 'methodology', 'cdn_benefit', 'budget', 'team']
+  },
+  {
+    grant_id: 'regional_dev',
+    grant_name: 'Regional Development Agency',
+    max_funding: 500000,
+    deadline: 'Rolling / project-based',
+    complexity: 'med',
+    eligibility_rules: {
+      requires_province: null,
+      max_employees: null,
+      min_sred_spend: 0,
+      industry_keywords: null,
+      description: 'Active SR&ED filing + Canadian HQ — agency and max funding vary by province',
+      is_rda: true,
+    },
+    sections: ['project_desc', 'innovation', 'methodology', 'cdn_benefit', 'budget']
+  },
+  {
+    grant_id: 'mitacs',
+    grant_name: 'Mitacs Accelerate',
+    max_funding: 60000,
+    deadline: 'Rolling (year-round)',
+    complexity: 'low',
+    eligibility_rules: {
+      requires_province: null,
+      max_employees: null,
+      min_sred_spend: 0,
+      industry_keywords: null,
+      description: 'Active R&D project + university or college research partnership',
+      requires_university: true,
+    },
+    sections: ['project_desc', 'methodology', 'team', 'cdn_benefit', 'budget']
   }
 ]
+
+/** Province → Regional Development Agency lookup */
+const RDA_ORGS = {
+  ON: { name: 'FedDev Ontario',                    max: 500000, note: 'Federal Economic Development Agency for Southern Ontario' },
+  BC: { name: 'PacifiCan',                         max: 500000, note: 'Pacific Economic Development Canada' },
+  AB: { name: 'PrairiesCan',                       max: 500000, note: 'Prairies Economic Development Canada' },
+  SK: { name: 'PrairiesCan',                       max: 500000, note: 'Prairies Economic Development Canada' },
+  MB: { name: 'PrairiesCan',                       max: 500000, note: 'Prairies Economic Development Canada' },
+  NB: { name: 'ACOA',                              max: 200000, note: 'Atlantic Canada Opportunities Agency' },
+  NS: { name: 'ACOA',                              max: 200000, note: 'Atlantic Canada Opportunities Agency' },
+  NL: { name: 'ACOA',                              max: 200000, note: 'Atlantic Canada Opportunities Agency' },
+  PE: { name: 'ACOA',                              max: 200000, note: 'Atlantic Canada Opportunities Agency' },
+  QC: { name: 'CED-Q',                             max: 500000, note: 'Canada Economic Development for Quebec Regions' },
+  NT: { name: 'CanNor',                            max: 250000, note: 'Canadian Northern Economic Development Agency' },
+  YT: { name: 'CanNor',                            max: 250000, note: 'Canadian Northern Economic Development Agency' },
+  NU: { name: 'CanNor',                            max: 250000, note: 'Canadian Northern Economic Development Agency' },
+}
 
 /** Section metadata */
 const SECTION_META = {
@@ -201,25 +250,41 @@ const SECTION_META = {
 }
 
 /** Rule-based eligibility scoring (fallback when no Claude API key) */
-function scoreEligibilityRules(ctx, grant) {
+function scoreEligibilityRules(ctx, grant, gapAnswers = {}) {
   const { company, total_sred_spend } = ctx
   const rules = grant.eligibility_rules
   const matched = []
   const missing = []
   let score = 0
+  let grant_name_override = null
+  let max_funding_override = null
 
-  // Province check
-  if (rules.requires_province) {
-    if (company.province === rules.requires_province) {
+  // RDA: resolve province-specific agency name and funding cap
+  if (rules.is_rda) {
+    const rda = RDA_ORGS[company.province]
+    if (rda) {
+      grant_name_override = rda.name
+      max_funding_override = rda.max
+      matched.push(`${rda.name} covers ${company.province} ✓`)
       score += 30
-      matched.push(`Province is ${company.province} ✓`)
     } else {
-      missing.push(`Province must be ${rules.requires_province} (yours: ${company.province})`)
-      return { score: 0, matched, missing, recommended: false }
+      missing.push('No Regional Development Agency found for your province')
+      return { score: 0, matched, missing, recommended: false, grant_name_override, max_funding_override }
     }
   } else {
-    score += 20
-    matched.push('All provinces eligible ✓')
+    // Province check
+    if (rules.requires_province) {
+      if (company.province === rules.requires_province) {
+        score += 30
+        matched.push(`Province is ${company.province} ✓`)
+      } else {
+        missing.push(`Province must be ${rules.requires_province} (yours: ${company.province})`)
+        return { score: 0, matched, missing, recommended: false, grant_name_override, max_funding_override }
+      }
+    } else {
+      score += 20
+      matched.push('All provinces eligible ✓')
+    }
   }
 
   // Employee count
@@ -269,6 +334,17 @@ function scoreEligibilityRules(ctx, grant) {
     matched.push('No industry restriction ✓')
   }
 
+  // University partner check (Mitacs)
+  if (rules.requires_university) {
+    if (gapAnswers.has_university_partner) {
+      score += 25
+      matched.push('University or college research partnership confirmed ✓')
+    } else {
+      missing.push('Requires a university or college research partner — Mitacs can help connect you at mitacs.ca')
+      score = Math.max(0, score - 5)
+    }
+  }
+
   // Has filed SR&ED projects
   if (ctx.projects.length > 0) {
     score += 5
@@ -278,7 +354,7 @@ function scoreEligibilityRules(ctx, grant) {
   }
 
   score = Math.min(100, Math.max(0, score))
-  return { score, matched, missing, recommended: score >= 60 }
+  return { score, matched, missing, recommended: score >= 60, grant_name_override, max_funding_override }
 }
 
 /** Call Claude API for eligibility matching (if ANTHROPIC_API_KEY set) */
@@ -565,41 +641,43 @@ router.get('/eligibility', async (req, res) => {
 
   try {
     const ctx = buildSREDContext(userId)
+    const gapAnswers = db.prepare('SELECT * FROM gap_answers WHERE user_id = ?').get(userId) || {}
 
     // Try Claude first, fall back to rule-based
     let claudeResults = await runClaudeEligibility(ctx)
 
     let eligibilityResults
     if (claudeResults && Array.isArray(claudeResults)) {
-      // Merge Claude scores with our grant directory
+      // Merge Claude scores with our grant directory; still apply RDA/Mitacs overrides rule-side
       eligibilityResults = GRANTS_DIRECTORY.map(grant => {
         const claudeResult = claudeResults.find(r => r.grant_id === grant.grant_id)
+        const ruleScoring = scoreEligibilityRules(ctx, grant, gapAnswers)
         return {
-          grant_id: grant.grant_id,
-          grant_name: grant.grant_name,
-          max_funding: grant.max_funding,
-          deadline: grant.deadline,
-          complexity: grant.complexity,
-          match_score: claudeResult?.match_score ?? 0,
+          grant_id:        grant.grant_id,
+          grant_name:      ruleScoring.grant_name_override ?? grant.grant_name,
+          max_funding:     ruleScoring.max_funding_override ?? grant.max_funding,
+          deadline:        grant.deadline,
+          complexity:      grant.complexity,
+          match_score:     claudeResult?.match_score ?? 0,
           matched_criteria: claudeResult?.matched_criteria ?? [],
-          missing_fields: claudeResult?.missing_fields ?? [],
-          recommended: claudeResult?.recommended ?? false,
+          missing_fields:  claudeResult?.missing_fields ?? [],
+          recommended:     claudeResult?.recommended ?? false,
         }
       })
     } else {
       // Rule-based fallback
       eligibilityResults = GRANTS_DIRECTORY.map(grant => {
-        const scoring = scoreEligibilityRules(ctx, grant)
+        const scoring = scoreEligibilityRules(ctx, grant, gapAnswers)
         return {
-          grant_id: grant.grant_id,
-          grant_name: grant.grant_name,
-          max_funding: grant.max_funding,
-          deadline: grant.deadline,
-          complexity: grant.complexity,
-          match_score: scoring.score,
+          grant_id:        grant.grant_id,
+          grant_name:      scoring.grant_name_override ?? grant.grant_name,
+          max_funding:     scoring.max_funding_override ?? grant.max_funding,
+          deadline:        grant.deadline,
+          complexity:      grant.complexity,
+          match_score:     scoring.score,
           matched_criteria: scoring.matched,
-          missing_fields: scoring.missing,
-          recommended: scoring.recommended,
+          missing_fields:  scoring.missing,
+          recommended:     scoring.recommended,
         }
       })
     }
@@ -641,29 +719,39 @@ router.get('/eligibility', async (req, res) => {
 // GET /api/grants/gap-answers
 router.get('/gap-answers', (req, res) => {
   const answers = db.prepare('SELECT * FROM gap_answers WHERE user_id = ?').get(req.user.id)
-  res.json(answers || { user_id: req.user.id, market_desc: null, revenue_model: null, canadian_benefit: null, differentiation: null })
+  res.json(answers || {
+    user_id: req.user.id,
+    market_desc: null, revenue_model: null, canadian_benefit: null,
+    differentiation: null, has_university_partner: null,
+  })
 })
 
 // POST /api/grants/gap-answers
 router.post('/gap-answers', (req, res) => {
-  const { market_desc, revenue_model, canadian_benefit, differentiation } = req.body ?? {}
+  const { market_desc, revenue_model, canadian_benefit, differentiation, has_university_partner } = req.body ?? {}
   const userId = req.user.id
   const now = new Date().toISOString()
+  // Convert boolean to integer for SQLite
+  const uniPartner = has_university_partner == null ? null : (has_university_partner ? 1 : 0)
 
   const existing = db.prepare('SELECT id FROM gap_answers WHERE user_id = ?').get(userId)
 
   if (existing) {
     db.prepare(`
       UPDATE gap_answers
-      SET market_desc = ?, revenue_model = ?, canadian_benefit = ?, differentiation = ?, updated_at = ?
+      SET market_desc = ?, revenue_model = ?, canadian_benefit = ?, differentiation = ?,
+          has_university_partner = ?, updated_at = ?
       WHERE user_id = ?
-    `).run(market_desc || null, revenue_model || null, canadian_benefit || null, differentiation || null, now, userId)
+    `).run(market_desc || null, revenue_model || null, canadian_benefit || null,
+           differentiation || null, uniPartner, now, userId)
   } else {
     const id = uuid()
     db.prepare(`
-      INSERT INTO gap_answers (id, user_id, market_desc, revenue_model, canadian_benefit, differentiation, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(id, userId, market_desc || null, revenue_model || null, canadian_benefit || null, differentiation || null, now)
+      INSERT INTO gap_answers
+        (id, user_id, market_desc, revenue_model, canadian_benefit, differentiation, has_university_partner, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, userId, market_desc || null, revenue_model || null,
+           canadian_benefit || null, differentiation || null, uniPartner, now)
   }
 
   const answers = db.prepare('SELECT * FROM gap_answers WHERE user_id = ?').get(userId)
