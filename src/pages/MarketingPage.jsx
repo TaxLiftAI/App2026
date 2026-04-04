@@ -362,6 +362,239 @@ function DashboardMockup() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SR&ED Credit Calculator Widget
+// ─────────────────────────────────────────────────────────────────────────────
+const REVENUE_BANDS = [
+  { label: 'Pre-revenue', salary: 85_000 },
+  { label: '< $1M',       salary: 95_000 },
+  { label: '$1M – $5M',   salary: 110_000 },
+  { label: '$5M – $20M',  salary: 125_000 },
+  { label: '$20M+',       salary: 135_000 },
+]
+
+const CALC_PROVINCES = [
+  { code: 'ON', name: 'Ontario',          rate: 0.08  },
+  { code: 'BC', name: 'British Columbia', rate: 0.10  },
+  { code: 'QC', name: 'Québec',           rate: 0.14  },
+  { code: 'AB', name: 'Alberta',          rate: 0.0   },
+  { code: 'SK', name: 'Saskatchewan',     rate: 0.10  },
+  { code: 'MB', name: 'Manitoba',         rate: 0.0   },
+  { code: 'NS', name: 'Nova Scotia',      rate: 0.15  },
+  { code: 'OTHER', name: 'Other',         rate: 0.08  },
+]
+
+function calcSrEd(numDevs, salary, provRate) {
+  // PPA method: QE = salary × 1.55 overhead proxy; federal ITC = 35% on first $3M QE
+  const qeLow  = numDevs * salary * 1.55 * 0.50   // 50% SR&ED time eligibility
+  const qeHigh = numDevs * salary * 1.55 * 0.80   // 80% SR&ED time eligibility
+  const fedLow  = Math.min(qeLow,  3_000_000) * 0.35
+  const fedHigh = Math.min(qeHigh, 3_000_000) * 0.35
+  const provLow  = qeLow  * provRate
+  const provHigh = qeHigh * provRate
+  return {
+    low:  Math.round(fedLow  + provLow),
+    high: Math.round(fedHigh + provHigh),
+  }
+}
+
+function fmt(n) {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000)     return `$${Math.round(n / 1_000)}K`
+  return `$${n}`
+}
+
+function SrEdCalculator({ openWaitlist, navigate }) {
+  const [revIdx,   setRevIdx]   = useState(2)           // default $1M–$5M
+  const [numDevs,  setNumDevs]  = useState(4)
+  const [provCode, setProvCode] = useState('ON')
+
+  const band = REVENUE_BANDS[revIdx]
+  const prov = CALC_PROVINCES.find(p => p.code === provCode) ?? CALC_PROVINCES[0]
+  const { low, high } = calcSrEd(numDevs, band.salary, prov.rate)
+
+  return (
+    <section id="calculator" className="py-20 bg-slate-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 text-xs font-semibold px-3 py-1.5 rounded-full mb-4">
+            <Calculator size={13} />
+            SR&amp;ED Credit Estimator
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+            How much R&amp;D credit could{' '}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">
+              you recover?
+            </span>
+          </h2>
+          <p className="text-gray-500 text-base max-w-2xl mx-auto">
+            Adjust the sliders below for an instant estimate. Most Canadian tech companies leave
+            $40K–$300K on the table every year.
+          </p>
+        </div>
+
+        {/* Card */}
+        <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+          <div className="lg:grid lg:grid-cols-2">
+
+            {/* ── Left: inputs ── */}
+            <div className="p-8 border-b lg:border-b-0 lg:border-r border-gray-100">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-6">
+                Your company profile
+              </h3>
+
+              {/* Revenue band */}
+              <div className="mb-7">
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Annual Revenue
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {REVENUE_BANDS.map((b, i) => (
+                    <button
+                      key={b.label}
+                      onClick={() => setRevIdx(i)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                        revIdx === i
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                          : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300 hover:text-indigo-600'
+                      }`}
+                    >
+                      {b.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Headcount slider */}
+              <div className="mb-7">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  R&amp;D Headcount
+                  <span className="ml-2 text-indigo-600 font-bold">
+                    {numDevs}{numDevs === 20 ? '+' : ''} dev{numDevs !== 1 ? 's' : ''}
+                  </span>
+                </label>
+                <p className="text-xs text-gray-400 mb-3">Engineers, researchers &amp; technical staff</p>
+                <input
+                  type="range"
+                  min={1}
+                  max={20}
+                  value={numDevs}
+                  onChange={e => setNumDevs(Number(e.target.value))}
+                  className="w-full h-2 bg-gray-200 rounded-full appearance-none cursor-pointer accent-indigo-600"
+                />
+                <div className="flex justify-between text-xs text-gray-400 mt-1">
+                  <span>1</span>
+                  <span>10</span>
+                  <span>20+</span>
+                </div>
+              </div>
+
+              {/* Province */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Province
+                </label>
+                <select
+                  value={provCode}
+                  onChange={e => setProvCode(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                >
+                  {CALC_PROVINCES.map(p => (
+                    <option key={p.code} value={p.code}>{p.name}</option>
+                  ))}
+                </select>
+                {prov.rate === 0 && (
+                  <p className="text-xs text-amber-600 mt-1.5">
+                    ⚠ {prov.name} has no provincial SR&amp;ED program — federal credit still applies.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* ── Right: result ── */}
+            <div className="p-8 bg-gradient-to-br from-indigo-50 to-violet-50 flex flex-col justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-6">
+                  Estimated annual credit
+                </h3>
+
+                {/* Credit range */}
+                <div className="mb-6">
+                  <div className="flex items-end gap-2 mb-1">
+                    <span className="text-4xl sm:text-5xl font-extrabold text-indigo-700 tabular-nums">
+                      {fmt(low)}
+                    </span>
+                    <span className="text-gray-400 text-lg mb-1 font-medium">–</span>
+                    <span className="text-4xl sm:text-5xl font-extrabold text-violet-700 tabular-nums">
+                      {fmt(high)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Based on {numDevs} dev{numDevs !== 1 ? 's' : ''} · {band.label} revenue · {prov.name} · PPA method
+                  </p>
+                </div>
+
+                {/* Breakdown */}
+                <div className="space-y-3 mb-8">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-indigo-500 inline-block" />
+                      Federal ITC (35%)
+                    </span>
+                    <span className="font-semibold text-gray-800">
+                      {fmt(Math.round(Math.min(numDevs * band.salary * 1.55 * 0.50, 3_000_000) * 0.35))}
+                      {' – '}
+                      {fmt(Math.round(Math.min(numDevs * band.salary * 1.55 * 0.80, 3_000_000) * 0.35))}
+                    </span>
+                  </div>
+                  {prov.rate > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-violet-500 inline-block" />
+                        Provincial ({(prov.rate * 100).toFixed(0)}% — {prov.code})
+                      </span>
+                      <span className="font-semibold text-gray-800">
+                        {fmt(Math.round(numDevs * band.salary * 1.55 * 0.50 * prov.rate))}
+                        {' – '}
+                        {fmt(Math.round(numDevs * band.salary * 1.55 * 0.80 * prov.rate))}
+                      </span>
+                    </div>
+                  )}
+                  <div className="border-t border-indigo-100 pt-3 flex justify-between text-sm font-semibold">
+                    <span className="text-gray-700">Total refundable credit</span>
+                    <span className="text-indigo-700">{fmt(low)} – {fmt(high)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* CTA */}
+              <div className="space-y-3">
+                <button
+                  onClick={() => openWaitlist('', 'calculator')}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm"
+                >
+                  Get your full estimate free
+                  <ChevronRight size={16} />
+                </button>
+                <p className="text-center text-xs text-gray-400">
+                  Takes 2 minutes · No credit card required
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Fine print */}
+        <p className="text-center text-xs text-gray-400 mt-5">
+          Estimates use the Prescribed Proxy Amount (PPA) method and assume 50–80% SR&amp;ED time eligibility.
+          Actual credits depend on CRA review and your specific activities.
+        </p>
+      </div>
+    </section>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Main page
 // ─────────────────────────────────────────────────────────────────────────────
 export default function MarketingPage() {
@@ -856,7 +1089,12 @@ export default function MarketingPage() {
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════════
-          7. FOR CPAs
+          7. SR&ED CREDIT CALCULATOR
+      ══════════════════════════════════════════════════════════════════════ */}
+      <SrEdCalculator openWaitlist={openWaitlist} navigate={navigate} />
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          8. FOR CPAs
       ══════════════════════════════════════════════════════════════════════ */}
       <section id="for-cpas" className="py-20 bg-slate-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
