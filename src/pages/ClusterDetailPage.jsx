@@ -543,6 +543,7 @@ function NarrativePanel({ narrative, cluster, onApprove, onReject, canEdit, onSt
         plan="starter"
       />
     </>
+    )
   }
 
   const isApproved = !!narrative.approved_at
