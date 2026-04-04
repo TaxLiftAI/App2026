@@ -54,7 +54,7 @@ router.post('/register', async (req, res) => {
   const password_hash = await bcrypt.hash(password, 10)
   const tenant_id     = `tenant-${id.slice(0, 8)}`
 
-  const safeRole = ['admin', 'developer', 'reviewer'].includes(role) ? role : 'admin'
+  const safeRole = ['admin', 'developer', 'reviewer', 'cpa'].includes(role) ? role : 'admin'
 
   db.prepare(`
     INSERT INTO users (id, email, password_hash, full_name, firm_name, role, tenant_id)
