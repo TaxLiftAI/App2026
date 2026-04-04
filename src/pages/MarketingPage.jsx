@@ -895,7 +895,7 @@ export default function MarketingPage() {
               </div>
 
               <button
-                onClick={() => openWaitlist('', 'cpa_section')}
+                onClick={() => navigate('/signup?type=cpa')}
                 className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-3 rounded-xl transition-colors shadow-lg shadow-indigo-900/40"
               >
                 Become a TaxLift partner
