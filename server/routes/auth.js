@@ -64,6 +64,14 @@ router.post('/register', async (req, res) => {
   const user  = db.prepare(USER_SELECT).get(id)
   const token = signToken({ id: user.id, email: user.email, role: user.role, tenant_id: user.tenant_id })
 
+  // Kick off 3-step drip sequence (fire-and-forget, never blocks the response)
+  try {
+    const { scheduleUserDrip } = require('../lib/emailDrip')
+    scheduleUserDrip(id, email.toLowerCase(), { name: full_name, firm_name })
+  } catch (err) {
+    console.error('[auth/register] scheduleUserDrip error:', err.message)
+  }
+
   res.status(201).json({ access_token: token, token_type: 'bearer', user: shapeUser(user) })
 })
 

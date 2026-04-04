@@ -224,6 +224,19 @@ try { db.exec('ALTER TABLE company_profiles ADD COLUMN tech_stack TEXT NOT NULL 
 try { db.exec('ALTER TABLE company_profiles ADD COLUMN sred_claimed TEXT NOT NULL DEFAULT \'not_sure\'') } catch { /* already exists */ }
 // ── Grants migrations ─────────────────────────────────────────────────────────
 try { db.exec('ALTER TABLE gap_answers ADD COLUMN has_university_partner INTEGER DEFAULT NULL') } catch { /* already exists */ }
+// ── User drip email migrations ────────────────────────────────────────────────
+try { db.exec(`
+  CREATE TABLE IF NOT EXISTS user_drip_emails (
+    id             TEXT PRIMARY KEY,
+    user_id        TEXT NOT NULL,
+    email          TEXT NOT NULL,
+    sequence_step  INTEGER NOT NULL,
+    send_after     TEXT NOT NULL,
+    status         TEXT NOT NULL DEFAULT 'pending',
+    sent_at        TEXT,
+    created_at     TEXT NOT NULL DEFAULT (datetime('now'))
+  )
+`) } catch { /* already exists */ }
 
 // Mark all seeded demo users as having completed onboarding so they go straight to the dashboard
 db.exec("UPDATE users SET onboarding_completed = 1 WHERE id IN ('u-001','u-002','u-003','u-cpa','u-005','u-dev','u-demo')")

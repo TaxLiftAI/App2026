@@ -385,9 +385,11 @@ async function processPendingEmails() {
 function startDripScheduler() {
   // Run once immediately on startup (catches any emails queued before restart)
   processPendingEmails().catch(err => console.error('[emailDrip] startup flush error:', err.message))
+  processUserDripEmails().catch(err => console.error('[userDrip] startup flush error:', err.message))
 
   setInterval(() => {
     processPendingEmails().catch(err => console.error('[emailDrip] poll error:', err.message))
+    processUserDripEmails().catch(err => console.error('[userDrip] poll error:', err.message))
   }, POLL_INTERVAL_MS)
 
   if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
@@ -396,4 +398,271 @@ function startDripScheduler() {
   console.log(`[emailDrip] Scheduler started — polling every ${POLL_INTERVAL_MS / 60000} minutes`)
 }
 
-module.exports = { scheduleDrip, startDripScheduler }
+// ══════════════════════════════════════════════════════════════════════════════
+// USER DRIP — 3-email sequence for registered users (not scan leads)
+// ══════════════════════════════════════════════════════════════════════════════
+
+function buildUserEmail1({ name, email, estimatedCredit, firmName }) {
+  const firstName   = (name || email).split(/[\s@]/)[0]
+  const creditStr   = estimatedCredit
+    ? `$${Math.round(estimatedCredit / 1000)}K–$${Math.round(estimatedCredit * 1.35 / 1000)}K`
+    : 'significant SR&ED credits'
+  const dashUrl     = `${FRONTEND_URL}/dashboard`
+  const connectUrl  = `${FRONTEND_URL}/quick-connect`
+
+  return {
+    subject: `Welcome to TaxLift, ${firstName} — your SR&ED estimate is ready`,
+    html: layout(`
+      <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">
+        Welcome, ${firstName}. 👋
+      </h2>
+      <p style="margin:0 0 20px;font-size:15px;color:#334155;line-height:1.7;">
+        Your TaxLift account is live. Based on your company profile, you may qualify for
+        <strong style="color:#4f46e5;">${creditStr}</strong> in annual SR&ED credits —
+        and potentially <strong>$700K+</strong> in additional Canadian grants.
+      </p>
+
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:10px;margin:0 0 24px;">
+        <tr><td style="padding:18px 20px;">
+          <p style="margin:0 0 10px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#64748b;">Your next steps</p>
+          ${[
+            ['1', 'Connect GitHub or Jira', 'TaxLift scans your commits and auto-detects SR&ED clusters.', connectUrl, 'Connect integration →'],
+            ['2', 'Review your first clusters', 'Approve, edit, or reject — takes about 10 minutes.', dashUrl, 'Go to dashboard →'],
+            ['3', 'Share with your CPA', 'One click generates a T661 package your accountant can file.', dashUrl, 'See how it works →'],
+          ].map(([n, title, body, url, cta]) => `
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:14px;">
+              <tr>
+                <td style="width:28px;vertical-align:top;padding-top:2px;">
+                  <span style="display:inline-flex;width:22px;height:22px;background:#4f46e5;border-radius:50%;color:#fff;font-size:11px;font-weight:700;align-items:center;justify-content:center;">${n}</span>
+                </td>
+                <td style="padding-left:10px;">
+                  <p style="margin:0;font-size:14px;font-weight:600;color:#1e293b;">${title}</p>
+                  <p style="margin:2px 0 4px;font-size:13px;color:#64748b;">${body}</p>
+                  <a href="${url}" style="font-size:13px;color:#4f46e5;text-decoration:none;font-weight:600;">${cta}</a>
+                </td>
+              </tr>
+            </table>
+          `).join('')}
+        </td></tr>
+      </table>
+
+      <a href="${connectUrl}"
+         style="display:inline-block;padding:14px 32px;background:#4f46e5;color:#fff;font-size:15px;font-weight:700;text-decoration:none;border-radius:10px;">
+        Connect your first integration →
+      </a>
+
+      <p style="margin:24px 0 0;font-size:13px;color:#94a3b8;">
+        Questions? Reply to this email — I read every one.<br>
+        — Prateek, TaxLift
+      </p>
+    `),
+  }
+}
+
+function buildUserEmail2({ name, email }) {
+  const firstName = (name || email).split(/[\s@]/)[0]
+  const clustersUrl = `${FRONTEND_URL}/clusters`
+  const connectUrl  = `${FRONTEND_URL}/quick-connect`
+
+  return {
+    subject: `${firstName}, your SR&ED clusters are waiting for review`,
+    html: layout(`
+      <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">
+        One review session = one T661 ready to file
+      </h2>
+      <p style="margin:0 0 20px;font-size:15px;color:#334155;line-height:1.7;">
+        Hey ${firstName} — most TaxLift customers complete their first cluster review in under
+        <strong>15 minutes</strong>. The AI does the narrative work; you just confirm each cluster is correct.
+      </p>
+
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;margin:0 0 24px;">
+        <tr><td style="padding:18px 20px;">
+          <p style="margin:0 0 6px;font-size:13px;font-weight:700;color:#1e40af;">What happens when you review a cluster:</p>
+          ${[
+            'TaxLift shows you the commits and hours it grouped together',
+            'You confirm the technical theme and approve or adjust the narrative',
+            'The T661 section auto-generates — ready for your CPA to review',
+            'The evidence chain is locked with SHA-256 hashes for CRA audit defence',
+          ].map(s => `
+            <p style="margin:5px 0;font-size:13px;color:#1e3a8a;">✓ &nbsp;${s}</p>
+          `).join('')}
+        </td></tr>
+      </table>
+
+      <a href="${clustersUrl}"
+         style="display:inline-block;padding:14px 32px;background:#4f46e5;color:#fff;font-size:15px;font-weight:700;text-decoration:none;border-radius:10px;">
+        Review my clusters →
+      </a>
+
+      <p style="margin:16px 0 0;font-size:13px;color:#64748b;">
+        Haven't connected GitHub or Jira yet?
+        <a href="${connectUrl}" style="color:#4f46e5;font-weight:600;">Connect now — takes 2 minutes.</a>
+      </p>
+
+      <p style="margin:24px 0 0;font-size:13px;color:#94a3b8;">— Prateek, TaxLift</p>
+    `),
+  }
+}
+
+function buildUserEmail3({ name, email, estimatedCredit }) {
+  const firstName  = (name || email).split(/[\s@]/)[0]
+  const creditStr  = estimatedCredit
+    ? `$${Math.round(estimatedCredit / 1000)}K`
+    : 'your estimated credit'
+  const settingsUrl = `${FRONTEND_URL}/settings`
+  const grantsUrl   = `${FRONTEND_URL}/grants`
+
+  return {
+    subject: `${firstName} — are you leaving $700K+ in grants on the table?`,
+    html: layout(`
+      <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">
+        SR&ED is just the start.
+      </h2>
+      <p style="margin:0 0 20px;font-size:15px;color:#334155;line-height:1.7;">
+        Hi ${firstName} — your SR&ED estimate is around <strong>${creditStr}</strong>.
+        But most companies like yours also qualify for <strong style="color:#4f46e5;">$700K–$2M+</strong> in additional
+        Canadian grants — NRC-IRAP, SDTC, Mitacs, and regional development agencies.
+      </p>
+
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+        ${[
+          ['NRC-IRAP', 'Up to $500K for R&D salaries', 'For Canadian SMEs doing R&D work'],
+          ['SDTC', 'Up to $15M for cleantech/deep tech', 'Non-dilutive — no equity given up'],
+          ['Mitacs Accelerate', 'Up to $15K per intern per term', 'Requires university partner'],
+          ['Regional Dev Agency', 'Up to $500K matching', 'FedDev, PacifiCan, ACOA by province'],
+        ].map(([name, amount, note]) => `
+          <tr>
+            <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;vertical-align:top;">
+              <p style="margin:0;font-size:14px;font-weight:700;color:#1e293b;">${name}</p>
+              <p style="margin:2px 0;font-size:13px;color:#4f46e5;font-weight:600;">${amount}</p>
+              <p style="margin:0;font-size:12px;color:#64748b;">${note}</p>
+            </td>
+          </tr>
+        `).join('')}
+      </table>
+
+      <p style="margin:0 0 20px;font-size:14px;color:#334155;line-height:1.7;">
+        TaxLift Plus matches your profile against all 9 programs automatically —
+        and generates the application sections using your SR&ED data.
+        <strong>Upgrade in 30 seconds.</strong>
+      </p>
+
+      <a href="${settingsUrl}"
+         style="display:inline-block;padding:14px 32px;background:#4f46e5;color:#fff;font-size:15px;font-weight:700;text-decoration:none;border-radius:10px;">
+        Upgrade to Plus — unlock grants →
+      </a>
+
+      <p style="margin:16px 0 0;font-size:13px;color:#64748b;">
+        Already on Plus?
+        <a href="${grantsUrl}" style="color:#4f46e5;font-weight:600;">View your matched grants →</a>
+      </p>
+
+      <p style="margin:24px 0 0;font-size:13px;color:#94a3b8;">— Prateek, TaxLift</p>
+    `),
+  }
+}
+
+/**
+ * scheduleUserDrip(userId, email, userData)
+ *
+ * Queues a 3-step email drip for a newly registered user.
+ * userData: { name, firm_name, estimated_credit }
+ */
+function scheduleUserDrip(userId, email, userData = {}) {
+  if (!userId || !email) return
+
+  const steps = [
+    { step: 1, sendAfter: hoursFromNow(0)   },   // immediate welcome
+    { step: 2, sendAfter: hoursFromNow(48)  },   // Day 2 — cluster review nudge
+    { step: 3, sendAfter: hoursFromNow(120) },   // Day 5 — grants upgrade
+  ]
+
+  const insert = db.prepare(`
+    INSERT OR IGNORE INTO user_drip_emails
+      (id, user_id, email, sequence_step, send_after, status)
+    VALUES (?, ?, ?, ?, ?, 'pending')
+  `)
+
+  for (const { step, sendAfter } of steps) {
+    try {
+      insert.run(makeId(), userId, email, step, sendAfter)
+    } catch (err) {
+      console.error(`[userDrip] Failed to schedule step ${step} for ${email}:`, err.message)
+    }
+  }
+
+  console.log(`[userDrip] Scheduled 3-email drip for ${email} (user ${userId})`)
+}
+
+async function sendUserDripEmail(row) {
+  const user = db.prepare('SELECT full_name, firm_name FROM users WHERE id = ?').get(row.user_id) ?? {}
+
+  // Rough credit estimate from company profile
+  let estimatedCredit = null
+  try {
+    const profile = db.prepare('SELECT employee_count, industry_domain FROM company_profiles WHERE user_id = ?').get(row.user_id)
+    if (profile?.employee_count) {
+      const rdPcts = { software: 0.40, ai_ml: 0.45, biotech: 0.50, cleantech: 0.40, fintech: 0.35, medtech: 0.40, other: 0.20 }
+      const rdPct  = rdPcts[profile.industry_domain] ?? 0.25
+      estimatedCredit = Math.round(profile.employee_count * 105_000 * rdPct * 0.35)
+    }
+  } catch { /* ignore */ }
+
+  const userData = { name: user.full_name, email: row.email, firmName: user.firm_name, estimatedCredit }
+
+  let mail
+  if      (row.sequence_step === 1) mail = buildUserEmail1(userData)
+  else if (row.sequence_step === 2) mail = buildUserEmail2(userData)
+  else                               mail = buildUserEmail3(userData)
+
+  const transport = getTransporter()
+
+  if (!transport) {
+    console.log(`[userDrip] [LOG-ONLY] Would send step ${row.sequence_step} to ${row.email}: "${mail.subject}"`)
+    db.prepare(`UPDATE user_drip_emails SET status = 'skipped', sent_at = ? WHERE id = ?`)
+      .run(new Date().toISOString(), row.id)
+    return
+  }
+
+  await transport.sendMail({
+    from:    `"TaxLift" <${EMAIL_FROM}>`,
+    to:      row.email,
+    subject: mail.subject,
+    html:    mail.html,
+  })
+
+  db.prepare(`UPDATE user_drip_emails SET status = 'sent', sent_at = ? WHERE id = ?`)
+    .run(new Date().toISOString(), row.id)
+
+  console.log(`[userDrip] Sent step ${row.sequence_step} to ${row.email}`)
+}
+
+async function processUserDripEmails() {
+  let pending
+  try {
+    pending = db.prepare(`
+      SELECT * FROM user_drip_emails
+      WHERE status = 'pending' AND send_after <= ?
+      ORDER BY send_after ASC
+    `).all(new Date().toISOString())
+  } catch (err) {
+    console.error('[userDrip] Failed to query pending emails:', err.message)
+    return
+  }
+
+  if (pending.length === 0) return
+
+  console.log(`[userDrip] Processing ${pending.length} pending user email(s)…`)
+
+  for (const row of pending) {
+    try {
+      db.prepare(`UPDATE user_drip_emails SET status = 'sending' WHERE id = ? AND status = 'pending'`).run(row.id)
+      await sendUserDripEmail(row)
+    } catch (err) {
+      console.error(`[userDrip] Failed step ${row.sequence_step} for ${row.email}:`, err.message)
+      db.prepare(`UPDATE user_drip_emails SET status = 'failed' WHERE id = ?`).run(row.id)
+    }
+  }
+}
+
+module.exports = { scheduleDrip, scheduleUserDrip, startDripScheduler }
