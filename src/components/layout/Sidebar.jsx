@@ -3,7 +3,7 @@ import {
   LayoutDashboard, GitMerge, FileText, BarChart3,
   Users, ScrollText, Plug, LogOut, ShieldCheck, DollarSign,
   UserCircle2, SlidersHorizontal, TrendingUp, Activity, ShieldAlert, Vault, HelpCircle, Settings, Keyboard, Building2,
-  Award,
+  Award, Trello,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { canDo } from '../../lib/utils'
@@ -16,6 +16,7 @@ const NAV = [
   { to: '/users',        label: 'Users',        icon: Users,           action: 'viewUsers' },
   { to: '/audit-log',   label: 'Audit Log',    icon: ScrollText,      action: 'viewAuditLog' },
   { to: '/integrations', label: 'Integrations', icon: Plug,            action: 'viewIntegrations' },
+  { to: '/jira-sprint',  label: 'Sprint Report', icon: Trello,          action: null,                badge: 'New' },
   { to: '/rate-card',    label: 'Rate Card',    icon: DollarSign,          action: 'viewRateCard'    },
   { to: '/dev-portal',  label: 'My Portal',    icon: UserCircle2,         action: 'viewDevPortal'   },
   { to: '/heuristics',  label: 'Heuristics',   icon: SlidersHorizontal,   action: 'viewHeuristics'  },

@@ -7,7 +7,7 @@ import {
 import { GitMerge, Clock, CheckCircle2, DollarSign, AlertTriangle, TrendingUp, FlaskConical, Zap, Mail, X, Send, Loader2 } from 'lucide-react'
 import { getCreditTrend, INTEGRATIONS } from '../data/mockData'
 import { formatCurrency, formatHours, STATUS_COLORS } from '../lib/utils'
-import { useClusters } from '../hooks'
+import { useClusters, useIntegrations } from '../hooks'
 import { useAuth } from '../context/AuthContext'
 import { StatusBadge, IntegrationBadge } from '../components/ui/Badge'
 import RiskScore from '../components/ui/RiskScore'
@@ -199,10 +199,11 @@ const PIE_COLORS = {
 }
 
 // ── Claim Progress Card ───────────────────────────────────────────────────────
-function ClaimProgressCard({ clusters, navigate }) {
-  const cl = clusters ?? []
+function ClaimProgressCard({ clusters, integrations, navigate }) {
+  const cl   = clusters     ?? []
+  const ints = integrations ?? []
 
-  const hasIntegration = cl.length > 0                                       // proxy: clusters exist
+  const hasIntegration = ints.some(i => i.status === 'healthy')
   const hasClusters    = cl.length > 0
   const hasNarrative   = cl.some(c => ['Drafted','Approved'].includes(c.status))
   const hasApproved    = cl.some(c => c.status === 'Approved')
@@ -356,6 +357,7 @@ export default function DashboardPage() {
   const navigate = useNavigate()
   const { currentUser } = useAuth()
   const { data: clusters, usingMock } = useClusters()
+  const { data: integrations } = useIntegrations()
   const trend = getCreditTrend()
   const [inviteOpen, setInviteOpen] = useState(false)
 
@@ -598,7 +600,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Claim progress */}
-      <ClaimProgressCard clusters={clusters} navigate={navigate} />
+      <ClaimProgressCard clusters={clusters} integrations={integrations} navigate={navigate} />
 
       {/* Recent clusters */}
       <Card padding={false}>

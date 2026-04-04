@@ -40,6 +40,7 @@ import CheckoutCancelPage  from './pages/CheckoutCancelPage'
 import WelcomePage         from './pages/WelcomePage'
 import AdminLeadsPage      from './pages/AdminLeadsPage'
 import AdminFunnelPage     from './pages/AdminFunnelPage'
+import JiraSprintPage      from './pages/JiraSprintPage'
 import GrantsDashboard     from './pages/grants/GrantsDashboard'
 import EligibilityResults  from './pages/grants/EligibilityResults'
 import GapFillInterview    from './pages/grants/GapFillInterview'
@@ -115,6 +116,12 @@ function AppRoutes() {
       <Route path="/integrations" element={
         <ProtectedRoute action="viewIntegrations">
           <Layout><IntegrationsPage /></Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/jira-sprint" element={
+        <ProtectedRoute>
+          <Layout><JiraSprintPage /></Layout>
         </ProtectedRoute>
       } />
 
