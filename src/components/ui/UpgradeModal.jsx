@@ -7,8 +7,10 @@
  *   feature   {string}   e.g. "Narrative generation"
  *   plan      {string}   'starter' | 'plus' — which plan unlocks it
  */
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Lock, Zap, FileText, Share2, ChevronRight, X, Award, CheckCircle2 } from 'lucide-react'
+import { Lock, Zap, FileText, Share2, ChevronRight, X, Award, CheckCircle2, Loader2 } from 'lucide-react'
+import { billing as billingApi } from '../../lib/api'
 
 const PLAN_FEATURES = {
   starter: [
@@ -25,16 +27,37 @@ const PLAN_FEATURES = {
   ],
 }
 
-const PLAN_LABELS = { starter: 'Starter', plus: 'Plus' }
-const PLAN_PRICES = { starter: '$99/mo', plus: '$249/mo' }
+const PLAN_LABELS  = { starter: 'Starter', plus: 'Plus' }
+const PLAN_PRICES  = { starter: '$99/mo',  plus: '$249/mo' }
 
 export default function UpgradeModal({ open, onClose, feature = 'This feature', plan = 'starter' }) {
   const navigate   = useNavigate()
   const features   = PLAN_FEATURES[plan] ?? PLAN_FEATURES.starter
   const planLabel  = PLAN_LABELS[plan]  ?? 'Starter'
   const planPrice  = PLAN_PRICES[plan]  ?? '$99/mo'
+  const [loading, setLoading] = useState(false)
 
   if (!open) return null
+
+  async function handleUpgrade() {
+    setLoading(true)
+    try {
+      const result = await billingApi.createCheckoutSession(
+        plan,
+        `${window.location.origin}/settings?tab=billing&upgraded=1`,
+        `${window.location.origin}/settings?tab=billing`
+      )
+      if (result?.url) {
+        window.location.href = result.url
+        return
+      }
+    } catch {
+      // Stripe not configured or error — fall back to billing settings page
+    }
+    setLoading(false)
+    onClose()
+    navigate('/settings?tab=billing')
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -86,11 +109,15 @@ export default function UpgradeModal({ open, onClose, feature = 'This feature', 
         {/* CTA */}
         <div className="px-6 pb-6 space-y-2">
           <button
-            onClick={() => { onClose(); navigate('/settings?tab=billing') }}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 shadow-sm transition-colors"
+            onClick={handleUpgrade}
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 shadow-sm transition-colors disabled:opacity-70"
           >
-            Upgrade to {planLabel} — {planPrice}
-            <ChevronRight size={16} />
+            {loading ? (
+              <><Loader2 size={15} className="animate-spin" /> Setting up checkout…</>
+            ) : (
+              <>Upgrade to {planLabel} — {planPrice} <ChevronRight size={16} /></>
+            )}
           </button>
           <button
             onClick={onClose}

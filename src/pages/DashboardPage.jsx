@@ -198,6 +198,143 @@ const PIE_COLORS = {
   New: '#94a3b8', Interviewed: '#60a5fa', Drafted: '#f59e0b', Approved: '#22c55e', Rejected: '#f87171',
 }
 
+// ── Claim Progress Card ───────────────────────────────────────────────────────
+function ClaimProgressCard({ clusters, navigate }) {
+  const cl = clusters ?? []
+
+  const hasIntegration = cl.length > 0                                       // proxy: clusters exist
+  const hasClusters    = cl.length > 0
+  const hasNarrative   = cl.some(c => ['Drafted','Approved'].includes(c.status))
+  const hasApproved    = cl.some(c => c.status === 'Approved')
+
+  const steps = [
+    {
+      label:  'Connect a data source',
+      detail: 'Link GitHub, Jira, or CI/CD so TaxLift auto-detects R&D',
+      done:   hasIntegration,
+      cta:    'Connect',
+      to:     '/integrations',
+    },
+    {
+      label:  'R&D clusters detected',
+      detail: 'At least one SR&ED activity cluster identified',
+      done:   hasClusters,
+      cta:    'View clusters',
+      to:     '/clusters',
+    },
+    {
+      label:  'Narratives generated',
+      detail: 'AI T661 narrative drafted for at least one cluster',
+      done:   hasNarrative,
+      cta:    'Generate',
+      to:     '/clusters',
+    },
+    {
+      label:  'CPA package ready',
+      detail: 'At least one cluster approved and ready to share',
+      done:   hasApproved,
+      cta:    'Review clusters',
+      to:     '/clusters?status=Drafted',
+    },
+  ]
+
+  const completedCount = steps.filter(s => s.done).length
+  const pct            = Math.round((completedCount / steps.length) * 100)
+  const nextStep       = steps.find(s => !s.done)
+  const allDone        = completedCount === steps.length
+
+  const color = allDone ? 'text-green-600' : pct >= 50 ? 'text-indigo-600' : 'text-amber-600'
+  const barColor = allDone ? 'bg-green-500' : pct >= 50 ? 'bg-indigo-500' : 'bg-amber-500'
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+      <div className="px-5 pt-5 pb-4">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          {/* Left: text + bar */}
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">SR&amp;ED Claim Progress</p>
+            <h3 className="text-lg font-bold text-gray-900 leading-snug">
+              Your claim is{' '}
+              <span className={color}>{pct}% complete</span>
+            </h3>
+            {!allDone && nextStep && (
+              <p className="text-xs text-gray-500 mt-1">
+                Next: <span className="font-medium text-gray-700">{nextStep.label}</span>
+              </p>
+            )}
+            {allDone && (
+              <p className="text-xs text-green-600 font-medium mt-1">All steps complete — your CPA package is ready to send.</p>
+            )}
+
+            {/* Progress bar */}
+            <div className="mt-3 flex items-center gap-3">
+              <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className={`h-2 rounded-full transition-all duration-700 ${barColor}`}
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+              <span className={`text-xs font-bold tabular-nums w-10 text-right ${color}`}>{pct}%</span>
+            </div>
+          </div>
+
+          {/* Right: step dots */}
+          <div className="flex gap-2 flex-shrink-0 pt-1">
+            {steps.map((s, i) => (
+              <div
+                key={i}
+                title={s.label}
+                className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold border-2 transition-colors ${
+                  s.done
+                    ? 'bg-green-500 border-green-500 text-white'
+                    : 'bg-white border-gray-200 text-gray-400'
+                }`}
+              >
+                {s.done ? (
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                    <path d="M2 5L4 7L8 3" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                ) : i + 1}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Step list */}
+      {!allDone && (
+        <div className="border-t border-gray-100 divide-y divide-gray-50">
+          {steps.map((step, i) => (
+            <div key={i} className={`flex items-center gap-3 px-5 py-2.5 ${step.done ? 'opacity-50' : ''}`}>
+              <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${step.done ? 'bg-green-500' : 'bg-gray-100'}`}>
+                {step.done ? (
+                  <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                    <path d="M1.5 4L3 5.5L6.5 2" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                ) : (
+                  <span className="text-[9px] font-bold text-gray-400">{i + 1}</span>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className={`text-xs font-semibold ${step.done ? 'text-gray-400 line-through' : 'text-gray-800'}`}>{step.label}</p>
+                <p className="text-[11px] text-gray-400 truncate">{step.detail}</p>
+              </div>
+              {!step.done && (
+                <button
+                  onClick={() => navigate(step.to)}
+                  className="flex-shrink-0 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors whitespace-nowrap"
+                >
+                  {step.cta} →
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function StatCard({ label, value, sub, icon: Icon, iconColor = 'text-indigo-600', iconBg = 'bg-indigo-50' }) {
   return (
     <Card>
@@ -459,6 +596,9 @@ export default function DashboardPage() {
           </ResponsiveContainer>
         </Card>
       </div>
+
+      {/* Claim progress */}
+      <ClaimProgressCard clusters={clusters} navigate={navigate} />
 
       {/* Recent clusters */}
       <Card padding={false}>

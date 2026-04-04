@@ -41,9 +41,11 @@ function shapeBackendUser(me) {
     role:                 normaliseRole(me.role),
     tenant_id:            me.tenant_id,
     avatar:               me.avatar ?? null,
+    firm_name:            me.firm_name ?? null,
     subscription_tier:    me.subscription_tier ?? 'free',
     // SQLite returns 0/1 integers; coerce to boolean
     onboarding_completed: me.onboarding_completed === 1 || me.onboarding_completed === true,
+    created_at:           me.created_at ?? null,
     _fromApi:             true,
   }
 }
