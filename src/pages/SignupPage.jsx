@@ -22,7 +22,8 @@ import {
   ShieldCheck, Eye, EyeOff, Loader2, CheckCircle2, AlertCircle,
   Sparkles, ArrowRight, Zap,
 } from 'lucide-react'
-import { useAuth } from '../context/AuthContext'
+import { useAuth }                   from '../context/AuthContext'
+import { referrals as referralsApi } from '../lib/api'
 
 const PLAN_LABELS = {
   starter:    'Starter',
@@ -58,9 +59,11 @@ export default function SignupPage() {
   const [params]      = useSearchParams()
   const { register, currentUser } = useAuth()
 
-  const plan       = params.get('plan') ?? ''
+  const plan         = params.get('plan') ?? ''
   const fromCheckout = params.get('from') === 'checkout'
   const estimateRaw  = params.get('estimate')
+  const isCpaSignup  = params.get('type') === 'cpa'
+  const refToken     = params.get('ref') ?? ''         // CPA referral token
 
   // Redirect if already logged in
   useEffect(() => {
@@ -113,12 +116,24 @@ export default function SignupPage() {
       password,
       full_name:  fullName.trim(),
       firm_name:  companyName.trim(),
+      // Pass cpa role when signing up via the partner CTA on CpaReviewPage
+      ...(isCpaSignup ? { role: 'cpa' } : {}),
     })
     setLoading(false)
 
     if (!result.ok) {
       setError(result.error ?? 'Registration failed. Please try again.')
       return
+    }
+
+    // Record referral attribution if a ref token was present in the URL
+    if (refToken) {
+      referralsApi.intake({
+        ref_token:    refToken,
+        company_name: companyName.trim() || email.trim(),
+        email:        email.trim().toLowerCase(),
+        full_name:    fullName.trim(),
+      }).catch(() => {}) // fire-and-forget
     }
 
     // Associate pending free scan with the new account
@@ -136,8 +151,8 @@ export default function SignupPage() {
       }
     } catch { /* ignore */ }
 
-    // Route to onboarding — or dashboard if coming from checkout (integrations next)
-    navigate(fromCheckout ? '/quick-connect' : '/quick-connect', { replace: true })
+    // CPA partners go straight to their portal; everyone else → onboarding
+    navigate(isCpaSignup ? '/cpa-portal' : '/quick-connect', { replace: true })
   }
 
   return (
@@ -150,12 +165,14 @@ export default function SignupPage() {
             <ShieldCheck size={28} className="text-white" />
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight">
-            {fromCheckout ? 'Create your account' : 'Get started free'}
+            {isCpaSignup ? 'Join as a CPA Partner' : fromCheckout ? 'Create your account' : 'Get started free'}
           </h1>
           <p className="text-slate-400 text-sm mt-1">
-            {fromCheckout
-              ? 'Your payment is confirmed — set up your account to access TaxLift'
-              : 'SR\u0026ED tax credit automation for Canadian tech companies'}
+            {isCpaSignup
+              ? 'Earn referral commissions on every SR\u0026ED client you send to TaxLift'
+              : fromCheckout
+                ? 'Your payment is confirmed — set up your account to access TaxLift'
+                : 'SR\u0026ED tax credit automation for Canadian tech companies'}
           </p>
         </div>
 
@@ -174,8 +191,20 @@ export default function SignupPage() {
           </div>
         )}
 
+        {/* CPA partner motivation banner */}
+        {isCpaSignup && (
+          <div className="flex items-start gap-2.5 bg-indigo-900/40 border border-indigo-700/50 rounded-xl px-4 py-3 mb-5">
+            <Sparkles size={14} className="text-indigo-400 flex-shrink-0 mt-0.5" />
+            <div className="text-xs text-indigo-300 leading-relaxed">
+              <p className="font-semibold text-white mb-0.5">Free to join. Commissions for life.</p>
+              Earn <strong className="text-white">0.8% of credits recovered</strong> for every client you refer.
+              On a $200K claim, that's $1,600 — for one email.
+            </div>
+          </div>
+        )}
+
         {/* Scan credit motivation banner */}
-        {!fromCheckout && displayCredit && (
+        {!fromCheckout && !isCpaSignup && displayCredit && (
           <div className="flex items-center gap-2.5 bg-indigo-900/40 border border-indigo-700/50 rounded-xl px-4 py-3 mb-5">
             <Sparkles size={14} className="text-indigo-400 flex-shrink-0" />
             <p className="text-indigo-300 text-xs">
@@ -318,7 +347,9 @@ export default function SignupPage() {
             >
               {loading
                 ? <><Loader2 size={15} className="animate-spin" /> Creating account…</>
-                : <><Zap size={15} /> Create account &amp; continue <ArrowRight size={14} /></>
+                : isCpaSignup
+                  ? <><Zap size={15} /> Create CPA partner account <ArrowRight size={14} /></>
+                  : <><Zap size={15} /> Create account &amp; continue <ArrowRight size={14} /></>
               }
             </button>
 

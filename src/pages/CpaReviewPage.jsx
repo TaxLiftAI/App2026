@@ -271,6 +271,52 @@ function EvidenceSection({ clusters }) {
 }
 
 // ── Request access CTA ─────────────────────────────────────────────────────────
+// ── CPA Partner join banner ───────────────────────────────────────────────────
+// Shown at bottom of every review package — turns CPAs into referral partners.
+function CpaPartnerBanner() {
+  return (
+    <div className="relative overflow-hidden border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-white rounded-2xl px-6 py-7">
+      {/* Decorative circle */}
+      <div className="absolute right-0 top-0 w-40 h-40 bg-indigo-100 rounded-full -translate-y-1/2 translate-x-1/4 opacity-50 pointer-events-none" />
+
+      <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-5 justify-between">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center flex-shrink-0 shadow-md shadow-indigo-200">
+            <Users size={22} className="text-white" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-indigo-900 leading-snug">
+              Join as a TaxLift CPA Partner — earn commissions on every client you refer
+            </p>
+            <p className="text-xs text-indigo-600 mt-1.5 max-w-md leading-relaxed">
+              You receive packages like this one. Imagine being the firm that prepared it — and earning
+              <strong> 0.8% of the credit recovered</strong> for each client. On a $300K claim,
+              that's <strong>$2,400</strong> for one referral.
+            </p>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2.5">
+              {[
+                '✓ Free to join — no setup fees',
+                '✓ Co-branded intake link for your clients',
+                '✓ Track commissions in your CPA portal',
+              ].map(t => (
+                <span key={t} className="text-[11px] text-indigo-700 font-medium">{t}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <a
+          href="/signup?type=cpa"
+          className="flex-shrink-0 flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold px-5 py-3 rounded-xl transition-colors shadow-sm whitespace-nowrap"
+        >
+          Join as CPA Partner
+          <ExternalLink size={14} />
+        </a>
+      </div>
+    </div>
+  )
+}
+
 function CpaCtaSection({ sharedByEmail, companyName }) {
   const [name,    setName]    = useState('')
   const [email,   setEmail]   = useState('')
@@ -557,6 +603,9 @@ export default function CpaReviewPage() {
 
         {/* ── CPA action CTA ── */}
         <CpaCtaSection sharedByEmail={sharedByEmail} companyName={companyName} />
+
+        {/* ── Become a CPA Partner ── */}
+        <CpaPartnerBanner />
 
         {/* ── Footer ── */}
         <div className="text-center pb-6">

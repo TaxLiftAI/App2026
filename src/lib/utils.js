@@ -95,7 +95,7 @@ export const ROLE_CAN = {
   viewNotifications:  ['Admin', 'Reviewer', 'Auditor', 'Developer', 'Support'],
   viewVault:          ['Admin', 'Reviewer', 'Auditor'],
   uploadVault:        ['Admin', 'Reviewer'],
-  viewCPAPortal:      ['Admin', 'Auditor'],
+  viewCPAPortal:      ['Admin', 'Auditor', 'CPA'],
 }
 
 export function canDo(action, role) {

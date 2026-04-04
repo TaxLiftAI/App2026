@@ -127,11 +127,13 @@ const del  = (path, opts) => request('DELETE', path, opts)
 
 // ── Referrals ─────────────────────────────────────────────────────────────────
         export const referrals = {
-            list:   (params)        => get('/api/referrals',      { params }),
+            list:   (params)        => get('/api/referrals',         { params }),
             stats:  ()              => get('/api/referrals/stats'),
             get:    (id)            => get(`/api/referrals/${id}`),
-            create: (payload)       => post('/api/referrals',     { body: payload }),
-            update: (id, payload)   => put(`/api/referrals/${id}`, { body: payload }),
+            create: (payload)       => post('/api/referrals',        { body: payload }),
+            update: (id, payload)   => put(`/api/referrals/${id}`,   { body: payload }),
+            // Public — no auth token needed; called from SignupPage after registration
+            intake: (payload)       => post('/api/referrals/intake', { body: payload }),
         }
 
 // ── Billing / Stripe ──────────────────────────────────────────────────────────
