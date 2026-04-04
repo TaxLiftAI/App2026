@@ -489,4 +489,10 @@ export async function isServerReachable() {
   return _reachableCache
 }
 
-export default { auth, clients, clusters, referrals, billing, leads, integrations, oauthProxy, health, grants, token, isServerReachable }
+// ── CPA handoff ───────────────────────────────────────────────────────────────
+export const cpa = {
+  smtpStatus:  () => get('/api/cpa/smtp-status'),
+  sendHandoff: (payload) => post('/api/cpa/send-handoff', { body: payload }),
+}
+
+export default { auth, clients, clusters, referrals, billing, leads, integrations, oauthProxy, health, grants, cpa, token, isServerReachable }

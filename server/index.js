@@ -76,6 +76,7 @@ app.use('/api/scan',       require('./routes/scan'))
 app.use('/api/proposals',  require('./routes/proposals'))
 app.use('/api/integrations', require('./routes/integrations'))
 app.use('/api/admin',      require('./routes/admin'))
+app.use('/api/cpa',        require('./routes/cpa'))
 
 // ── Health check (both /health and /api/health are valid) ────────────────────
 function healthHandler(_req, res) {

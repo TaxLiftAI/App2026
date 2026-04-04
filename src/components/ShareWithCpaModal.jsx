@@ -23,11 +23,12 @@ import { useState, useMemo } from 'react'
 import {
   X, Copy, Check, Link2, Mail, Clock, Shield,
   FileText, Users, ShieldCheck, ChevronDown, ChevronUp,
-  Layers, ExternalLink, Info,
+  Layers, ExternalLink, Info, Send, Loader2, CheckCircle2, AlertCircle,
 } from 'lucide-react'
 import { encodeCpaToken, makeExpiresAt } from '../lib/cpaToken'
 import { formatCurrency } from '../lib/utils'
 import { NARRATIVES } from '../data/mockData'
+import { cpa as cpaApi } from '../lib/api'
 
 // Narrative lookup helper — works whether cluster has narrative_content_text
 // directly or just a narrative_id reference into the NARRATIVES mock map.
@@ -108,6 +109,12 @@ export default function ShareWithCpaModal({
   const [copied,      setCopied]      = useState(false)
   const [copiedEmail, setCopiedEmail] = useState(false)
   const [showEmail,   setShowEmail]   = useState(false)
+
+  // Direct send state
+  const [cpaEmailInput, setCpaEmailInput] = useState('')
+  const [cpaNameInput,  setCpaNameInput]  = useState('')
+  const [sending,       setSending]       = useState(false)
+  const [sendResult,    setSendResult]    = useState(null) // { ok, message }
 
   // ── Build token payload ──────────────────────────────────────────────────
   const { link, emailDraft } = useMemo(() => {
@@ -219,6 +226,39 @@ export default function ShareWithCpaModal({
     })
   }
 
+  async function handleSendEmail() {
+    if (!cpaEmailInput || !link) return
+    setSending(true)
+    setSendResult(null)
+
+    // Derive report metadata from whichever source is active
+    const pkg = clientData ?? {}
+    const reportPayload = {
+      cpaEmail:      cpaEmailInput.trim(),
+      cpaName:       cpaNameInput.trim() || undefined,
+      companyName:   clientData?.company_name ?? companyName,
+      fiscalYear,
+      sharedBy,
+      sharedByEmail,
+      reviewLink:    link,
+      expiresAt:     new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      totalCredit:   clientData?.estimated_credit_cad ?? report?.total_credit_cad ?? null,
+      clusterCount:  clientData?.clusters_approved ?? report?.approved_clusters ?? null,
+      auditScore:    clientData?.avg_readiness_score ?? auditScore ?? null,
+    }
+
+    try {
+      const result = await cpaApi.sendHandoff(reportPayload)
+      setSendResult({ ok: true, message: result.message ?? `Sent to ${cpaEmailInput}` })
+      setCpaEmailInput('')
+      setCpaNameInput('')
+    } catch (err) {
+      setSendResult({ ok: false, message: err?.message ?? 'Failed to send email' })
+    } finally {
+      setSending(false)
+    }
+  }
+
   if (!open) return null
 
   const displayName = clientData?.company_name ?? companyName
@@ -305,6 +345,54 @@ export default function ShareWithCpaModal({
             </p>
           </div>
 
+          {/* ── Direct email send ── */}
+          <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 space-y-3">
+            <p className="text-xs font-semibold text-indigo-700 flex items-center gap-1.5">
+              <Send size={12} /> Send directly from TaxLift
+            </p>
+
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="CPA name (optional)"
+                value={cpaNameInput}
+                onChange={e => setCpaNameInput(e.target.value)}
+                className="flex-1 min-w-0 px-3 py-2 text-sm border border-indigo-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder-gray-400"
+              />
+              <input
+                type="email"
+                placeholder="CPA email address"
+                value={cpaEmailInput}
+                onChange={e => { setCpaEmailInput(e.target.value); setSendResult(null) }}
+                onKeyDown={e => e.key === 'Enter' && handleSendEmail()}
+                className="flex-1 min-w-0 px-3 py-2 text-sm border border-indigo-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder-gray-400"
+              />
+            </div>
+
+            <button
+              onClick={handleSendEmail}
+              disabled={!cpaEmailInput || sending || !link}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg transition-colors"
+            >
+              {sending
+                ? <><Loader2 size={12} className="animate-spin" /> Sending…</>
+                : <><Send size={12} /> Send package email</>}
+            </button>
+
+            {sendResult && (
+              <div className={`flex items-start gap-2 text-xs rounded-lg px-3 py-2 ${
+                sendResult.ok
+                  ? 'bg-green-50 text-green-700 border border-green-200'
+                  : 'bg-red-50 text-red-700 border border-red-200'
+              }`}>
+                {sendResult.ok
+                  ? <CheckCircle2 size={12} className="flex-shrink-0 mt-0.5" />
+                  : <AlertCircle  size={12} className="flex-shrink-0 mt-0.5" />}
+                {sendResult.message}
+              </div>
+            )}
+          </div>
+
           {/* Email draft toggle */}
           <div>
             <button
@@ -312,7 +400,7 @@ export default function ShareWithCpaModal({
               className="flex items-center gap-2 text-xs font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
             >
               <Mail size={13} />
-              {showEmail ? 'Hide email draft' : 'Copy email draft to send to your CPA'}
+              {showEmail ? 'Hide email draft' : 'Or copy email draft to send manually'}
               {showEmail ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
             </button>
 
