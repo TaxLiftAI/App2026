@@ -20,7 +20,7 @@ import {
   ShieldCheck, CheckCircle2, Clock, DollarSign, GitMerge,
   Lock, Copy, Check, ExternalLink, AlertTriangle,
   BarChart2, Zap, FileText, Shield, TrendingUp,
-  ArrowRight, ChevronDown, X, Calendar,
+  ArrowRight, ChevronDown, X, Calendar, Share2,
 } from 'lucide-react'
 
 // ── Token encode / decode ─────────────────────────────────────────────────────
@@ -86,9 +86,10 @@ function AnimatedNumber({ value, prefix = '', suffix = '', duration = 1400 }) {
 
 // ── Share button (exported — used in DashboardPage) ───────────────────────────
 export function ShareButton({ clusters, companyName = 'Acme Corp', industry = 'Technology' }) {
-  const [open,   setOpen]   = useState(false)
-  const [copied, setCopied] = useState(false)
-  const popoverRef          = useRef(null)
+  const [open,        setOpen]        = useState(false)
+  const [copied,      setCopied]      = useState(false)
+  const [copiedText,  setCopiedText]  = useState(false)
+  const popoverRef                    = useRef(null)
 
   // Close on outside click
   useEffect(() => {
@@ -109,16 +110,11 @@ export function ShareButton({ clusters, companyName = 'Acme Corp', industry = 'T
     const auditScore    = (clusters ?? []).length
       ? Math.round((readyClusters.length / clusters.length) * 100)
       : 0
-
-    // Top activities — include cluster names for the "what qualifies" section
     const topActivities = approved
       .filter(c => c.business_component)
       .sort((a, b) => (b.estimated_credit_cad ?? 0) - (a.estimated_credit_cad ?? 0))
       .slice(0, 4)
-      .map(c => ({
-        name:      c.business_component,
-        creditCAD: c.estimated_credit_cad,
-      }))
+      .map(c => ({ name: c.business_component, creditCAD: c.estimated_credit_cad }))
 
     const payload = {
       companyName,
@@ -138,11 +134,37 @@ export function ShareButton({ clusters, companyName = 'Acme Corp', industry = 'T
     return `${window.location.origin}/share/${encodeShareToken(payload)}`
   }
 
+  function buildLinkedInPost(link) {
+    const approved    = (clusters ?? []).filter(c => c.status === 'Approved')
+    const totalCredit = approved.reduce((s, c) => s + (c.estimated_credit_cad ?? 0), 0)
+    const fmtCredit   = totalCredit > 0
+      ? `$${Math.round(totalCredit).toLocaleString('en-CA')} CAD`
+      : 'significant SR&ED tax credits'
+    return `We just discovered ${companyName} qualifies for ${fmtCredit} in SR&ED tax credits — automatically surfaced from our engineering activity by TaxLift.\n\nNo timesheets. No consultants. Just connected our GitHub and Jira, and TaxLift did the rest.\n\nIf you're building software in Canada and not claiming SR&ED, you're leaving money on the table.\n\n${link}\n\n#SRED #Startup #CanadaTech #TaxCredit`
+  }
+
   function handleCopy() {
     navigator.clipboard.writeText(buildLink()).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2500)
     })
+  }
+
+  function handleCopyLinkedInText() {
+    const link = buildLink()
+    navigator.clipboard.writeText(buildLinkedInPost(link)).then(() => {
+      setCopiedText(true)
+      setTimeout(() => setCopiedText(false), 2500)
+    })
+  }
+
+  function handleShareLinkedIn() {
+    const link = buildLink()
+    window.open(
+      `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(link)}`,
+      '_blank',
+      'noopener,noreferrer,width=600,height=600'
+    )
   }
 
   const days = 7
@@ -162,8 +184,8 @@ export function ShareButton({ clusters, companyName = 'Acme Corp', industry = 'T
           {/* Header */}
           <div className="bg-gradient-to-r from-slate-900 to-indigo-900 px-4 py-3.5 flex items-center justify-between">
             <div>
-              <p className="text-white text-sm font-semibold">Executive Summary Link</p>
-              <p className="text-indigo-200 text-xs mt-0.5">Founder / board-ready · No login needed</p>
+              <p className="text-white text-sm font-semibold">Share your SR&amp;ED summary</p>
+              <p className="text-indigo-200 text-xs mt-0.5">Board-ready · No login needed</p>
             </div>
             <button onClick={() => setOpen(false)} className="text-white/60 hover:text-white">
               <X size={15} />
@@ -193,18 +215,50 @@ export function ShareButton({ clusters, companyName = 'Acme Corp', industry = 'T
               ))}
             </div>
 
-            {/* Copy button */}
+            {/* Copy link button */}
             <button
               onClick={handleCopy}
               className={`w-full flex items-center justify-center gap-2 text-xs font-bold py-2.5 rounded-xl transition-colors ${
-                copied
-                  ? 'bg-green-600 text-white'
-                  : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                copied ? 'bg-green-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'
               }`}
             >
               {copied ? <Check size={13} /> : <Copy size={13} />}
-              {copied ? 'Link copied to clipboard!' : 'Copy shareable link'}
+              {copied ? 'Link copied!' : 'Copy shareable link'}
             </button>
+
+            {/* Divider */}
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-px bg-gray-100" />
+              <span className="text-[10px] text-gray-400 font-medium">or share on</span>
+              <div className="flex-1 h-px bg-gray-100" />
+            </div>
+
+            {/* LinkedIn share */}
+            <div className="space-y-2">
+              <button
+                onClick={handleShareLinkedIn}
+                className="w-full flex items-center justify-center gap-2 text-xs font-bold py-2.5 rounded-xl border-2 border-[#0A66C2] text-[#0A66C2] hover:bg-[#0A66C2] hover:text-white transition-colors"
+              >
+                {/* LinkedIn icon */}
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                </svg>
+                Share on LinkedIn
+              </button>
+
+              {/* Copy LinkedIn post text */}
+              <button
+                onClick={handleCopyLinkedInText}
+                className={`w-full flex items-center justify-center gap-2 text-xs py-2 rounded-xl border transition-colors ${
+                  copiedText
+                    ? 'border-green-300 bg-green-50 text-green-700'
+                    : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                {copiedText ? <Check size={12} /> : <Copy size={12} />}
+                {copiedText ? 'Post text copied!' : 'Copy suggested LinkedIn post'}
+              </button>
+            </div>
           </div>
         </div>
       )}

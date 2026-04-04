@@ -4,7 +4,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from 'recharts'
-import { GitMerge, Clock, CheckCircle2, DollarSign, AlertTriangle, TrendingUp, FlaskConical, Zap } from 'lucide-react'
+import { GitMerge, Clock, CheckCircle2, DollarSign, AlertTriangle, TrendingUp, FlaskConical, Zap, Mail, X, Send, Loader2 } from 'lucide-react'
 import { getCreditTrend, INTEGRATIONS } from '../data/mockData'
 import { formatCurrency, formatHours, STATUS_COLORS } from '../lib/utils'
 import { useClusters } from '../hooks'
@@ -13,7 +13,186 @@ import { StatusBadge, IntegrationBadge } from '../components/ui/Badge'
 import RiskScore from '../components/ui/RiskScore'
 import Card, { CardHeader } from '../components/ui/Card'
 import GettingStartedCard from '../components/dashboard/GettingStartedCard'
-import { ShareButton } from './ShareableSummaryPage'
+import { ShareButton, encodeShareToken } from './ShareableSummaryPage'
+import { cpa as cpaApi } from '../lib/api'
+
+// ── Invite Accountant Modal ───────────────────────────────────────────────────
+function InviteAccountantModal({ open, onClose, clusters, currentUser }) {
+  const [cpaName,  setCpaName]  = useState('')
+  const [cpaEmail, setCpaEmail] = useState('')
+  const [loading,  setLoading]  = useState(false)
+  const [success,  setSuccess]  = useState(false)
+  const [error,    setError]    = useState('')
+
+  function reset() {
+    setCpaName(''); setCpaEmail(''); setLoading(false); setSuccess(false); setError('')
+  }
+
+  function handleClose() { reset(); onClose() }
+
+  function buildShareLink() {
+    const approved    = (clusters ?? []).filter(c => c.status === 'Approved')
+    const pending     = (clusters ?? []).filter(c => !['Approved','Rejected','Merged'].includes(c.status))
+    const totalCredit = approved.reduce((s, c) => s + (c.estimated_credit_cad ?? 0), 0)
+    const totalHours  = approved.reduce((s, c) => s + (c.aggregate_time_hours ?? 0), 0)
+    const readyClusters = (clusters ?? []).filter(c => ['Approved','Drafted'].includes(c.status))
+    const auditScore  = clusters?.length
+      ? Math.round((readyClusters.length / clusters.length) * 100) : 0
+    const topActivities = approved
+      .filter(c => c.business_component)
+      .sort((a, b) => (b.estimated_credit_cad ?? 0) - (a.estimated_credit_cad ?? 0))
+      .slice(0, 4)
+      .map(c => ({ name: c.business_component, creditCAD: c.estimated_credit_cad }))
+
+    const payload = {
+      companyName:    currentUser?.firm_name ?? currentUser?.company_name ?? 'Your Company',
+      industry:       'Technology',
+      fiscalYear:     new Date().getFullYear().toString(),
+      totalCredit,
+      totalCreditUSD: Math.round(totalCredit * 0.74),
+      totalHours,
+      totalClusters:  (clusters ?? []).length,
+      approved:       approved.length,
+      pending:        pending.length,
+      auditScore,
+      topActivities,
+      sharedBy:       currentUser?.name ?? currentUser?.email,
+      generatedAt:    new Date().toISOString(),
+      expiresAt:      new Date(Date.now() + 30 * 86_400_000).toISOString(), // 30 days for accountant links
+    }
+    return `${window.location.origin}/share/${encodeShareToken(payload)}`
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!cpaEmail) return
+    setLoading(true); setError('')
+    try {
+      const reviewLink  = buildShareLink()
+      const companyName = currentUser?.firm_name ?? currentUser?.company_name ?? 'Your Company'
+      const fiscalYear  = new Date().getFullYear().toString()
+      const approved    = (clusters ?? []).filter(c => c.status === 'Approved')
+      const totalCredit = approved.reduce((s, c) => s + (c.estimated_credit_cad ?? 0), 0)
+      const readyClusters = (clusters ?? []).filter(c => ['Approved','Drafted'].includes(c.status))
+      const auditScore  = clusters?.length ? Math.round((readyClusters.length / clusters.length) * 100) : 0
+
+      await cpaApi.sendHandoff({
+        cpaEmail,
+        cpaName:      cpaName || undefined,
+        companyName,
+        fiscalYear,
+        sharedBy:     currentUser?.name ?? currentUser?.email ?? 'TaxLift user',
+        sharedByEmail: currentUser?.email,
+        reviewLink,
+        expiresAt:    new Date(Date.now() + 30 * 86_400_000).toISOString(),
+        totalCredit,
+        clusterCount: approved.length,
+        auditScore,
+      })
+      setSuccess(true)
+    } catch (err) {
+      setError(err?.message ?? 'Failed to send — please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (!open) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={handleClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-slate-900 to-indigo-900 px-5 py-4 flex items-center justify-between">
+          <div>
+            <p className="text-white text-sm font-semibold">Invite your accountant</p>
+            <p className="text-indigo-200 text-xs mt-0.5">Send them a read-only CPA review package</p>
+          </div>
+          <button onClick={handleClose} className="text-white/60 hover:text-white transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+
+        {success ? (
+          <div className="p-6 text-center">
+            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
+              <CheckCircle2 size={22} className="text-green-600" />
+            </div>
+            <p className="text-sm font-semibold text-gray-900 mb-1">Package sent!</p>
+            <p className="text-xs text-gray-500 mb-4">
+              Your accountant will receive an email with a link to your SR&amp;ED review package. The link is valid for 30 days.
+            </p>
+            <button
+              onClick={handleClose}
+              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors"
+            >
+              Done
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="p-5 space-y-4">
+            {/* What they'll receive */}
+            <div className="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 space-y-1.5">
+              <p className="text-[11px] font-semibold text-indigo-700 uppercase tracking-wider">What your accountant receives</p>
+              {[
+                'T661 narrative drafts for every R&D cluster',
+                'Financial schedule with proxy method estimate',
+                'Evidence chain-of-custody (SHA-256 hashed)',
+                'Audit readiness checklist',
+              ].map(item => (
+                <div key={item} className="flex items-center gap-2 text-xs text-indigo-800">
+                  <CheckCircle2 size={11} className="text-indigo-500 flex-shrink-0" />
+                  {item}
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Accountant's name <span className="font-normal text-gray-400">(optional)</span></label>
+                <input
+                  type="text"
+                  value={cpaName}
+                  onChange={e => setCpaName(e.target.value)}
+                  placeholder="e.g. Jane Smith"
+                  className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Accountant's work email <span className="text-red-400">*</span></label>
+                <input
+                  type="email"
+                  required
+                  value={cpaEmail}
+                  onChange={e => setCpaEmail(e.target.value)}
+                  placeholder="accountant@firm.com"
+                  className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                <AlertTriangle size={12} className="flex-shrink-0" /> {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading || !cpaEmail}
+              className="w-full flex items-center justify-center gap-2 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-semibold rounded-xl transition-colors"
+            >
+              {loading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+              {loading ? 'Sending…' : 'Send CPA review package'}
+            </button>
+            <p className="text-[11px] text-gray-400 text-center">No login required for your accountant · Link valid 30 days</p>
+          </form>
+        )}
+      </div>
+    </div>
+  )
+}
 
 const PIE_COLORS = {
   New: '#94a3b8', Interviewed: '#60a5fa', Drafted: '#f59e0b', Approved: '#22c55e', Rejected: '#f87171',
@@ -41,6 +220,7 @@ export default function DashboardPage() {
   const { currentUser } = useAuth()
   const { data: clusters, usingMock } = useClusters()
   const trend = getCreditTrend()
+  const [inviteOpen, setInviteOpen] = useState(false)
 
   // Derive stats from live cluster data
   const stats = useMemo(() => {
@@ -145,6 +325,14 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Invite accountant modal */}
+      <InviteAccountantModal
+        open={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+        clusters={clusters}
+        currentUser={currentUser}
+      />
+
       {/* Page header with action buttons */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -158,9 +346,15 @@ export default function DashboardPage() {
           >
             <Zap size={13} /> Quick Connect
           </button>
+          <button
+            onClick={() => setInviteOpen(true)}
+            className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            <Mail size={13} /> Invite accountant
+          </button>
           <ShareButton
             clusters={clusters}
-            companyName={currentUser?.tenant_id ? 'Your Company' : 'Acme Corp'}
+            companyName={currentUser?.firm_name ?? currentUser?.company_name ?? 'Your Company'}
           />
         </div>
       </div>
