@@ -52,7 +52,10 @@ import PlanUpgradeGate     from './pages/grants/PlanUpgradeGate'
 import { canDo } from './lib/utils'
 
 function ProtectedRoute({ children, action }) {
-  const { currentUser } = useAuth()
+  const { currentUser, authLoading } = useAuth()
+  // Wait for session restore before deciding to redirect — prevents race condition
+  // where demo login sets currentUser but navigate fires before state commits
+  if (authLoading) return null
   if (!currentUser) return <Navigate to="/login" replace />
   if (action && !canDo(action, currentUser.role)) {
     return (

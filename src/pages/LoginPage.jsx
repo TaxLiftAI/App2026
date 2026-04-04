@@ -33,7 +33,10 @@ export default function LoginPage() {
 
   function handleDemoLogin() {
     loginDemo(demoUserId)
-    navigate('/dashboard')
+    // navigate is intentionally omitted — loginDemo sets currentUser, which causes
+    // the /login route element (currentUser ? <Navigate to="/dashboard"> : <LoginPage>)
+    // to redirect automatically on the next render, avoiding the race condition
+    // where navigate fires before the state update commits.
   }
 
   const displayError = localError || authError
