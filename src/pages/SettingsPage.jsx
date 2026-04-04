@@ -1,10 +1,13 @@
-─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────——§—é────────────────────────────────────────────────────────────────——•────────—……—…────────────——────import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   User, Mail, Shield, Bell, Key, Copy, Eye, EyeOff,
   CheckCircle2, Save, RefreshCw, Globe, Calendar, Keyboard,
-  ChevronRight, Lock, AlertCircle,
+  ChevronRight, Lock, AlertCircle, CreditCard, Building2,
+  Loader2, Zap, Crown,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { auth as authApi, billing as billingApi } from '../lib/api'
+import { redirectToCheckout, PLANS } from '../lib/stripe'
 import { ROLE_COLORS } from '../lib/utils'
 
 // ─── Section wrapper ──────────────────────────────────────────────────────────
@@ -94,16 +97,54 @@ const FISCAL_MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ]
 
+const CANADIAN_PROVINCES = [
+  { value: 'AB', label: 'Alberta' },
+  { value: 'BC', label: 'British Columbia' },
+  { value: 'MB', label: 'Manitoba' },
+  { value: 'NB', label: 'New Brunswick' },
+  { value: 'NL', label: 'Newfoundland and Labrador' },
+  { value: 'NS', label: 'Nova Scotia' },
+  { value: 'NT', label: 'Northwest Territories' },
+  { value: 'NU', label: 'Nunavut' },
+  { value: 'ON', label: 'Ontario' },
+  { value: 'PE', label: 'Prince Edward Island' },
+  { value: 'QC', label: 'Quebec' },
+  { value: 'SK', label: 'Saskatchewan' },
+  { value: 'YT', label: 'Yukon' },
+]
+
+const INDUSTRY_DOMAINS = [
+  { value: 'software',        label: 'Software / SaaS' },
+  { value: 'ai_ml',           label: 'AI / Machine Learning' },
+  { value: 'biotech',         label: 'Biotech / Life Sciences' },
+  { value: 'cleantech',       label: 'Clean Technology / Sustainability' },
+  { value: 'advanced_mfg',   label: 'Advanced Manufacturing' },
+  { value: 'agritech',        label: 'Agriculture Technology' },
+  { value: 'fintech',         label: 'Fintech / Financial Services' },
+  { value: 'medtech',         label: 'Medical Devices / Health Tech' },
+  { value: 'materials',       label: 'Materials Science' },
+  { value: 'aerospace',       label: 'Aerospace / Defence' },
+  { value: 'other',           label: 'Other' },
+]
+
 // ─── Mock API key ─────────────────────────────────────────────────────────────
 const MOCK_API_KEY = 'cred_live_sk_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6'
 
+const TIER_CONFIG = {
+  free:       { label: 'Free',       badge: 'bg-gray-100 text-gray-600',    icon: null },
+  starter:    { label: 'Starter',    badge: 'bg-blue-100 text-blue-700',    icon: Zap  },
+  plus:       { label: 'Plus',       badge: 'bg-indigo-100 text-indigo-700', icon: Crown },
+  pro:        { label: 'Pro',        badge: 'bg-purple-100 text-purple-700', icon: Crown },
+  enterprise: { label: 'Enterprise', badge: 'bg-amber-100 text-amber-700',  icon: Crown },
+}
+
 export default function SettingsPage() {
-  const { currentUser } = useAuth()
+  const { currentUser, refreshUser } = useAuth()
   const role = currentUser?.role ?? 'Admin'
   const roleStyle = ROLE_COLORS[role] ?? { bg: 'bg-gray-100', text: 'text-gray-700' }
 
   // Profile state
-  const [displayName, setDisplayName] = useState(currentUser?.display_name ?? '')
+  const [displayName, setDisplayName] = useState(currentUser?.name ?? currentUser?.display_name ?? '')
   const [nameEditing, setNameEditing]  = useState(false)
   const [nameDraft, setNameDraft]      = useState(displayName)
 
@@ -122,6 +163,17 @@ export default function SettingsPage() {
   const [apiKeyCopied, setApiKeyCopied]   = useState(false)
   const [apiKeyRegenerated, setApiKeyRegenerated] = useState(false)
 
+  // Company profile
+  const [province, setProvince]         = useState('ON')
+  const [industry, setIndustry]         = useState('')
+  const [employeeCount, setEmployeeCount] = useState('')
+  const [profileSaving, setProfileSaving] = useState(false)
+
+  // Billing
+  const [subscription, setSubscription] = useState(null)
+  const [upgrading, setUpgrading]       = useState(false)
+  const [upgradeError, setUpgradeError] = useState(null)
+
   // Toast
   const [toast, setToast] = useState(null)
 
@@ -129,6 +181,17 @@ export default function SettingsPage() {
     setToast(msg)
     setTimeout(() => setToast(null), 2800)
   }
+
+  // Load company profile + subscription on mount
+  useEffect(() => {
+    authApi.getProfile().then(p => {
+      if (p?.province)        setProvince(p.province)
+      if (p?.industry_domain) setIndustry(p.industry_domain)
+      if (p?.employee_count)  setEmployeeCount(String(p.employee_count))
+    }).catch(() => {})
+
+    billingApi.subscription().then(s => setSubscription(s)).catch(() => {})
+  }, [])
 
   function saveName() {
     setDisplayName(nameDraft.trim() || displayName)
@@ -158,7 +221,41 @@ export default function SettingsPage() {
     showToast('Preferences saved')
   }
 
+  async function saveCompanyProfile() {
+    setProfileSaving(true)
+    try {
+      await authApi.updateProfile({
+        province,
+        industry_domain: industry,
+        employee_count:  employeeCount ? parseInt(employeeCount, 10) : undefined,
+      })
+      showToast('Company profile saved — grant eligibility updated')
+    } catch {
+      showToast('Could not save profile')
+    } finally {
+      setProfileSaving(false)
+    }
+  }
+
+  async function handleUpgrade(planId) {
+    setUpgrading(true)
+    setUpgradeError(null)
+    const result = await redirectToCheckout(planId)
+    if (!result.ok) {
+      setUpgradeError(result.message ?? 'Checkout failed — please try again')
+      setUpgrading(false)
+    }
+    // On success, browser redirects to Stripe — no further state needed
+  }
+
   const maskedKey = MOCK_API_KEY.slice(0, 12) + '•'.repeat(24) + MOCK_API_KEY.slice(-4)
+
+  const currentTier  = subscription?.tier ?? currentUser?.subscription_tier ?? 'free'
+  const tierCfg      = TIER_CONFIG[currentTier] ?? TIER_CONFIG.free
+  const TierIcon     = tierCfg.icon
+  const isFreeTier   = currentTier === 'free'
+  const isStarterTier = currentTier === 'starter'
+  const isPlusTier   = ['plus', 'pro', 'enterprise'].includes(currentTier)
 
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-6">
@@ -227,8 +324,168 @@ export default function SettingsPage() {
         <div className="border-t border-gray-100" />
 
         <FieldRow label="Tenant" hint="Your organisation's workspace">
-          <span className="text-sm text-gray-600">Acme Corp <span className="text-gray-400 text-xs ml-1">/ tenant-acme</span></span>
+          <span className="text-sm text-gray-600">
+            {currentUser?.firm_name ?? 'Your company'}
+            {currentUser?.tenant_id && (
+              <span className="text-gray-400 text-xs ml-1">/ {currentUser.tenant_id}</span>
+            )}
+          </span>
         </FieldRow>
+      </Section>
+
+      {/* ── Billing & Plan ── */}
+      <Section icon={CreditCard} title="Plan & Billing" subtitle="Your current subscription and upgrade options">
+
+        {/* Current plan status */}
+        <FieldRow label="Current plan" hint="Your active TaxLift subscription">
+          <div className="flex items-center gap-2">
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${tierCfg.badge}`}>
+              {TierIcon && <TierIcon size={10} />}
+              {tierCfg.label}
+            </span>
+            {subscription?.subscribedAt && (
+              <span className="text-xs text-gray-400">
+                since {new Date(subscription.subscribedAt).toLocaleDateString('en-CA', { year: 'numeric', month: 'short' })}
+              </span>
+            )}
+          </div>
+        </FieldRow>
+
+        {/* Upgrade CTA — only shown to non-Plus users */}
+        {!isPlusTier && (
+          <>
+            <div className="border-t border-gray-100" />
+            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-xl p-4 space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Crown size={14} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">Upgrade to Plus — $599/mo</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Unlock the Grants module — AI-matched against 9 Canadian programs (IRAP, SDTC, Mitacs, RDA + provincial).
+                    Average client finds <strong>$700K+</strong> in additional funding.
+                  </p>
+                </div>
+              </div>
+
+              <ul className="grid grid-cols-2 gap-x-4 gap-y-1">
+                {PLANS.plus.features.slice(1, 5).map((f, i) => (
+                  <li key={i} className="flex items-center gap-1.5 text-xs text-indigo-700">
+                    <CheckCircle2 size={11} className="text-indigo-500 flex-shrink-0" />
+                    {f.replace('✦ ', '')}
+                  </li>
+                ))}
+              </ul>
+
+              {upgradeError && (
+                <p className="text-xs text-red-600 flex items-center gap-1.5">
+                  <AlertCircle size={11} /> {upgradeError}
+                </p>
+              )}
+
+              <div className="flex items-center gap-3 pt-1">
+                <button
+                  onClick={() => handleUpgrade('plus')}
+                  disabled={upgrading || !subscription?.stripeConfigured}
+                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-colors"
+                >
+                  {upgrading ? <Loader2 size={14} className="animate-spin" /> : <Crown size={14} />}
+                  {upgrading ? 'Redirecting…' : 'Upgrade to Plus'}
+                </button>
+
+                {isFreeTier && (
+                  <button
+                    onClick={() => handleUpgrade('starter')}
+                    disabled={upgrading || !subscription?.stripeConfigured}
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 hover:bg-gray-50 disabled:opacity-50 text-gray-700 text-sm font-medium rounded-xl transition-colors"
+                  >
+                    {upgrading ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
+                    Start with Starter ($299/mo)
+                  </button>
+                )}
+              </div>
+
+              {!subscription?.stripeConfigured && (
+                <p className="text-xs text-amber-600 flex items-center gap-1.5">
+                  <AlertCircle size={11} /> Stripe is not configured — set STRIPE_SECRET_KEY on the server to enable billing.
+                </p>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Already on Plus — manage subscription */}
+        {isPlusTier && (
+          <>
+            <div className="border-t border-gray-100" />
+            <FieldRow label="Manage subscription" hint="Update payment method or cancel">
+              <a
+                href="https://billing.stripe.com/p/login"
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 text-sm text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
+              >
+                Open billing portal <ChevronRight size={13} />
+              </a>
+            </FieldRow>
+          </>
+        )}
+      </Section>
+
+      {/* ── Company Profile ── */}
+      <Section icon={Building2} title="Company Profile" subtitle="Used to match grant eligibility — takes 30 seconds to fill in">
+        <FieldRow label="Province / Territory" hint="Determines provincial grants like BC Ignite, AB Innovates, OITC">
+          <select
+            value={province}
+            onChange={e => setProvince(e.target.value)}
+            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white text-gray-700"
+          >
+            {CANADIAN_PROVINCES.map(p => (
+              <option key={p.value} value={p.value}>{p.label}</option>
+            ))}
+          </select>
+        </FieldRow>
+
+        <div className="border-t border-gray-100" />
+
+        <FieldRow label="Industry" hint="Used to score IRAP, NGen, SDTC, and sector-specific grants">
+          <select
+            value={industry}
+            onChange={e => setIndustry(e.target.value)}
+            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white text-gray-700"
+          >
+            <option value="">— Select your primary industry —</option>
+            {INDUSTRY_DOMAINS.map(d => (
+              <option key={d.value} value={d.value}>{d.label}</option>
+            ))}
+          </select>
+        </FieldRow>
+
+        <div className="border-t border-gray-100" />
+
+        <FieldRow label="Employees (FTEs)" hint="Full-time equivalents — affects IRAP and Mitacs eligibility bands">
+          <input
+            type="number"
+            min="1"
+            max="9999"
+            value={employeeCount}
+            onChange={e => setEmployeeCount(e.target.value)}
+            placeholder="e.g. 25"
+            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white text-gray-700"
+          />
+        </FieldRow>
+
+        <div className="pt-1">
+          <button
+            onClick={saveCompanyProfile}
+            disabled={profileSaving}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors"
+          >
+            {profileSaving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+            {profileSaving ? 'Saving…' : 'Save profile'}
+          </button>
+        </div>
       </Section>
 
       {/* ── Notification preferences ── */}

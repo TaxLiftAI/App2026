@@ -344,6 +344,10 @@ export const auth = {
 
   me: () => get('/api/auth/me'),
 
+  getProfile: () => get('/api/auth/profile'),
+
+  updateProfile: (payload) => request('PATCH', '/api/auth/profile', { body: payload }),
+
   changePassword: (payload) =>
     post('/api/auth/change-password', { body: payload }),
 }

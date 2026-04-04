@@ -44,7 +44,7 @@ function ScoreRing({ score }) {
 export default function GrantsDashboard() {
   const navigate = useNavigate()
   const { currentUser } = useAuth()
-  const isPlusUser = ['plus', 'pro', 'admin', 'cpa'].includes(currentUser?.subscription_tier?.toLowerCase()) ||
+  const isPlusUser = ['plus', 'pro', 'enterprise', 'admin', 'cpa'].includes(currentUser?.subscription_tier?.toLowerCase()) ||
                      ['admin', 'cpa'].includes(currentUser?.role?.toLowerCase())
 
   const [eligibility, setEligibility] = useState(null)
