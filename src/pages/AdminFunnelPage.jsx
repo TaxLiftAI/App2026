@@ -17,8 +17,12 @@ import {
   ArrowLeft, Download, RefreshCw, Loader2,
   Users, Mail, CreditCard, ArrowRight,
   ChevronUp, ChevronDown, ExternalLink, Send,
-  ScanLine,
+  ScanLine, TrendingUp, BarChart2, CheckCircle2, Clock,
 } from 'lucide-react'
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, Legend,
+} from 'recharts'
 import { admin as adminApi, BASE_URL, token } from '../lib/api'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -180,7 +184,7 @@ export default function AdminFunnelPage() {
   const [data,       setData]       = useState(null)
   const [loading,    setLoading]    = useState(false)
   const [error,      setError]      = useState('')
-  const [tab,        setTab]        = useState('scans')   // 'scans' | 'leads'
+  const [tab,        setTab]        = useState('daily')   // 'daily' | 'scans' | 'leads' | 'users'
   const [sort,       setSort]       = useState({ col: 'created_at', dir: 'desc' })
   const [triggering, setTriggering] = useState({})        // { [scanId]: bool }
 
@@ -371,8 +375,10 @@ export default function AdminFunnelPage() {
         {/* ── Tabs ─────────────────────────────────────────────────────────── */}
         <div className="flex gap-0 mb-4 bg-white rounded-xl border border-slate-200 p-1 w-fit">
           {[
+            { key: 'daily', label: 'Daily Activity' },
             { key: 'scans', label: `Free Scans (${scanCount})` },
             { key: 'leads', label: `All Leads (${data?.leads?.length ?? 0})` },
+            { key: 'users', label: `Users (${data?.users?.total ?? 0})` },
           ].map(({ key, label }) => (
             <button
               key={key}
@@ -393,6 +399,110 @@ export default function AdminFunnelPage() {
           <div className="flex items-center justify-center py-20 gap-2 text-slate-400">
             <Loader2 size={18} className="animate-spin" />
             <span className="text-sm">Loading funnel data…</span>
+          </div>
+        )}
+
+        {/* ── Daily Activity tab ───────────────────────────────────────────── */}
+        {!loading && data && tab === 'daily' && (
+          <div className="space-y-5">
+
+            {/* Headline stats for the window */}
+            <div className="grid grid-cols-3 gap-4">
+              {[
+                {
+                  label: 'Scans (30d)',
+                  value: (data.daily ?? []).reduce((s, d) => s + d.scans, 0),
+                  icon: ScanLine,
+                  color: 'text-indigo-600',
+                  bg:    'bg-indigo-50',
+                },
+                {
+                  label: 'Signups (30d)',
+                  value: (data.daily ?? []).reduce((s, d) => s + d.signups, 0),
+                  icon: Users,
+                  color: 'text-emerald-600',
+                  bg:    'bg-emerald-50',
+                },
+                {
+                  label: 'Scan → Signup rate',
+                  value: (() => {
+                    const s = (data.daily ?? []).reduce((a, d) => a + d.scans, 0)
+                    const u = (data.daily ?? []).reduce((a, d) => a + d.signups, 0)
+                    return s > 0 ? `${Math.round((u / s) * 100)}%` : '—'
+                  })(),
+                  icon: TrendingUp,
+                  color: 'text-violet-600',
+                  bg:    'bg-violet-50',
+                },
+              ].map(({ label, value, icon: Icon, color, bg }) => (
+                <div key={label} className="bg-white rounded-xl border border-slate-200 p-5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className={`p-1.5 rounded-lg ${bg}`}>
+                      <Icon size={14} className={color} />
+                    </div>
+                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{label}</span>
+                  </div>
+                  <div className="text-3xl font-bold text-slate-900 tabular-nums">{value}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Bar chart */}
+            <div className="bg-white rounded-xl border border-slate-200 p-6">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-800">Scans &amp; Signups — Last 30 Days</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">Daily new free scans vs registered signups</p>
+                </div>
+                <div className="flex items-center gap-4 text-xs text-slate-500">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-sm bg-indigo-400 inline-block" />
+                    Free scans
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-sm bg-emerald-400 inline-block" />
+                    Signups
+                  </span>
+                </div>
+              </div>
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart
+                  data={data.daily ?? []}
+                  margin={{ top: 0, right: 0, left: -20, bottom: 0 }}
+                  barGap={2}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis
+                    dataKey="day"
+                    tickFormatter={d => {
+                      const dt = new Date(d + 'T00:00:00')
+                      return dt.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })
+                    }}
+                    tick={{ fontSize: 10, fill: '#94a3b8' }}
+                    interval={4}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fontSize: 10, fill: '#94a3b8' }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}
+                    labelFormatter={d => new Date(d + 'T00:00:00').toLocaleDateString('en-CA', { weekday: 'short', month: 'short', day: 'numeric' })}
+                  />
+                  <Bar dataKey="scans"   fill="#818cf8" radius={[3, 3, 0, 0]} name="Free scans" />
+                  <Bar dataKey="signups" fill="#34d399" radius={[3, 3, 0, 0]} name="Signups" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Conversion hint */}
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 text-sm text-amber-800">
+              <strong>Tip:</strong> Paid upgrade events aren't timestamped yet — install Stripe webhooks to track upgrade-by-day. The Users tab shows current subscription tiers.
+            </div>
           </div>
         )}
 
@@ -563,6 +673,75 @@ export default function AdminFunnelPage() {
                   ))}
                 </tbody>
               </table>
+            )}
+          </div>
+        )}
+
+        {/* ── Users tab ─────────────────────────────────────────────────────── */}
+        {!loading && data && tab === 'users' && (
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            {(data.allUsers ?? []).length === 0 ? (
+              <div className="text-center py-20 text-slate-400">
+                <Users size={32} className="mx-auto mb-3 opacity-40" />
+                <p className="text-sm font-medium">No registered users yet</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-100 bg-slate-50 text-left">
+                      <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">User</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Company</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Plan</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden md:table-cell">Onboarded</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden lg:table-cell">Signed up</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {(data.allUsers ?? []).map(user => {
+                      const tier   = user.subscription_tier ?? 'free'
+                      const isPaid = !['free', ''].includes(tier)
+                      const tierColors = {
+                        free:       'bg-slate-100 text-slate-500',
+                        starter:    'bg-blue-50 text-blue-700',
+                        plus:       'bg-indigo-50 text-indigo-700',
+                        enterprise: 'bg-violet-50 text-violet-700',
+                      }
+                      return (
+                        <tr key={user.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="px-4 py-3">
+                            <div className="font-medium text-slate-900 truncate max-w-[180px]">
+                              {user.full_name || <span className="text-slate-400">—</span>}
+                            </div>
+                            <div className="text-xs text-slate-400 truncate max-w-[180px]">
+                              <a href={`mailto:${user.email}`} className="hover:text-indigo-600 hover:underline">
+                                {user.email}
+                              </a>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-slate-500 text-xs truncate max-w-[140px]">
+                            {user.firm_name || <span className="text-slate-300">—</span>}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${tierColors[tier] ?? 'bg-slate-100 text-slate-600'}`}>
+                              {tier}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 hidden md:table-cell">
+                            {user.onboarding_completed
+                              ? <span className="flex items-center gap-1 text-xs text-emerald-600"><CheckCircle2 size={12} /> Done</span>
+                              : <span className="flex items-center gap-1 text-xs text-amber-500"><Clock size={12} /> Pending</span>
+                            }
+                          </td>
+                          <td className="px-4 py-3 text-slate-400 text-xs hidden lg:table-cell whitespace-nowrap">
+                            {relativeTime(user.created_at)}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         )}

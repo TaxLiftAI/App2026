@@ -97,6 +97,41 @@ router.get('/funnel', requireAuth, requireAdmin, (req, res) => {
     SELECT COUNT(DISTINCT email) as n FROM drip_emails WHERE status = 'sent'
   `).get().n
 
+  // 30-day daily series: scans + signups per day
+  const scansDaily = db.prepare(`
+    SELECT date(created_at) as day, COUNT(*) as scans
+    FROM free_scans
+    WHERE created_at >= datetime('now', '-29 days')
+    GROUP BY day
+    ORDER BY day ASC
+  `).all()
+
+  const signupsDaily = db.prepare(`
+    SELECT date(created_at) as day, COUNT(*) as signups
+    FROM users
+    WHERE created_at >= datetime('now', '-29 days')
+    GROUP BY day
+    ORDER BY day ASC
+  `).all()
+
+  // Merge into unified day array (last 30 days, fill gaps with 0)
+  const daily = []
+  for (let i = 29; i >= 0; i--) {
+    const d   = new Date()
+    d.setDate(d.getDate() - i)
+    const day = d.toISOString().slice(0, 10)
+    const s   = scansDaily.find(r => r.day === day)
+    const u   = signupsDaily.find(r => r.day === day)
+    daily.push({ day, scans: s?.scans ?? 0, signups: u?.signups ?? 0 })
+  }
+
+  // All users list with tier info (for Users tab)
+  const allUsers = db.prepare(`
+    SELECT id, email, full_name, firm_name, subscription_tier, onboarding_completed, created_at
+    FROM users
+    ORDER BY created_at DESC
+  `).all()
+
   res.json({
     freeScans:   scansWithDrip,
     leads:       leadsRows,
@@ -104,6 +139,8 @@ router.get('/funnel', requireAuth, requireAdmin, (req, res) => {
     emailLeads:  { total: emailLeadsTotal, dripSentCount },
     paidCount,
     scanSparkline: scanLast7,
+    daily,
+    allUsers,
   })
 })
 

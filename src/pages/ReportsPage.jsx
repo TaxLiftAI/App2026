@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useMemo } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts'
-import { Download, Calendar, DollarSign, Clock, CheckCircle2, Printer, FileSpreadsheet, Building2, Info, Calculator, ChevronDown, ChevronUp, FlaskConical, Briefcase, Share2 } from 'lucide-react'
+import { Download, Calendar, DollarSign, Clock, CheckCircle2, Printer, FileSpreadsheet, Building2, Info, Calculator, ChevronDown, ChevronUp, FlaskConical, Briefcase, Share2, Lock } from 'lucide-react'
 import CpaHandoffPackage from '../components/CpaHandoffPackage'
 import ShareWithCpaModal from '../components/ShareWithCpaModal'
 import { useAuth } from '../context/AuthContext'
@@ -13,6 +13,7 @@ import { StatusBadge } from '../components/ui/Badge'
 import Card, { CardHeader } from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import RiskScore from '../components/ui/RiskScore'
+import UpgradeModal from '../components/ui/UpgradeModal'
 
 const CURRENT_YEAR = 2026
 
@@ -513,8 +514,17 @@ export default function ReportsPage() {
   const [exporting, setExporting] = useState(false)
   const [activeTab, setActiveTab] = useState('summary')   // 'summary' | 't661' | 'developers'
   const [shareOpen, setShareOpen] = useState(false)
+  const [upgradeOpen, setUpgradeOpen]       = useState(false)
+  const [upgradeFeature, setUpgradeFeature] = useState('Export PDF')
   const generatedAtRef = useRef(null)
   const cpaPackageRef  = useRef(null)
+
+  const isPaid = ['starter', 'plus', 'enterprise'].includes(currentUser?.subscription_tier?.toLowerCase())
+
+  function requirePaid(feature, action) {
+    if (!isPaid) { setUpgradeFeature(feature); setUpgradeOpen(true); return }
+    action()
+  }
 
   function applyPreset(i) {
     setPreset(i)
@@ -571,6 +581,13 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-5">
+
+      <UpgradeModal
+        open={upgradeOpen}
+        onClose={() => setUpgradeOpen(false)}
+        feature={upgradeFeature}
+        plan="starter"
+      />
 
       {/* Demo mode banner */}
       {usingMock && (
@@ -647,30 +664,31 @@ export default function ReportsPage() {
             <Button
               variant="secondary"
               size="sm"
-              icon={exporting ? undefined : Printer}
-              onClick={handleExportPDF}
+              icon={exporting ? undefined : isPaid ? Printer : Lock}
+              onClick={() => requirePaid('Export PDF', handleExportPDF)}
               disabled={report.total_clusters === 0 || exporting}
+              title={isPaid ? undefined : 'Starter plan required'}
             >
-              {exporting ? 'Preparing…' : 'Export PDF'}
+              {exporting ? 'Preparing…' : isPaid ? 'Export PDF' : 'Export PDF — Starter'}
             </Button>
             <Button
               variant="secondary"
               size="sm"
-              icon={Share2}
-              onClick={() => setShareOpen(true)}
-              disabled={report.approved_clusters === 0}
-              title="Generate a shareable review link to send to your CPA — no login required"
+              icon={isPaid ? Share2 : Lock}
+              onClick={() => requirePaid('Share with CPA', () => setShareOpen(true))}
+              disabled={report.approved_clusters === 0 && isPaid}
+              title={isPaid ? 'Generate a shareable review link to send to your CPA — no login required' : 'Starter plan required'}
             >
-              Share with CPA
+              {isPaid ? 'Share with CPA' : 'Share with CPA — Starter'}
             </Button>
             <Button
               size="sm"
-              icon={Briefcase}
-              onClick={() => { cpaPackageRef.current?.print() }}
-              disabled={report.approved_clusters === 0}
-              title="Generate a print-ready CPA handoff package with T661 estimates, narratives, and evidence. Share with your CPA to complete the filing."
+              icon={isPaid ? Briefcase : Lock}
+              onClick={() => requirePaid('CPA Package', () => cpaPackageRef.current?.print())}
+              disabled={report.approved_clusters === 0 && isPaid}
+              title={isPaid ? 'Generate a print-ready CPA handoff package with T661 estimates, narratives, and evidence.' : 'Starter plan required'}
             >
-              CPA Package ↗
+              {isPaid ? 'CPA Package ↗' : 'CPA Package — Starter'}
             </Button>
           </div>
         </div>

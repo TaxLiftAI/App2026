@@ -18,6 +18,7 @@ import Card, { CardHeader } from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
 import CommentThread from '../components/ui/CommentThread'
+import UpgradeModal from '../components/ui/UpgradeModal'
 import NarrativeQualityCard from '../components/NarrativeQualityCard'
 
 // ── Heuristic icon map ─────────────────────────────────────────────────────────
@@ -425,13 +426,14 @@ function DiffViewer({ original, edited }) {
 }
 
 // ── Narrative Panel ────────────────────────────────────────────────────────────
-function NarrativePanel({ narrative, cluster, onApprove, onReject, canEdit, onStartManual, onNarrativeGenerated }) {
+function NarrativePanel({ narrative, cluster, onApprove, onReject, canEdit, onStartManual, onNarrativeGenerated, isPaid = true }) {
   const [mode, setMode] = useState('view')   // 'view' | 'edit' | 'diff' | 'history'
   const [editText, setEditText] = useState(narrative?.content_text ?? '')
   const [citationsOpen, setCitationsOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [aiGenerating, setAiGenerating] = useState(false)
   const [aiError, setAiError] = useState(null)
+  const [narrativeUpgradeOpen, setNarrativeUpgradeOpen] = useState(false)
 
   // Mutable current text and version log
   const [liveText, setLiveText] = useState(narrative?.content_text ?? '')
@@ -442,6 +444,7 @@ function NarrativePanel({ narrative, cluster, onApprove, onReject, canEdit, onSt
   const prevVer   = versions.length > 1 ? versions[versions.length - 2] : null
 
   async function handleAiGenerate() {
+    if (!isPaid) { setNarrativeUpgradeOpen(true); return }
     setAiGenerating(true)
     setAiError(null)
     try {
@@ -492,6 +495,7 @@ function NarrativePanel({ narrative, cluster, onApprove, onReject, canEdit, onSt
 
   if (!narrative) {
     return (
+      <>
       <div className="space-y-4">
         {aiError && (
           <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5 text-xs text-red-700">
@@ -506,14 +510,20 @@ function NarrativePanel({ narrative, cluster, onApprove, onReject, canEdit, onSt
             <div className="flex items-center gap-2">
               <Button
                 size="sm"
-                icon={Zap}
+                icon={isPaid ? Zap : Lock}
                 onClick={handleAiGenerate}
                 disabled={aiGenerating}
                 className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                title={isPaid ? undefined : 'Starter plan required'}
               >
-                {aiGenerating ? 'Generating…' : 'AI Generate'}
+                {aiGenerating ? 'Generating…' : isPaid ? 'AI Generate' : 'AI Generate — Starter'}
               </Button>
-              <Button size="sm" variant="secondary" icon={PenLine} onClick={onStartManual}>
+              <Button
+                size="sm"
+                variant="secondary"
+                icon={isPaid ? PenLine : Lock}
+                onClick={() => isPaid ? onStartManual() : setNarrativeUpgradeOpen(true)}
+              >
                 Manual Template
               </Button>
             </div>
@@ -526,7 +536,13 @@ function NarrativePanel({ narrative, cluster, onApprove, onReject, canEdit, onSt
           </div>
         )}
       </div>
-    )
+      <UpgradeModal
+        open={narrativeUpgradeOpen}
+        onClose={() => setNarrativeUpgradeOpen(false)}
+        feature="Narrative generation"
+        plan="starter"
+      />
+    </>
   }
 
   const isApproved = !!narrative.approved_at
@@ -1130,6 +1146,7 @@ export default function ClusterDetailPage() {
                 narrative={n}
                 cluster={c}
                 canEdit={canEdit}
+                isPaid={['starter', 'plus', 'enterprise'].includes(currentUser?.subscription_tier?.toLowerCase())}
                 onApprove={() => setShowApproveModal(true)}
                 onReject={() => setShowRejectModal(true)}
                 onStartManual={() => setShowNarrativeTemplate(true)}
