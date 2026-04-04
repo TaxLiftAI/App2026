@@ -70,11 +70,11 @@ export default function SignupPage() {
     if (currentUser) navigate('/dashboard', { replace: true })
   }, [currentUser, navigate])
 
-  // Pre-fill email from scan flow
+  // Pre-fill email from scan flow (not for CPA signups — different user journey)
   const [fullName,    setFullName]    = useState('')
   const [companyName, setCompanyName] = useState('')
   const [email,       setEmail]       = useState(() =>
-    localStorage.getItem('taxlift_scan_email') ?? ''
+    isCpaSignup ? '' : (localStorage.getItem('taxlift_scan_email') ?? '')
   )
   const [password,    setPassword]    = useState('')
   const [confirm,     setConfirm]     = useState('')
