@@ -489,11 +489,11 @@ function StepComplete({ provider, backfill, sensitivity, onDone }) {
       </div>
 
       <div className="flex flex-col gap-2 pt-2">
-        <Button variant="primary" onClick={() => onDone('/integrations')}>
-          Go to Integrations <ArrowRight size={14} />
+        <Button variant="primary" onClick={() => onDone('/welcome')}>
+          See your credit estimate <ArrowRight size={14} />
         </Button>
-        <Button variant="secondary" onClick={() => onDone('/dashboard')}>
-          Back to Dashboard
+        <Button variant="secondary" onClick={() => onDone('/integrations')}>
+          Go to Integrations
         </Button>
       </div>
     </div>

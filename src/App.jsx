@@ -37,6 +37,7 @@ import DemoPage            from './pages/DemoPage'
 import SignupPage          from './pages/SignupPage'
 import CheckoutSuccessPage from './pages/CheckoutSuccessPage'
 import CheckoutCancelPage  from './pages/CheckoutCancelPage'
+import WelcomePage         from './pages/WelcomePage'
 import AdminLeadsPage      from './pages/AdminLeadsPage'
 import AdminFunnelPage     from './pages/AdminFunnelPage'
 import GrantsDashboard     from './pages/grants/GrantsDashboard'
@@ -259,6 +260,7 @@ function AppRoutes() {
       <Route path="/start" element={<ReferralIntakePage />} />
       <Route path="/success" element={<CheckoutSuccessPage />} />
       <Route path="/cancel"  element={<CheckoutCancelPage />} />
+      <Route path="/welcome" element={<ProtectedRoute><WelcomePage /></ProtectedRoute>} />
 
       {/* Free scan funnel — public, no auth required */}
       <Route path="/scan"         element={<ScanLandingPage />} />

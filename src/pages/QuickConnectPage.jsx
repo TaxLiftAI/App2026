@@ -1347,10 +1347,10 @@ export default function QuickConnectPage() {
             {/* Action bar */}
             <div className="flex items-center gap-3 pt-2">
               <button
-                onClick={() => navigate('/dashboard')}
+                onClick={() => navigate('/welcome')}
                 className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-3 rounded-xl transition-colors"
               >
-                Go to dashboard <ArrowRight size={15} />
+                See your credit estimate <ArrowRight size={15} />
               </button>
               {clusters.length > 0 && (
                 <button
