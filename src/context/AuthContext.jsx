@@ -36,11 +36,12 @@ function normaliseRole(role) {
 function shapeBackendUser(me) {
   return {
     id:                   me.id,
-    name:                 me.full_name ?? me.email,
+    name:                 me.display_name ?? me.full_name ?? me.email,
     email:                me.email,
     role:                 normaliseRole(me.role),
     tenant_id:            me.tenant_id,
     avatar:               me.avatar ?? null,
+    subscription_tier:    me.subscription_tier ?? 'free',
     // SQLite returns 0/1 integers; coerce to boolean
     onboarding_completed: me.onboarding_completed === 1 || me.onboarding_completed === true,
     _fromApi:             true,

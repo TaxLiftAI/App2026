@@ -16,33 +16,6 @@ import RiskScore from '../components/ui/RiskScore'
 
 const CURRENT_YEAR = 2026
 
-// ── Report data builder ───────────────────────────────────────────────────────
-function getReport(start, end) {
-  const s = new Date(start)
-  const e = new Date(end)
-  const inRange = CLUSTERS.filter(c => {
-    const d = new Date(c.created_at)
-    return d >= s && d <= e
-  })
-  const approved = inRange.filter(c => c.status === 'Approved')
-  const rejected = inRange.filter(c => c.status === 'Rejected')
-  const pending  = inRange.filter(c => !['Approved', 'Rejected'].includes(c.status))
-
-  return {
-    period_start: start,
-    period_end: end,
-    total_clusters: inRange.length,
-    approved_clusters: approved.length,
-    rejected_clusters: rejected.length,
-    pending_clusters: pending.length,
-    total_eligible_hours: approved.reduce((s, c) => s + (c.aggregate_time_hours ?? 0), 0),
-    total_credit_cad: approved.reduce((s, c) => s + (c.estimated_credit_cad ?? 0), 0),
-    total_credit_usd: approved.reduce((s, c) => s + (c.estimated_credit_usd ?? 0), 0),
-    clusters: inRange,
-    approved_list: approved,
-  }
-}
-
 // ── Per-developer hours breakdown ─────────────────────────────────────────────
 // Distributes approved cluster hours across developers proportionally by commit count
 function getDevHoursBreakdown(approvedClusters) {
