@@ -6,8 +6,19 @@
  *
  * Routes that call requireAuth() will respond 401 if the token is
  * missing or invalid.
+ *
+ * Also wires in suspicious-activity monitoring (Threat 2):
+ * logs each authenticated request and flags multi-IP token reuse.
  */
 const jwt = require('jsonwebtoken')
+// Lazy-require to avoid circular dependency issues at startup
+let _checkSuspicious = null
+function getSuspiciousChecker() {
+  if (!_checkSuspicious) {
+    _checkSuspicious = require('./security').checkSuspiciousActivity
+  }
+  return _checkSuspicious
+}
 
 function getSecret() {
   const s = process.env.JWT_SECRET
@@ -35,6 +46,16 @@ function requireAuth(req, res, next) {
   const token = header.slice(7)
   try {
     req.user = jwt.verify(token, getSecret())
+
+    // Threat 2: log access + flag suspicious multi-IP token reuse (non-blocking)
+    try {
+      const ip = req.ip ?? req.socket?.remoteAddress ?? 'unknown'
+      const ua = req.headers['user-agent'] ?? ''
+      getSuspiciousChecker()(req.user.id, ip, ua)
+    } catch {
+      // Never let monitoring crash a real request
+    }
+
     next()
   } catch (err) {
     const msg = err.name === 'TokenExpiredError'

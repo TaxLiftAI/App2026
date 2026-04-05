@@ -17,6 +17,10 @@ require('dotenv').config({ path: require('path').join(__dirname, '.env') })
 const express  = require('express')
 const cors     = require('cors')
 
+// ── Security & rate-limiting middleware ───────────────────────────────────────
+const { globalLimiter, authLimiter, scanLimiter, leadsLimiter } = require('./middleware/rateLimiter')
+const { securityHeaders, botGuard, scoreInternalsScrubber }     = require('./middleware/security')
+
 // ── Bootstrap database (runs migrations + seed on first start) ────────────────
 require('./db')
 
@@ -25,6 +29,13 @@ const { startDripScheduler } = require('./lib/emailDrip')
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express()
+
+// ── Global security headers (Threat 3) ───────────────────────────────────────
+// Must come before any route so headers are set on every response
+app.use(securityHeaders)
+
+// ── Global rate limit — baseline for all routes (Threat 1) ───────────────────
+app.use(globalLimiter)
 
 // Parse JSON and urlencoded bodies (for OAuth2 form POST compat)
 app.use(express.json())
@@ -64,19 +75,35 @@ app.use('/api/billing/webhook', express.raw({ type: 'application/json' }), (req,
 })
 
 // ── Routes ────────────────────────────────────────────────────────────────────
-app.use('/api/auth',      require('./routes/auth'))
-app.use('/api/oauth',     require('./routes/oauth'))
-app.use('/api/billing',   require('./routes/billing'))
-app.use('/api/leads',     require('./routes/leads'))
-app.use('/api/clients',   require('./routes/clients'))
-app.use('/api/clusters',  require('./routes/clusters'))
+
+// Auth — tighter rate limit + bot guard (Threats 4, 1)
+app.use('/api/auth', authLimiter, botGuard, require('./routes/auth'))
+
+// OAuth — same bot guard, normal rate limit
+app.use('/api/oauth', botGuard, require('./routes/oauth'))
+
+// Billing — standard (Stripe webhook already has raw-body middleware above)
+app.use('/api/billing', require('./routes/billing'))
+
+// Leads / marketing — spam protection (Threat 4)
+app.use('/api/leads', leadsLimiter, require('./routes/leads'))
+
+// Clients — authenticated, standard rate limit
+app.use('/api/clients', require('./routes/clients'))
+
+// Clusters — scraping protection + scoring internals scrubber (Threats 1, 3)
+app.use('/api/clusters', scanLimiter, scoreInternalsScrubber, require('./routes/clusters'))
+
 app.use('/api/referrals', require('./routes/referrals'))
-app.use('/api/grants',   require('./routes/grants'))
-app.use('/api/scan',       require('./routes/scan'))
-app.use('/api/proposals',  require('./routes/proposals'))
+app.use('/api/grants',    require('./routes/grants'))
+
+// Scan — scraping protection + scoring internals scrubber (Threats 1, 3)
+app.use('/api/scan', scanLimiter, scoreInternalsScrubber, require('./routes/scan'))
+
+app.use('/api/proposals',    require('./routes/proposals'))
 app.use('/api/integrations', require('./routes/integrations'))
-app.use('/api/admin',      require('./routes/admin'))
-app.use('/api/cpa',        require('./routes/cpa'))
+app.use('/api/admin',        require('./routes/admin'))
+app.use('/api/cpa',          require('./routes/cpa'))
 
 // ── Health check (both /health and /api/health are valid) ────────────────────
 function healthHandler(_req, res) {
