@@ -1,12 +1,22 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { ShieldCheck, ChevronDown, Loader2, AlertCircle, FlaskConical } from 'lucide-react'
 import { useAuth, DEMO_PERSONAS } from '../context/AuthContext'
 import Button from '../components/ui/Button'
 
 export default function LoginPage() {
-  const { loginWithCredentials, loginDemo, authError } = useAuth()
+  const { currentUser, isDemoMode, loginWithCredentials, loginDemo, authError } = useAuth()
   const navigate = useNavigate()
+
+  // After loginDemo commits state, navigate to dashboard.
+  // useEffect fires post-commit, guaranteeing currentUser is set
+  // by the time ProtectedRoute renders (avoids the race condition
+  // where navigate() fires before React commits setCurrentUser).
+  useEffect(() => {
+    if (currentUser && isDemoMode) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [currentUser, isDemoMode]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Mode: 'real' | 'demo'
   const [mode, setMode]           = useState('real')
