@@ -12,7 +12,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { ApiError } from '../lib/api'
 
 export function useApiData(apiFn, mockFallback, deps = []) {
-  const [data, setData]         = useState(null)
+  const [data, setData]         = useState(undefined)  // undefined (not null) so { data: x = [] } defaults work
   const [loading, setLoading]   = useState(true)
   const [error, setError]       = useState(null)
   const [usingMock, setUsingMock] = useState(false)

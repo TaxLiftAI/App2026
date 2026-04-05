@@ -132,7 +132,8 @@ export default function Layout({ children }) {
   })
   const [paletteOpen,   setPaletteOpen]   = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
-  const { data: integrations = [] } = useIntegrations()
+  const { data: integrationsData } = useIntegrations()
+  const integrations = integrationsData ?? []   // useApiData initialises data as null, not undefined
   const { currentUser } = useAuth()
 
   // Global Cmd+K / Ctrl+K and ? listeners
