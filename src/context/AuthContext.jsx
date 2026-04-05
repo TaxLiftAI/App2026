@@ -116,10 +116,18 @@ export function AuthProvider({ children }) {
 
   // ── Demo / mock login ─────────────────────────────────────────────────────────────────
   const loginDemo = useCallback((userId) => {
-    const user = USERS.find(u => u.id === userId)
-    if (user) {
+    const raw = USERS.find(u => u.id === userId)
+    if (raw) {
       tokenStore.clear()
-      setCurrentUser(user)
+      // Shape the mock user so all UI components get the same fields they expect
+      // from a real backend user (name, subscription_tier, onboarding_completed, etc.)
+      setCurrentUser({
+        ...raw,
+        name:                 raw.display_name ?? raw.email,
+        subscription_tier:    'starter',   // give demo users full feature access
+        onboarding_completed: true,
+        _fromApi:             false,
+      })
       setIsDemoMode(true)
       setAuthError(null)
     }

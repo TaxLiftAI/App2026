@@ -53,9 +53,10 @@ import { canDo } from './lib/utils'
 
 function ProtectedRoute({ children, action }) {
   const { currentUser, authLoading } = useAuth()
-  // Wait for session restore before deciding to redirect — prevents race condition
-  // where demo login sets currentUser but navigate fires before state commits
-  if (authLoading) return null
+  // Only block render while loading AND we have no user yet (session restore in progress).
+  // If currentUser is already set (e.g. demo login), render immediately so the dashboard
+  // doesn't show blank while a stale authApi.me() call is still in-flight.
+  if (authLoading && !currentUser) return null
   if (!currentUser) return <Navigate to="/login" replace />
   if (action && !canDo(action, currentUser.role)) {
     return (
