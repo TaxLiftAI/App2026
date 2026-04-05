@@ -116,11 +116,56 @@ export const clients = {
 
 // ── Clusters ──────────────────────────────────────────────────────────────────
 export const clusters = {
-  list:   (params)        => get('/api/clusters',     { params }),
-  get:    (id)            => get(`/api/clusters/${id}`),
-  create: (payload)       => post('/api/clusters',   { body: payload }),
-  update: (id, payload)   => put(`/api/clusters/${id}`, { body: payload }),
-  delete: (id)            => del(`/api/clusters/${id}`),
+  list:    (params)           => get('/api/clusters',               { params }),
+  get:     (id)               => get(`/api/clusters/${id}`),
+  create:  (payload)          => post('/api/clusters',              { body: payload }),
+  update:  (id, payload)      => put(`/api/clusters/${id}`,         { body: payload }),
+  delete:  (id)               => del(`/api/clusters/${id}`),
+  approve: (id)               => request('PATCH', `/api/clusters/${id}/approve`),
+  reject:  (id, reason)       => request('PATCH', `/api/clusters/${id}/reject`,  { body: { reason } }),
+  merge:   (id, targetId)     => request('PATCH', `/api/clusters/${id}/merge`,   { body: { target_id: targetId } }),
+  bulk:    (ids, action, reason) =>
+    post('/api/clusters/bulk', { body: { ids, action, reason } }),
+}
+
+// ── Narratives ────────────────────────────────────────────────────────────────
+export const narratives = {
+  list:     (params)      => get('/api/narratives',                 { params }),
+  get:      (id)          => get(`/api/narratives/${id}`),
+  create:   (payload)     => post('/api/narratives',                { body: payload }),
+  update:   (id, payload) => request('PATCH', `/api/narratives/${id}`, { body: payload }),
+  approve:  (id)          => request('PATCH', `/api/narratives/${id}/approve`),
+  versions: (id)          => get(`/api/narratives/${id}/versions`),
+}
+
+// ── Documents / Vault ─────────────────────────────────────────────────────────
+export const documents = {
+  list:   (params) => get('/api/documents',      { params }),
+  get:    (id)     => get(`/api/documents/${id}`),
+  verify: (id)     => request('PATCH', `/api/documents/${id}/verify`),
+  upload: (form)   => post('/api/documents',     { body: form, isForm: true }),
+  delete: (id)     => del(`/api/documents/${id}`),
+}
+
+// ── Reports ───────────────────────────────────────────────────────────────────
+export const reports = {
+  summary:    (params) => get('/api/reports/summary',    { params }),
+  t661:       (params) => get('/api/reports/t661',       { params }),
+  developers: (params) => get('/api/reports/developers', { params }),
+  clusters:   (params) => get('/api/reports/clusters',   { params }),
+}
+
+// ── Users ─────────────────────────────────────────────────────────────────────
+export const users = {
+  list:   (params)        => get('/api/users',        { params }),
+  get:    (id)            => get(`/api/users/${id}`),
+  update: (id, payload)   => put(`/api/users/${id}`,  { body: payload }),
+}
+
+// ── AI Agents ─────────────────────────────────────────────────────────────────
+export const agents = {
+  generateNarrative: (clusterId) =>
+    post('/api/agents/narrative', { body: { cluster_id: clusterId } }),
 }
 
 // ── Referrals ─────────────────────────────────────────────────────────────────
@@ -250,4 +295,4 @@ export async function isServerReachable() {
   return _reachableCache
 }
 
-export default { auth, clients, clusters, referrals, billing, leads, integrations, oauthProxy, health, grants, cpa, token, isServerReachable }
+export default { auth, clients, clusters, narratives, documents, reports, users, agents, referrals, billing, leads, integrations, oauthProxy, health, grants, cpa, token, isServerReachable }
