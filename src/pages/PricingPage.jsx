@@ -15,6 +15,7 @@
  */
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { usePageMeta } from '../hooks/usePageMeta'
 import {
   ShieldCheck, Check, ArrowRight, ArrowLeft, Loader2, Sparkles,
   ChevronDown, ChevronUp, Zap, Star, Clock, Lock, Mail, ExternalLink,
@@ -92,6 +93,12 @@ const TRUST_MARKS = [
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function PricingPage() {
+  usePageMeta({
+    title:       'Pricing — TaxLift SR&ED Tax Credit Platform',
+    description: 'Simple, transparent pricing for SR&ED claims. Start free with our eligibility scan. Paid plans charged as a percentage of credits recovered — no recovery, no fee.',
+    path:        '/pricing',
+  })
+
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 

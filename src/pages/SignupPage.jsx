@@ -18,6 +18,7 @@
  */
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
+import { usePageMeta } from '../hooks/usePageMeta'
 import {
   ShieldCheck, Eye, EyeOff, Loader2, CheckCircle2, AlertCircle,
   Sparkles, ArrowRight, Zap,
@@ -55,6 +56,12 @@ function passwordStrength(pw) {
 }
 
 export default function SignupPage() {
+  usePageMeta({
+    title:       'Create Account — TaxLift SR&ED Platform',
+    description: 'Sign up for TaxLift and start your free SR&ED eligibility scan. No credit card required. Connect GitHub or Jira and get your first credit estimate in minutes.',
+    path:        '/signup',
+  })
+
   const navigate      = useNavigate()
   const [params]      = useSearchParams()
   const { register, currentUser } = useAuth()

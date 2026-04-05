@@ -18,6 +18,7 @@
  */
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { usePageMeta } from '../hooks/usePageMeta'
 import {
   ShieldCheck, ChevronRight, Copy, Check, Building2, MapPin,
   Info, TrendingUp, ArrowRight, Sparkles, FlaskConical,
@@ -597,6 +598,12 @@ function LeadModal({ totalStr, onClose }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function EstimatorPage() {
+  usePageMeta({
+    title:       'Free SR&ED Credit Estimator — TaxLift',
+    description: 'Calculate how much SR&ED / R&D tax credit your Canadian startup could recover. Enter headcount and salary — get an instant CRA-grade estimate with provincial breakdown.',
+    path:        '/estimate',
+  })
+
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
 

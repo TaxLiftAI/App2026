@@ -6,6 +6,7 @@
  */
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { usePageMeta } from '../../hooks/usePageMeta'
 import {
   Github, ShieldCheck, Zap, Clock, ArrowRight, Lock,
   CheckCircle2, Sparkles, Code2, BarChart3,
@@ -30,6 +31,12 @@ const SOCIAL_PROOF_COMMITS = [
 ]
 
 export default function ScanLandingPage() {
+  usePageMeta({
+    title:       'Free SR&ED Scan — TaxLift',
+    description: 'Connect GitHub in 60 seconds and get a free SR&ED eligibility scan. TaxLift identifies qualifying R&D work from your commit history and estimates your CRA tax credit.',
+    path:        '/scan',
+  })
+
   const navigate = useNavigate()
   const [email,   setEmail]   = useState('')
   const [touched, setTouched] = useState(false)

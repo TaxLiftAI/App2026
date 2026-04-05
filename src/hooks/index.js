@@ -3,7 +3,9 @@
  *
  * Import example:
  *   import { useClusters, useCluster, useReportSummary } from '../hooks'
+ *   import { usePageMeta } from '../hooks/usePageMeta'
  */
+export { usePageMeta } from './usePageMeta'
 import { useMemo } from 'react'
 import { useApiData, useMutation } from './useApi'
 import * as api from '../lib/api'

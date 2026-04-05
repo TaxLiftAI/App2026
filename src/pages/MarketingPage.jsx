@@ -15,6 +15,7 @@
  */
 import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { usePageMeta } from '../hooks/usePageMeta'
 import {
   Menu, X, ChevronDown, ChevronRight, ArrowRight,
   GitBranch, FileText, Shield, Package, BarChart2, Calculator,
@@ -598,6 +599,12 @@ function SrEdCalculator({ openWaitlist, navigate }) {
 // Main page
 // ─────────────────────────────────────────────────────────────────────────────
 export default function MarketingPage() {
+  usePageMeta({
+    title:       'TaxLift — Automated SR&ED / R&D Tax Credit Platform',
+    description: 'TaxLift automates SR&ED and R&D tax credit claims for startups. Connect GitHub or Jira, get a CRA-ready T661 package in minutes. Free eligibility scan.',
+    path:        '/',
+  })
+
   const navigate = useNavigate()
   const [mobileOpen, setMobileOpen]   = useState(false)
   const [scrolled, setScrolled]       = useState(false)

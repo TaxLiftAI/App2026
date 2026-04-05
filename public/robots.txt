@@ -1,0 +1,39 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /clusters
+Disallow: /reports
+Disallow: /users
+Disallow: /audit-log
+Disallow: /integrations
+Disallow: /analytics
+Disallow: /activity
+Disallow: /audit-readiness
+Disallow: /vault
+Disallow: /quiz
+Disallow: /settings
+Disallow: /cpa-portal
+Disallow: /onboarding
+Disallow: /quick-connect
+Disallow: /rate-card
+Disallow: /dev-portal
+Disallow: /heuristics
+Disallow: /admin
+Disallow: /grants
+Disallow: /jira-sprint
+Disallow: /scan/repos
+Disallow: /scan/running
+
+# Public pages — explicitly allowed for clarity
+Allow: /
+Allow: /pricing
+Allow: /demo
+Allow: /estimate
+Allow: /scan
+Allow: /signup
+Allow: /login
+Allow: /start
+Allow: /share/
+Allow: /cpa-review/
+
+Sitemap: https://taxlift.ai/sitemap.xml

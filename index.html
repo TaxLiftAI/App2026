@@ -4,10 +4,122 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TaxLift — R&D Tax Credit Platform</title>
+
+    <!-- Primary meta -->
+    <title>TaxLift — Automated SR&amp;ED / R&amp;D Tax Credit Platform</title>
+    <meta name="description" content="TaxLift automates SR&amp;ED and R&amp;D tax credit claims for startups and scaleups. Connect GitHub or Jira, get a CRA-ready T661 package in minutes. Backed by a no-risk guarantee." />
+    <meta name="keywords" content="SR&amp;ED, SRED, R&amp;D tax credit, SR&amp;ED software, T661, CRA audit, Canadian tax credit, R&amp;D automation, tax credit platform" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://taxlift.ai/" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type"        content="website" />
+    <meta property="og:url"         content="https://taxlift.ai/" />
+    <meta property="og:title"       content="TaxLift — Automated SR&amp;ED / R&amp;D Tax Credit Platform" />
+    <meta property="og:description" content="Stop leaving SR&amp;ED credits on the table. TaxLift scans your GitHub and Jira, auto-generates T661-ready narratives, and delivers a CRA-compliant package your CPA can file the same day." />
+    <meta property="og:image"       content="https://taxlift.ai/og-image.png" />
+    <meta property="og:site_name"   content="TaxLift" />
+    <meta property="og:locale"      content="en_CA" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card"        content="summary_large_image" />
+    <meta name="twitter:site"        content="@taxliftai" />
+    <meta name="twitter:title"       content="TaxLift — Automated SR&amp;ED / R&amp;D Tax Credit Platform" />
+    <meta name="twitter:description" content="Stop leaving SR&amp;ED credits on the table. Auto-generate your T661 claim from GitHub + Jira in minutes." />
+    <meta name="twitter:image"       content="https://taxlift.ai/og-image.png" />
+
+    <!-- Structured data (Organization + SoftwareApplication) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://taxlift.ai/#organization",
+          "name": "TaxLift",
+          "url": "https://taxlift.ai",
+          "logo": "https://taxlift.ai/favicon.svg",
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "email": "support@taxlift.ai",
+            "contactType": "customer support"
+          }
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://taxlift.ai/#app",
+          "name": "TaxLift",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "url": "https://taxlift.ai",
+          "description": "TaxLift automates SR&ED and R&D tax credit documentation by scanning your GitHub, Jira, and CI/CD pipelines and generating CRA-compliant T661 packages.",
+          "offers": {
+            "@type": "Offer",
+            "priceCurrency": "CAD",
+            "price": "0",
+            "description": "Free eligibility scan. Paid plans start at a percentage of credits recovered."
+          }
+        }
+      ]
+    }
+    </script>
+
+    <!-- Preconnect to API origin for faster first request -->
+    <link rel="preconnect" href="https://app2026-production.up.railway.app" />
   </head>
   <body>
-    <div id="root"></div>
+    <!--
+      Inline loading skeleton — visible instantly before React hydrates.
+      Eliminates the "blank white flash" on first load.
+      React replaces #root content once the bundle executes.
+    -->
+    <div id="root">
+      <style>
+        #tl-splash {
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          min-height: 100vh;
+          background: #f8fafc;
+          gap: 16px;
+        }
+        #tl-splash-logo {
+          width: 48px;
+          height: 48px;
+          background: #4f46e5;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #fff;
+          font-size: 22px;
+          font-weight: 800;
+          letter-spacing: -1px;
+        }
+        #tl-splash-name {
+          font-size: 20px;
+          font-weight: 700;
+          color: #1e293b;
+          letter-spacing: -0.5px;
+        }
+        #tl-splash-spinner {
+          width: 24px;
+          height: 24px;
+          border: 3px solid #e2e8f0;
+          border-top-color: #4f46e5;
+          border-radius: 50%;
+          animation: tl-spin 0.7s linear infinite;
+        }
+        @keyframes tl-spin { to { transform: rotate(360deg); } }
+      </style>
+      <div id="tl-splash">
+        <div id="tl-splash-logo">T&#x2191;</div>
+        <div id="tl-splash-name">TaxLift</div>
+        <div id="tl-splash-spinner"></div>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

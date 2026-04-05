@@ -7,6 +7,7 @@
  */
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { usePageMeta } from '../hooks/usePageMeta'
 import {
   ArrowRight, Lock, Sparkles, GitBranch, Clock, CheckCircle2,
   AlertTriangle, FileText, BarChart2, Package, TrendingUp, X,
@@ -681,6 +682,12 @@ const TABS = [
 ]
 
 export default function DemoPage() {
+  usePageMeta({
+    title:       'Interactive Demo — TaxLift SR&ED Platform',
+    description: 'Explore TaxLift with live sample data. See how we auto-detect SR&ED clusters, generate T661-ready narratives, and produce an audit-ready CRA package — no sign-up needed.',
+    path:        '/demo',
+  })
+
   const [activeTab, setActiveTab]   = useState('overview')
   const [upgradeOpen, setUpgradeOpen] = useState(false)
 
