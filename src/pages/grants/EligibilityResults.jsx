@@ -8,11 +8,34 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ChevronLeft, CheckCircle2, XCircle, AlertCircle,
-  ChevronDown, ChevronUp, Loader2, Clock, Play
+  ChevronDown, ChevronUp, Loader2, Clock, Play, Info
 } from 'lucide-react'
 import { grants as grantsApi } from '../../lib/api'
+import { DEMO_GRANTS } from '../../lib/demoData'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
+
+// ── Preview-mode eligibility shape ────────────────────────────────────────────
+const PREVIEW_ELIGIBILITY = {
+  grants: DEMO_GRANTS.filter(g => !g.paused).map(g => ({
+    grant_id:        g.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+    grant_name:      g.full_name,
+    match_score:     g.score,
+    recommended:     g.is_high,
+    max_funding:     g.max_amount,
+    deadline:        'Rolling',
+    matched_criteria: [
+      'SR&ED documentation on file',
+      'Canadian-controlled private corporation (CCPC)',
+      'Technology sector company',
+      'Active R&D investment',
+    ],
+    missing_fields: ['Employee count (add in company profile)', 'Annual revenue (add in company profile)'],
+  })),
+  company: { company_name: 'Your Company', province: '—', employee_count: '—' },
+  total_sred_spend: 0,
+  sred_project_ids: [],
+}
 
 const SRED_FIELD_LABELS = {
   province:             'Province (SR&ED company profile)',
@@ -66,13 +89,10 @@ export default function EligibilityResults() {
     </div>
   )
 
-  if (error) return (
-    <div className="p-6">
-      <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">{error}</div>
-    </div>
-  )
-
-  const { grants = [], company = {}, total_sred_spend = 0 } = eligibility || {}
+  // ── Preview mode when backend unreachable ────────────────────────────────────
+  const isPreview = !!error
+  const displayData = isPreview ? PREVIEW_ELIGIBILITY : eligibility
+  const { grants = [], company = {}, total_sred_spend = 0 } = displayData || {}
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-5">
@@ -84,10 +104,27 @@ export default function EligibilityResults() {
           <h1 className="text-xl font-bold text-gray-900">Eligibility Results</h1>
           <p className="text-xs text-gray-500 mt-0.5">
             Based on SR&ED data for {company.company_name} · {company.province} · {company.employee_count} employees ·
-            ${total_sred_spend.toLocaleString()} total R&D spend
+            {total_sred_spend > 0 ? ` $${total_sred_spend.toLocaleString()} total R&D spend` : ''}
           </p>
         </div>
       </div>
+
+      {isPreview && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+          <Info size={16} className="text-amber-500 mt-0.5 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-amber-800">Preview — sample eligibility data</p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              Grants engine is connecting… Scores shown are illustrative. Complete your company profile
+              and SR&ED clusters for a personalised assessment.
+            </p>
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="text-xs text-amber-700 hover:text-amber-900 underline flex-shrink-0"
+          >Retry</button>
+        </div>
+      )}
 
       <div className="space-y-3">
         {grants.map(grant => {

@@ -52,7 +52,7 @@ export const PLANS = {
     features: [
       'Everything in Starter',
       '✦ Grants module — 7 programs matched automatically',
-      '✦ NRC-IRAP, ISED SDTC, OINTC, NGen + provincial',
+      '✦ NRC-IRAP, OINTC, NGen + provincial programs',
       '✦ Gap-fill interview & AI section drafting',
       '✦ Application tracker with deadline alerts',
       'CPA referral portal & commission tracking',

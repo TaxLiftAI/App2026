@@ -11,8 +11,28 @@ import {
 } from 'lucide-react'
 import { grants as grantsApi } from '../../lib/api'
 import { useAuth } from '../../context/AuthContext'
+import { DEMO_GRANTS } from '../../lib/demoData'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
+
+// ── Preview-mode shape: normalise DEMO_GRANTS → API eligibility shape ─────────
+const PREVIEW_ELIGIBILITY = {
+  grants: DEMO_GRANTS.filter(g => !g.paused).map(g => ({
+    grant_id:        g.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+    grant_name:      g.full_name,
+    match_score:     g.score,
+    recommended:     g.is_high,
+    max_funding:     g.max_amount,
+    deadline:        'Rolling',
+    complexity:      g.is_high ? 'med' : 'low',
+    matched_criteria: ['SR&ED documentation on file', 'Canadian-controlled private corporation', 'Technology sector'],
+    missing_fields:  [],
+  })),
+  total_potential_funding: DEMO_GRANTS.filter(g => !g.paused).reduce((s, g) => s + g.max_amount, 0),
+  sred_projects_count: 4,
+  ai_powered: false,
+  cached: false,
+}
 
 const COMPLEXITY_BADGE = {
   low:  { label: 'Simple',  bg: 'bg-green-100',  text: 'text-green-700' },
@@ -80,32 +100,38 @@ export default function GrantsDashboard() {
     </div>
   )
 
-  if (error) return (
-    <div className="p-6">
-      <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-        <AlertCircle size={18} className="text-red-500 mt-0.5 flex-shrink-0" />
-        <div>
-          <p className="text-sm font-medium text-red-800">Failed to load eligibility data</p>
-          <p className="text-xs text-red-600 mt-0.5">{error}</p>
-          <Button size="sm" className="mt-3" onClick={() => loadEligibility()}>Retry</Button>
-        </div>
-      </div>
-    </div>
-  )
+  // ── Preview mode: backend unreachable → show sample data with amber banner ──
+  const isPreview = !!error
+  const displayData = isPreview ? PREVIEW_ELIGIBILITY : eligibility
 
-  const recommended = eligibility?.grants?.filter(g => g.recommended) || []
-  const totalPotential = eligibility?.total_potential_funding || 0
+  const recommended    = displayData?.grants?.filter(g => g.recommended) || []
+  const totalPotential = displayData?.total_potential_funding || 0
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
+
+      {/* Preview mode banner */}
+      {isPreview && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+          <AlertCircle size={16} className="text-amber-500 mt-0.5 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-amber-800">Preview — sample data</p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              Grants engine is connecting… Showing illustrative match data based on a typical SR&ED profile.
+              Real scores are computed once your projects are analysed.
+            </p>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => loadEligibility()}>Retry</Button>
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Canadian Grants</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Matched against your SR&ED filing · {eligibility?.sred_projects_count || 0} project{eligibility?.sred_projects_count !== 1 ? 's' : ''} analysed
-            {eligibility?.cached && (
+            Matched against your SR&ED filing · {displayData?.sred_projects_count || 0} project{displayData?.sred_projects_count !== 1 ? 's' : ''} analysed
+            {displayData?.cached && (
               <span className="ml-2 text-xs text-gray-400">
                 (cached · <button className="text-indigo-500 hover:underline" onClick={() => loadEligibility(true)}>refresh</button>)
               </span>
@@ -175,7 +201,7 @@ export default function GrantsDashboard() {
         </div>
       )}
 
-      {eligibility?.ai_powered === false && (
+      {!isPreview && displayData?.ai_powered === false && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-2 text-xs text-amber-700">
           <Info size={14} />
           Using rule-based matching. Set ANTHROPIC_API_KEY in server/.env for AI-powered scoring.
@@ -185,7 +211,7 @@ export default function GrantsDashboard() {
       {/* Grant Cards */}
       <div className="space-y-3">
         <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Grant Programs</h2>
-        {eligibility?.grants?.map(grant => {
+        {displayData?.grants?.map(grant => {
           const existingApp = applications.find(a => a.grant_id === grant.grant_id)
           const badge = COMPLEXITY_BADGE[grant.complexity] || COMPLEXITY_BADGE.med
 

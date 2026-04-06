@@ -114,25 +114,14 @@ const GRANT_PROGRAMS = [
   },
   {
     id: 'sdtc', name: 'ISED SDTC', org: 'Sustainable Dev. Technology Canada',
-    max: 3_000_000, color: 'green', icon: '🌿', effort: 'high',
+    max: 3_000_000, color: 'gray', icon: '🌿', effort: 'high',
+    paused: true,
     description: 'Large non-repayable contributions for projects with measurable environmental benefit.',
     detail: 'SDTC funds up to 40% of eligible project costs. Requires a clear environmental benefit thesis, commercialization plan, and 2+ years of R&D history. Competitive — ~10–15% acceptance rate.',
-    statusCaveat: 'SDTC underwent a governance review in 2023 and intake has been paused. Confirm current program status at ised.gc.ca before applying.',
+    statusCaveat: '⚠ Program intake is currently suspended. SDTC was placed under ISED administration following a 2023 governance review. New applications are not being accepted. Monitor ised.gc.ca for reinstatement updates.',
     timeline: '6–12 months', stackable: true,
-    match: ({ industry, yearsRD, isCCPC, revenueRange }) => {
-      if (!isCCPC || yearsRD < 2) return 'low'
-      const eligible = ['cleantech','biotech','ai','hardware','manufacturing']
-      if (!eligible.includes(industry)) return 'low'
-      if (industry === 'cleantech' && ['1m_5m','5m_20m'].includes(revenueRange)) return 'high'
-      return yearsRD >= 3 ? 'medium' : 'low'
-    },
-    estimate: ({ numDevs, avgSalary, eligibilityPct, yearsRD, contractorPct }) => {
-      if (yearsRD < 2) return 0
-      const emp  = numDevs * avgSalary * (1 - contractorPct / 100)
-      const ctor = numDevs * avgSalary * (contractorPct / 100)
-      const base = (emp + ctor * 0.80) * (eligibilityPct / 100) * 0.40
-      return Math.min(Math.round(base / 10_000) * 10_000, 3_000_000)
-    },
+    match: () => 'low',
+    estimate: () => 0,
   },
   {
     id: 'ngen', name: 'NGen Supercluster', org: 'Next Generation Manufacturing Canada',
@@ -426,39 +415,51 @@ function GrantCard({ grant, expanded, onToggle }) {
   const eff = EFFORT[grant.effort]
 
   return (
-    <div className={`rounded-xl border ${colorCls} transition-all duration-200`}>
+    <div className={`rounded-xl border ${grant.paused ? 'border-gray-200 bg-gray-50 opacity-75' : colorCls} transition-all duration-200`}>
       <button className="w-full flex items-center justify-between gap-3 p-3 text-left" onClick={onToggle}>
         <div className="flex items-center gap-2.5 min-w-0">
           <span className="text-base leading-none flex-shrink-0">{grant.icon}</span>
           <div className="min-w-0">
-            <p className="text-xs font-semibold truncate">{grant.name}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-xs font-semibold truncate">{grant.name}</p>
+              {grant.paused && (
+                <span className="text-[9px] font-bold uppercase tracking-wide bg-gray-200 text-gray-500 rounded px-1.5 py-0.5 flex-shrink-0">
+                  Paused
+                </span>
+              )}
+            </div>
             <p className="text-[10px] opacity-60 truncate">{grant.org}</p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          {grant.confidence !== 'low' && grant.estimated > 0 && (
+          {!grant.paused && grant.confidence !== 'low' && grant.estimated > 0 && (
             <span className="text-xs font-bold tabular-nums">{fmtK(grant.estimatedLow)}–{fmtK(grant.estimated)}</span>
           )}
-          <span className={`flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full border ${conf.cls}`}>
-            <ConfIcon size={10} />{conf.label}
-          </span>
+          {!grant.paused && (
+            <span className={`flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full border ${conf.cls}`}>
+              <ConfIcon size={10} />{conf.label}
+            </span>
+          )}
           <ChevronDown size={13} className={`opacity-50 transition-transform ${expanded ? 'rotate-180' : ''}`} />
         </div>
       </button>
       {expanded && (
         <div className="px-3 pb-3 border-t border-current/10 space-y-2">
-          <p className="pt-2 text-[11px] leading-relaxed opacity-80">{grant.description}</p>
-          <p className="text-[11px] leading-relaxed opacity-70">{grant.detail}</p>
-          <div className="flex flex-wrap gap-1.5 pt-1">
-            {grant.timeline && <span className="text-[10px] opacity-75 bg-white/60 border border-current/20 rounded-full px-2 py-0.5">⏱ {grant.timeline} to decision</span>}
-            {eff && <span className={`text-[10px] font-medium bg-white/60 border border-current/20 rounded-full px-2 py-0.5 ${eff.color}`}>{eff.label} · {eff.desc}</span>}
-            {grant.stackable && <span className="text-[10px] opacity-75 bg-white/60 border border-current/20 rounded-full px-2 py-0.5">✅ Stackable with SR&ED</span>}
-            {grant.requiresUniversity && <span className="text-[10px] opacity-75 bg-white/60 border border-current/20 rounded-full px-2 py-0.5">🎓 Needs university partner</span>}
-            <span className="text-[10px] font-semibold bg-white/60 border border-current/20 rounded-full px-2 py-0.5">Max: {fmt(grant.max)}</span>
-          </div>
-          {grant.statusCaveat && (
-            <div className="flex items-start gap-1.5 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-2 text-[10px] text-amber-700 mt-1">
-              <AlertTriangle size={10} className="mt-0.5 flex-shrink-0" /> {grant.statusCaveat}
+          {grant.paused && (
+            <div className="flex items-start gap-2 bg-gray-100 border border-gray-300 rounded-lg px-2.5 py-2 text-[11px] text-gray-600 mt-2">
+              <AlertTriangle size={12} className="mt-0.5 flex-shrink-0 text-gray-500" />
+              <span>{grant.statusCaveat}</span>
+            </div>
+          )}
+          <p className={`pt-2 text-[11px] leading-relaxed ${grant.paused ? 'opacity-50' : 'opacity-80'}`}>{grant.description}</p>
+          <p className={`text-[11px] leading-relaxed ${grant.paused ? 'opacity-40' : 'opacity-70'}`}>{grant.detail}</p>
+          {!grant.paused && (
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {grant.timeline && <span className="text-[10px] opacity-75 bg-white/60 border border-current/20 rounded-full px-2 py-0.5">⏱ {grant.timeline} to decision</span>}
+              {eff && <span className={`text-[10px] font-medium bg-white/60 border border-current/20 rounded-full px-2 py-0.5 ${eff.color}`}>{eff.label} · {eff.desc}</span>}
+              {grant.stackable && <span className="text-[10px] opacity-75 bg-white/60 border border-current/20 rounded-full px-2 py-0.5">✅ Stackable with SR&ED</span>}
+              {grant.requiresUniversity && <span className="text-[10px] opacity-75 bg-white/60 border border-current/20 rounded-full px-2 py-0.5">🎓 Needs university partner</span>}
+              <span className="text-[10px] font-semibold bg-white/60 border border-current/20 rounded-full px-2 py-0.5">Max: {fmt(grant.max)}</span>
             </div>
           )}
         </div>

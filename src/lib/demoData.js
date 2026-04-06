@@ -125,7 +125,8 @@ export const DEMO_GRANTS = [
     max_amount: 3000000,
     badge: 'Federal',
     is_high: false,
-    description: 'Moderate match — strengthening your energy-efficiency narrative could improve eligibility.',
+    paused: true,
+    description: 'Intake currently suspended. SDTC is under ISED administration following a 2023 governance review — new applications are not being accepted. Monitor ised.gc.ca for updates.',
   },
   {
     name: 'OINTC',

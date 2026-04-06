@@ -995,7 +995,7 @@ export default function MarketingPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-10">
             {[
               { name: 'NRC-IRAP',          amount: 'Up to $500K',  flag: '🇨🇦', color: 'border-indigo-500/30 bg-indigo-500/5',   badge: 'Federal'    },
-              { name: 'ISED SDTC',         amount: 'Up to $3M',    flag: '🇨🇦', color: 'border-violet-500/30 bg-violet-500/5',   badge: 'Federal'    },
+              { name: 'ISED SDTC',         amount: 'Intake paused', flag: '🇨🇦', color: 'border-gray-600/20  bg-gray-600/5',     badge: 'Federal', paused: true },
               { name: 'Ontario ITC',       amount: 'Up to $200K',  flag: '🏛',  color: 'border-blue-500/30   bg-blue-500/5',     badge: 'Provincial' },
               { name: 'NGen',              amount: 'Up to $250K',  flag: '🇨🇦', color: 'border-cyan-500/30   bg-cyan-500/5',     badge: 'Federal'    },
               { name: 'BC Ignite',         amount: 'Up to $100K',  flag: '🏛',  color: 'border-teal-500/30   bg-teal-500/5',     badge: 'Provincial' },
@@ -1005,18 +1005,17 @@ export default function MarketingPage() {
             ].map(g => (
               <div
                 key={g.name}
-                className={`rounded-2xl border p-4 flex flex-col gap-2 ${g.color}`}
+                className={`rounded-2xl border p-4 flex flex-col gap-2 ${g.color} ${g.paused ? 'opacity-50' : ''}`}
               >
                 <div className="flex items-center justify-between">
                   <span className="text-lg">{g.flag}</span>
-                  {g.badge && (
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                      {g.badge}
-                    </span>
-                  )}
+                  {g.paused
+                    ? <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider bg-gray-700/30 rounded px-1.5 py-0.5">Paused</span>
+                    : g.badge && <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{g.badge}</span>
+                  }
                 </div>
-                <p className="text-white font-semibold text-sm leading-snug">{g.name}</p>
-                <p className="text-slate-400 text-xs font-medium">{g.amount}</p>
+                <p className={`font-semibold text-sm leading-snug ${g.paused ? 'text-gray-400' : 'text-white'}`}>{g.name}</p>
+                <p className={`text-xs font-medium ${g.paused ? 'text-gray-500 italic' : 'text-slate-400'}`}>{g.amount}</p>
               </div>
             ))}
           </div>
