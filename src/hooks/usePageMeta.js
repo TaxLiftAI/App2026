@@ -1,15 +1,22 @@
 /**
  * usePageMeta — lightweight head-tag manager (no external dependencies).
  *
- * Sets <title>, <meta name="description">, Open Graph, and Twitter Card tags
- * for the current page. Cleans up on unmount (restores defaults).
+ * Sets <title>, <meta name="description">, Open Graph, Twitter Card tags,
+ * canonical URL, and optional BreadcrumbList JSON-LD for each page.
+ *
+ * BreadcrumbList structured data helps Google understand page hierarchy and
+ * can display breadcrumb trails in search results (rich snippets).
  *
  * Usage:
  *   usePageMeta({
- *     title: 'TaxLift — Free SR&ED Eligibility Quiz',
- *     description: 'Find out if your startup qualifies ...',
- *     path: '/quiz',        // appended to canonical URL
- *     image: '/og-quiz.png' // optional, defaults to /og-image.png
+ *     title:       'TaxLift — Free SR&ED Estimator',
+ *     description: 'Estimate your SR&ED credits instantly.',
+ *     path:        '/estimate',
+ *     image:       '/og-estimate.png',  // optional
+ *     breadcrumb:  [                    // optional — omit for homepage
+ *       { name: 'Home',      path: '/'         },
+ *       { name: 'Estimator', path: '/estimate' },
+ *     ],
  *   })
  */
 import { useEffect } from 'react'
@@ -40,7 +47,18 @@ function setLink(rel, href) {
   el.setAttribute('href', href)
 }
 
-export function usePageMeta({ title, description, path = '', image } = {}) {
+function injectJsonLd(id, data) {
+  let el = document.getElementById(id)
+  if (!el) {
+    el = document.createElement('script')
+    el.id   = id
+    el.type = 'application/ld+json'
+    document.head.appendChild(el)
+  }
+  el.textContent = JSON.stringify(data)
+}
+
+export function usePageMeta({ title, description, path = '', image, breadcrumb } = {}) {
   useEffect(() => {
     const prevTitle = document.title
     const ogImage   = image ? `${BASE_URL}${image}` : DEFAULT_OG
@@ -58,15 +76,31 @@ export function usePageMeta({ title, description, path = '', image } = {}) {
     setMeta('og:type',        'website',   'property')
 
     // Twitter
-    setMeta('twitter:title',       title,       'name')
-    setMeta('twitter:description', description, 'name')
-    setMeta('twitter:image',       ogImage,     'name')
+    setMeta('twitter:card',        'summary_large_image', 'name')
+    setMeta('twitter:title',       title,                 'name')
+    setMeta('twitter:description', description,           'name')
+    setMeta('twitter:image',       ogImage,               'name')
 
     // Canonical
     setLink('canonical', canonical)
 
+    // BreadcrumbList JSON-LD (rich result — breadcrumb trail in Google)
+    if (breadcrumb?.length > 0) {
+      injectJsonLd('ld-breadcrumb', {
+        '@context':        'https://schema.org',
+        '@type':           'BreadcrumbList',
+        itemListElement:   breadcrumb.map((crumb, i) => ({
+          '@type':  'ListItem',
+          position: i + 1,
+          name:     crumb.name,
+          item:     `${BASE_URL}${crumb.path}`,
+        })),
+      })
+    }
+
     return () => {
       document.title = prevTitle
+      document.getElementById('ld-breadcrumb')?.remove()
     }
-  }, [title, description, path, image])
+  }, [title, description, path, image, breadcrumb])
 }

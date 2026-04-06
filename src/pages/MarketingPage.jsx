@@ -38,6 +38,7 @@ const NAV_LINKS = [
   { label: 'Grants',       href: '#grants'       },
   { label: 'For CPAs',     href: '#for-cpas'     },
   { label: 'Pricing',      href: '#pricing'      },
+  { label: 'Estimator',    href: '/estimate',    isRoute: true },
 ]
 
 const PAIN_CARDS = [
@@ -610,6 +611,52 @@ export default function MarketingPage() {
   })
 
   const navigate = useNavigate()
+
+  // ── Structured data: FAQPage + HowTo (injected once on mount) ──────────────
+  // FAQPage schema makes Google show expandable FAQ dropdowns in search results.
+  // HowTo schema can trigger rich result cards for the "how it works" section.
+  useEffect(() => {
+    const faqSchema = {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: FAQS.map(({ q, a }) => ({
+        '@type': 'Question',
+        name: q,
+        acceptedAnswer: { '@type': 'Answer', text: a },
+      })),
+    }
+    const howToSchema = {
+      '@context': 'https://schema.org',
+      '@type': 'HowTo',
+      name: 'How to claim SR&ED tax credits with TaxLift',
+      description: 'Automate your Canadian SR&ED tax credit claim in three steps using TaxLift.',
+      step: [
+        { '@type': 'HowToStep', position: 1, name: 'Connect your tools',       text: 'Connect GitHub, Jira, or other version control systems via OAuth in under 2 minutes.' },
+        { '@type': 'HowToStep', position: 2, name: 'Review AI-scored clusters', text: 'TaxLift scans every commit, scores against the 5 CRA SR&ED eligibility dimensions, and groups work into T661-ready clusters.' },
+        { '@type': 'HowToStep', position: 3, name: 'Export your T661 package',  text: 'Download a CRA-compliant T661 claim package with narratives, expenditure calculations, and supporting evidence for your CPA to review and file.' },
+      ],
+      totalTime: 'PT10M',
+      supply: [{ '@type': 'HowToSupply', name: 'GitHub or Jira account' }],
+      tool:   [{ '@type': 'HowToTool',   name: 'TaxLift (free trial at taxlift.ai)' }],
+    }
+    const injectLd = (id, data) => {
+      let el = document.getElementById(id)
+      if (!el) {
+        el = document.createElement('script')
+        el.id = id
+        el.type = 'application/ld+json'
+        document.head.appendChild(el)
+      }
+      el.textContent = JSON.stringify(data)
+    }
+    injectLd('ld-faq',   faqSchema)
+    injectLd('ld-howto', howToSchema)
+    return () => {
+      document.getElementById('ld-faq')?.remove()
+      document.getElementById('ld-howto')?.remove()
+    }
+  }, [])
+
   const [mobileOpen, setMobileOpen]   = useState(false)
   const [scrolled, setScrolled]       = useState(false)
   const [waitlistOpen, setWaitlistOpen] = useState(false)
@@ -685,7 +732,16 @@ export default function MarketingPage() {
 
           {/* Desktop links */}
           <div className="hidden md:flex items-center gap-6">
-            {NAV_LINKS.map(l => (
+            {NAV_LINKS.map(l => l.isRoute ? (
+              <Link
+                key={l.label}
+                to={l.href}
+                className="text-sm text-indigo-600 hover:text-indigo-700 font-semibold transition-colors flex items-center gap-1 border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-full"
+              >
+                <Calculator size={13} />
+                {l.label}
+              </Link>
+            ) : (
               <a
                 key={l.label}
                 href={l.href}
@@ -728,7 +784,17 @@ export default function MarketingPage() {
         {mobileOpen && (
           <div className="md:hidden bg-white border-b border-gray-100 shadow-lg px-4 pb-4">
             <div className="space-y-1 pt-2">
-              {NAV_LINKS.map(l => (
+              {NAV_LINKS.map(l => l.isRoute ? (
+                <Link
+                  key={l.label}
+                  to={l.href}
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-indigo-600 hover:bg-indigo-50"
+                >
+                  <Calculator size={14} />
+                  {l.label}
+                </Link>
+              ) : (
                 <a
                   key={l.label}
                   href={l.href}
@@ -1102,6 +1168,52 @@ export default function MarketingPage() {
           7. SR&ED CREDIT CALCULATOR
       ══════════════════════════════════════════════════════════════════════ */}
       <SrEdCalculator openWaitlist={openWaitlist} navigate={navigate} />
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          7b. FULL ESTIMATOR CTA BANNER
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section className="py-14 bg-gradient-to-r from-indigo-600 to-violet-600">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
+            <div className="flex-1">
+              <div className="inline-flex items-center gap-2 bg-white/20 text-white text-xs font-semibold px-3 py-1 rounded-full mb-4">
+                <Calculator size={13} />
+                Free SR&amp;ED Estimator
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
+                Get a detailed credit breakdown — province, salary mix, contractor split & prior years
+              </h2>
+              <p className="text-indigo-100 text-sm leading-relaxed max-w-xl">
+                The quick calculator above gives a headline number. The full estimator lets you model every variable:
+                employee vs contractor split, fiscal year end, missed prior years, CCPC status, province-specific rates,
+                university partnership bonuses, and a side-by-side comparison with traditional consultant costs.
+                No signup required.
+              </p>
+              <div className="mt-5 flex flex-wrap gap-4 text-sm text-indigo-100">
+                {['All 10 provinces', 'Prior year catch-up', 'Contractor split', 'Net ROI vs consultant fees', 'Eligibility quiz'].map(f => (
+                  <span key={f} className="flex items-center gap-1.5">
+                    <svg className="w-4 h-4 text-indigo-300" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414L8.414 15l-4.121-4.121a1 1 0 011.414-1.414L8.414 12.172l6.879-6.879a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    {f}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="flex-shrink-0 flex flex-col items-center gap-3">
+              <Link
+                to="/estimate"
+                className="inline-flex items-center gap-2 bg-white text-indigo-700 hover:bg-indigo-50 font-bold text-sm px-7 py-3.5 rounded-xl shadow-lg transition-colors"
+              >
+                <Calculator size={17} />
+                Open Full Estimator
+                <ArrowRight size={15} />
+              </Link>
+              <span className="text-indigo-200 text-xs">Free · No signup · Instant results</span>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* ══════════════════════════════════════════════════════════════════════
           8. FOR CPAs

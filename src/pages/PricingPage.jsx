@@ -97,6 +97,10 @@ export default function PricingPage() {
     title:       'Pricing — TaxLift SR&ED Tax Credit Platform',
     description: 'Simple, transparent pricing for SR&ED claims. Start free with our eligibility scan. Paid plans charged as a percentage of credits recovered — no recovery, no fee.',
     path:        '/pricing',
+    breadcrumb:  [
+      { name: 'Home',    path: '/'        },
+      { name: 'Pricing', path: '/pricing' },
+    ],
   })
 
   const navigate = useNavigate()

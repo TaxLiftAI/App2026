@@ -603,6 +603,10 @@ export default function EstimatorPage() {
     title:       'Free SR&ED Credit Estimator — TaxLift',
     description: 'Calculate how much SR&ED / R&D tax credit your Canadian startup could recover. Enter headcount and salary — get an instant CRA-grade estimate with provincial breakdown.',
     path:        '/estimate',
+    breadcrumb:  [
+      { name: 'Home',      path: '/'         },
+      { name: 'Estimator', path: '/estimate' },
+    ],
   })
 
   const navigate = useNavigate()
