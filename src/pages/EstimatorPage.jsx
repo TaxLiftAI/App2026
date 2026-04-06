@@ -574,8 +574,8 @@ function LeadModal({ totalStr, onClose }) {
                 { key:'company', label:'Company name', type:'text', ph:'Acme Inc.' },
               ].map(f => (
                 <div key={f.key}>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">{f.label}</label>
-                  <input type={f.type} required placeholder={f.ph} value={form[f.key]}
+                  <label htmlFor={`est-${f.key}`} className="block text-xs font-medium text-gray-700 mb-1">{f.label}</label>
+                  <input id={`est-${f.key}`} name={f.key} type={f.type} required placeholder={f.ph} value={form[f.key]}
                     onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                 </div>

@@ -104,10 +104,12 @@ export default function LoginPage() {
           {mode === 'real' && (
             <form onSubmit={handleRealLogin} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                <label htmlFor="login-email" className="block text-xs font-medium text-gray-700 mb-1.5">
                   Email
                 </label>
                 <input
+                  id="login-email"
+                  name="email"
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
@@ -117,10 +119,12 @@ export default function LoginPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                <label htmlFor="login-password" className="block text-xs font-medium text-gray-700 mb-1.5">
                   Password
                 </label>
                 <input
+                  id="login-password"
+                  name="password"
                   type="password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
@@ -160,11 +164,13 @@ export default function LoginPage() {
           {mode === 'demo' && (
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                <label htmlFor="login-demo-account" className="block text-xs font-medium text-gray-700 mb-1.5">
                   Demo account
                 </label>
                 <div className="relative">
                   <select
+                    id="login-demo-account"
+                    name="demoAccount"
                     value={demoUserId}
                     onChange={e => setDemoUserId(e.target.value)}
                     className="w-full appearance-none bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent pr-8"

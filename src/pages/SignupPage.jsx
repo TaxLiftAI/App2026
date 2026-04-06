@@ -236,10 +236,12 @@ export default function SignupPage() {
 
             {/* Full name */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">
+              <label htmlFor="signup-name" className="block text-xs font-medium text-gray-700 mb-1.5">
                 Full name <span className="text-red-500">*</span>
               </label>
               <input
+                id="signup-name"
+                name="fullName"
                 type="text"
                 autoComplete="name"
                 placeholder="Jane Smith"
@@ -252,10 +254,12 @@ export default function SignupPage() {
 
             {/* Company name */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">
+              <label htmlFor="signup-company" className="block text-xs font-medium text-gray-700 mb-1.5">
                 Company name
               </label>
               <input
+                id="signup-company"
+                name="companyName"
                 type="text"
                 autoComplete="organization"
                 placeholder="Acme Corp"
@@ -267,10 +271,12 @@ export default function SignupPage() {
 
             {/* Email */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">
+              <label htmlFor="signup-email" className="block text-xs font-medium text-gray-700 mb-1.5">
                 Work email <span className="text-red-500">*</span>
               </label>
               <input
+                id="signup-email"
+                name="email"
                 type="email"
                 autoComplete="email"
                 placeholder="jane@acmecorp.com"
@@ -283,11 +289,13 @@ export default function SignupPage() {
 
             {/* Password */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">
+              <label htmlFor="signup-password" className="block text-xs font-medium text-gray-700 mb-1.5">
                 Password <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <input
+                  id="signup-password"
+                  name="password"
                   type={showPw ? 'text' : 'password'}
                   autoComplete="new-password"
                   placeholder="Min. 8 characters"
@@ -325,10 +333,12 @@ export default function SignupPage() {
 
             {/* Confirm password */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">
+              <label htmlFor="signup-confirm" className="block text-xs font-medium text-gray-700 mb-1.5">
                 Confirm password <span className="text-red-500">*</span>
               </label>
               <input
+                id="signup-confirm"
+                name="confirmPassword"
                 type={showPw ? 'text' : 'password'}
                 autoComplete="new-password"
                 placeholder="Re-enter your password"

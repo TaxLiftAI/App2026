@@ -112,10 +112,12 @@ export default function ScanLandingPage() {
         <form onSubmit={handleConnectGitHub} className="max-w-md mx-auto">
           <div className="bg-white/5 border border-white/10 rounded-2xl p-5 backdrop-blur-sm space-y-3">
             <div>
-              <label className="block text-left text-xs font-medium text-slate-300 mb-1.5">
+              <label htmlFor="scan-email" className="block text-left text-xs font-medium text-slate-300 mb-1.5">
                 Work email <span className="text-slate-500">(to email you your full report)</span>
               </label>
               <input
+                id="scan-email"
+                name="email"
                 type="email"
                 placeholder="you@yourcompany.com"
                 value={email}
