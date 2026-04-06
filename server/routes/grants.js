@@ -23,6 +23,18 @@ const axios = require('axios')
 // All grants routes require auth
 router.use(requireAuth)
 
+// Plus-tier guard — grants module is a Plus/Enterprise feature
+function requirePlusTier(req, res, next) {
+  const tier = req.user?.subscription_tier
+  if (tier === 'plus' || tier === 'enterprise') return next()
+  return res.status(403).json({
+    message: 'Grants module requires a Plus or Enterprise subscription.',
+    upgrade_url: '/pricing?plan=plus',
+  })
+}
+
+router.use(requirePlusTier)
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Build a SREDContext object for a given user */

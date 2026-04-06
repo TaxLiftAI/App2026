@@ -137,6 +137,13 @@ export default function PricingPage() {
   const creditLow  = estimate ? Math.round(estimate * 0.65) : null
   const creditHigh = estimate ? Math.round(estimate * 1.35) : null
 
+  // ROI comparison vs traditional consultant (15–25% contingency)
+  const PLUS_ANNUAL    = 599 * 12  // $7,188 / yr
+  const consultantLow  = estimate ? Math.round(estimate * 0.15) : null
+  const consultantHigh = estimate ? Math.round(estimate * 0.25) : null
+  const savingsLow     = consultantLow  ? Math.max(0, consultantLow  - PLUS_ANNUAL) : null
+  const savingsHigh    = consultantHigh ? Math.max(0, consultantHigh - PLUS_ANNUAL) : null
+
   const highlightedPlan = searchParams.get('plan') || null
 
   // Build plans — optionally override highlighted based on URL param
@@ -226,10 +233,32 @@ export default function PricingPage() {
                   {' '}· CCPC rate · conservative–expected range
                 </p>
               </div>
-              <div className="flex-shrink-0">
-                <div className="bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-center">
-                  <p className="text-white font-bold text-sm">Pick a plan below</p>
-                  <p className="text-indigo-200 text-xs mt-0.5">to unlock your full package</p>
+              <div className="flex-shrink-0 min-w-[200px]">
+                <div className="bg-white/10 border border-white/20 rounded-xl px-4 py-3 space-y-2.5">
+                  <p className="text-indigo-200 text-xs font-semibold uppercase tracking-wider">
+                    vs. SR&ED consultant
+                  </p>
+                  <div className="flex items-center justify-between gap-4 text-sm">
+                    <span className="text-indigo-300 text-xs">Consultant (15–25%)</span>
+                    <span className="text-white/70 font-mono text-xs line-through">
+                      {fmtK(consultantLow)}–{fmtK(consultantHigh)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-4 text-sm">
+                    <span className="text-indigo-300 text-xs">TaxLift Plus (annual)</span>
+                    <span className="text-white font-mono text-xs font-semibold">
+                      {fmtK(PLUS_ANNUAL)}
+                    </span>
+                  </div>
+                  <div className="border-t border-white/20 pt-2 flex items-center justify-between">
+                    <span className="text-xs font-bold text-emerald-300">You save</span>
+                    <span className="text-emerald-300 font-bold font-mono text-sm">
+                      {fmtK(savingsLow)}–{fmtK(savingsHigh)}
+                    </span>
+                  </div>
+                  <p className="text-indigo-300 text-[10px] leading-snug text-center">
+                    Pick a plan below to unlock your full package ↓
+                  </p>
                 </div>
               </div>
             </div>
@@ -247,8 +276,9 @@ export default function PricingPage() {
               : 'SR&ED automation — flat fee, no surprises'}
           </h1>
           <p className="text-gray-500 max-w-xl mx-auto text-sm sm:text-base leading-relaxed">
-            No 15–25% contingency cut. All plans include a 14-day free trial and a CPA-ready
-            package generated from your existing GitHub and Jira data.
+            No 15–25% contingency cut. On a $200K claim, a traditional consultant takes
+            $30–50K — TaxLift Plus costs $7,188/yr. All plans include a 14-day free trial
+            and a CPA-ready package generated from your existing GitHub and Jira data.
           </p>
         </div>
 

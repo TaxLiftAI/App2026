@@ -51,8 +51,8 @@ export const PLANS = {
     description: 'SR&ED + Grants module — unlock up to $4M+ in additional Canadian innovation funding.',
     features: [
       'Everything in Starter',
-      '✦ Grants module — 7 programs matched automatically',
-      '✦ NRC-IRAP, OINTC, NGen + provincial programs',
+      '✦ Grants module — 9 programs matched automatically',
+      '✦ NRC-IRAP, OITC, NGen + provincial programs',
       '✦ Gap-fill interview & AI section drafting',
       '✦ Application tracker with deadline alerts',
       'CPA referral portal & commission tracking',
