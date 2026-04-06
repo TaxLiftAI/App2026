@@ -11,7 +11,7 @@
 import { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
 
-const DEFAULT_URL = import.meta.env.VITE_CALENDLY_URL ?? 'https://calendly.com/taxlift/demo'
+const DEFAULT_URL = import.meta.env.VITE_CALENDLY_URL ?? 'https://calendly.com/taxlift/free-review'
 const WIDGET_SCRIPT = 'https://assets.calendly.com/assets/external/widget.js'
 const WIDGET_CSS    = 'https://assets.calendly.com/assets/external/widget.css'
 

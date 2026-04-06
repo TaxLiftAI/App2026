@@ -423,7 +423,7 @@ export default function SettingsPage() {
               <a
                 href="https://billing.stripe.com/p/login"
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="flex items-center gap-1.5 text-sm text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
               >
                 Open billing portal <ChevronRight size={13} />
