@@ -446,10 +446,10 @@ function SrEdCalculator({ openWaitlist, navigate }) {
 
               {/* Revenue band */}
               <div className="mb-7">
-                <label className="block text-sm font-medium text-gray-700 mb-3">
+                <p className="block text-sm font-medium text-gray-700 mb-3">
                   Annual Revenue
-                </label>
-                <div className="flex flex-wrap gap-2">
+                </p>
+                <div className="flex flex-wrap gap-2" role="group" aria-label="Annual Revenue">
                   {REVENUE_BANDS.map((b, i) => (
                     <button
                       key={b.label}
