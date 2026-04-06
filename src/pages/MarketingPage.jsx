@@ -468,7 +468,7 @@ function SrEdCalculator({ openWaitlist, navigate }) {
 
               {/* Headcount slider */}
               <div className="mb-7">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="calc-headcount" className="block text-sm font-medium text-gray-700 mb-1">
                   R&amp;D Headcount
                   <span className="ml-2 text-indigo-600 font-bold">
                     {numDevs}{numDevs === 20 ? '+' : ''} dev{numDevs !== 1 ? 's' : ''}
@@ -476,6 +476,8 @@ function SrEdCalculator({ openWaitlist, navigate }) {
                 </label>
                 <p className="text-xs text-gray-400 mb-3">Engineers, researchers &amp; technical staff</p>
                 <input
+                  id="calc-headcount"
+                  name="headcount"
                   type="range"
                   min={1}
                   max={20}
@@ -492,10 +494,12 @@ function SrEdCalculator({ openWaitlist, navigate }) {
 
               {/* Province */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="calc-province" className="block text-sm font-medium text-gray-700 mb-2">
                   Province
                 </label>
                 <select
+                  id="calc-province"
+                  name="province"
                   value={provCode}
                   onChange={e => setProvCode(e.target.value)}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
