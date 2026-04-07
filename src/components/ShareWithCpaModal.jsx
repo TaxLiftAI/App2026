@@ -197,7 +197,7 @@ export default function ShareWithCpaModal({
 
     const token      = encodeCpaToken(payload)
     const origin     = window.location.origin
-    const reviewLink = `${origin}/cpa-review/${token}`
+    const reviewLink = `${origin}/cpa-review/${token}?annotate=1`
 
     return {
       link: reviewLink,

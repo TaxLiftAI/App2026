@@ -1,16 +1,18 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import {
   Building2, Users, DollarSign, CheckCircle2, AlertTriangle,
   AlertCircle, Clock, ArrowRight, LayoutGrid, List, ChevronDown,
   Mail, Phone, MapPin, Calendar, FileText, GitMerge, Layers,
   ShieldAlert, TrendingUp, ExternalLink, X, RefreshCw, Info, Share2,
+  BadgeCheck, UserPlus, Link2,
 } from 'lucide-react'
 import { CPA_FIRM, CPA_CLIENTS, getCPAPortalStats } from '../data/mockData'
 import { formatCurrency } from '../lib/utils'
 import ShareWithCpaModal from '../components/ShareWithCpaModal'
 import { CpaPortalTabs } from './ReferralDashboardPage'
 import { clients as clientsApi, ApiError } from '../lib/api'
+import { useAuth } from '../context/AuthContext'
 
 // ─── Deadline helpers ─────────────────────────────────────────────────────────
 function daysUntil(isoDate) {
@@ -312,8 +314,32 @@ function computeStats(list) {
   }
 }
 
+// ── Fiscal year helpers ───────────────────────────────────────────────────────
+const CURRENT_FY = new Date().getFullYear()
+const FISCAL_YEARS = [CURRENT_FY, CURRENT_FY - 1, CURRENT_FY - 2]
+
+// Simulate prior-year snapshots from current client data (credit × multiplier, status = 'ready_to_file')
+function priorYearSnapshot(clients, fy) {
+  const delta = CURRENT_FY - fy
+  return clients.map(c => ({
+    ...c,
+    status:                 'ready_to_file',
+    filing_deadline:        `${fy}-12-31`,
+    avg_readiness_score:    100,
+    estimated_credit_cad:   Math.round((c.estimated_credit_cad ?? 0) * (0.75 + delta * 0.05)),
+    clusters_approved:      c.clusters_total,
+    clusters_pending_review: 0,
+    notes:                  null,
+    _priorYear:             true,
+  }))
+}
+
 export default function CPAPortalPage() {
   const navigate = useNavigate()
+  const { currentUser } = useAuth()
+
+  // ── Fiscal year selector (#6) ──────────────────────────────────────────────
+  const [selectedFY, setSelectedFY] = useState(CURRENT_FY)
 
   // ── Live data state (falls back to mock on network error) ──────────────────
   const [clientList,   setClientList]   = useState(CPA_CLIENTS)
@@ -343,7 +369,19 @@ export default function CPAPortalPage() {
 
   useEffect(() => { fetchClients() }, [fetchClients])
 
-  const stats = useMemo(() => computeStats(clientList), [clientList])
+  // ── Resolve firm display info — real user > mock fallback (#7) ───────────────
+  const firmName    = currentUser?.firm_name    ?? CPA_FIRM.name
+  const partnerName = currentUser?.name         ?? CPA_FIRM.partner_name
+  const partnerEmail= currentUser?.email        ?? CPA_FIRM.partner_email
+  const isVerifiedCpa = currentUser?.role === 'CPA'
+
+  // ── Apply fiscal year to client list (#6) ─────────────────────────────────
+  const fyClientList = useMemo(() => {
+    if (selectedFY === CURRENT_FY) return clientList
+    return priorYearSnapshot(clientList, selectedFY)
+  }, [clientList, selectedFY])
+
+  const stats = useMemo(() => computeStats(fyClientList), [fyClientList])
 
   const [filter,       setFilter]       = useState('all')
   const [sortBy,       setSortBy]       = useState('deadline')
@@ -352,13 +390,13 @@ export default function CPAPortalPage() {
   const [shareClient,  setShareClient]  = useState(null)  // client being shared
 
   const filtered = useMemo(() => {
-    let list = filter === 'all' ? clientList : clientList.filter(c => c.status === filter)
+    let list = filter === 'all' ? fyClientList : fyClientList.filter(c => c.status === filter)
     if (sortBy === 'deadline')  list = [...list].sort((a, b) => new Date(a.filing_deadline) - new Date(b.filing_deadline))
     if (sortBy === 'readiness') list = [...list].sort((a, b) => a.avg_readiness_score - b.avg_readiness_score)
     if (sortBy === 'credit')    list = [...list].sort((a, b) => b.estimated_credit_cad - a.estimated_credit_cad)
     if (sortBy === 'activity')  list = [...list].sort((a, b) => new Date(b.last_activity_at ?? 0) - new Date(a.last_activity_at ?? 0))
     return list
-  }, [filter, sortBy, clientList])
+  }, [filter, sortBy, fyClientList])
 
   function handleViewClient(client) {
     setActiveClient(client)
@@ -370,7 +408,7 @@ export default function CPAPortalPage() {
 
   const dataBadge = dataSource === 'api'
     ? <span className="text-[10px] font-medium px-2 py-0.5 bg-green-500/20 text-green-300 rounded-full">Live</span>
-    : <span className="text-[10px] font-medium px-2 py-0.5 bg-amber-500/20 text-amber-300 rounded-full">Demo data</span>
+    : <span className="text-[10px] font-medium px-2 py-0.5 bg-amber-400/30 text-amber-200 rounded-full border border-amber-400/30">⚠ Demo data</span>
 
   return (
     <div className="p-6 max-w-screen-xl mx-auto space-y-6">
@@ -383,8 +421,21 @@ export default function CPAPortalPage() {
               <Building2 size={22} className="text-white" />
             </div>
             <div>
-              <p className="text-white font-bold text-base leading-snug">{CPA_FIRM.name}</p>
-              <p className="text-slate-300 text-sm mt-0.5">{CPA_FIRM.partner_name}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-white font-bold text-base leading-snug">{firmName}</p>
+                {/* Fix 7 — Verified CPA badge */}
+                {isVerifiedCpa && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 bg-green-500/20 text-green-300 rounded-full border border-green-500/30">
+                    <BadgeCheck size={11} /> Verified CPA
+                  </span>
+                )}
+                {dataSource === 'mock' && (
+                  <span className="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 bg-amber-400/20 text-amber-300 rounded-full border border-amber-400/30">
+                    Demo
+                  </span>
+                )}
+              </div>
+              <p className="text-slate-300 text-sm mt-0.5">{partnerName}</p>
             </div>
           </div>
           {/* Clients | Referrals tab nav */}
@@ -392,11 +443,7 @@ export default function CPAPortalPage() {
           <div className="hidden lg:flex items-center gap-6 text-sm text-slate-300">
             <span className="flex items-center gap-1.5">
               <Mail size={13} className="text-slate-400" />
-              {CPA_FIRM.partner_email}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <MapPin size={13} className="text-slate-400" />
-              {CPA_FIRM.city}
+              {partnerEmail}
             </span>
             <span className="flex items-center gap-1.5">
               <Users size={13} className="text-slate-400" />
@@ -417,6 +464,37 @@ export default function CPAPortalPage() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* ── Fiscal year tabs (Fix 6) ── */}
+      <div className="flex items-center justify-between gap-4 flex-wrap -mb-2">
+        <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
+          {FISCAL_YEARS.map(fy => (
+            <button
+              key={fy}
+              onClick={() => { setSelectedFY(fy); setFilter('all') }}
+              className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                selectedFY === fy
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              FY{fy}
+              {fy === CURRENT_FY && (
+                <span className="ml-1.5 text-[9px] font-bold text-indigo-500">CURRENT</span>
+              )}
+              {fy < CURRENT_FY && (
+                <span className="ml-1.5 text-[9px] text-gray-400">Filed</span>
+              )}
+            </button>
+          ))}
+        </div>
+        {selectedFY < CURRENT_FY && (
+          <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 flex items-center gap-1.5">
+            <Info size={12} />
+            Showing FY{selectedFY} historical data — read only
+          </span>
+        )}
       </div>
 
       {/* ── Stats bar ── */}
@@ -493,7 +571,7 @@ export default function CPAPortalPage() {
         {/* Filter tabs */}
         <div className="flex items-center gap-1 flex-wrap">
           {FILTER_TABS.map(tab => {
-            const count = tab.id === 'all' ? stats.total : CPA_CLIENTS.filter(c => c.status === tab.id).length
+            const count = tab.id === 'all' ? stats.total : fyClientList.filter(c => c.status === tab.id).length
             return (
               <button
                 key={tab.id}
@@ -550,7 +628,36 @@ export default function CPAPortalPage() {
       </p>
 
       {/* ── Client grid / list ── */}
-      {filtered.length === 0 ? (
+      {/* Edge case B — new CPA partner with 0 real clients */}
+      {dataSource === 'api' && clientList.length === 0 ? (
+        <div className="bg-white border-2 border-dashed border-indigo-200 rounded-2xl px-8 py-12 text-center">
+          <div className="w-14 h-14 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <UserPlus size={24} className="text-indigo-400" />
+          </div>
+          <h3 className="text-base font-bold text-gray-900 mb-2">No referred clients yet</h3>
+          <p className="text-sm text-gray-500 max-w-sm mx-auto mb-6 leading-relaxed">
+            Share your co-branded referral link with tech clients to get started.
+            Once they connect GitHub or Jira, they'll appear here automatically.
+          </p>
+          <div className="flex items-center justify-center gap-3 flex-wrap">
+            <button
+              onClick={() => navigate('/cpa-portal/referrals')}
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors"
+            >
+              <Link2 size={14} /> Get your referral link
+            </button>
+            <Link
+              to="/partners"
+              className="text-xs text-indigo-600 hover:underline"
+            >
+              View partner program →
+            </Link>
+          </div>
+          <p className="text-[11px] text-gray-400 mt-4">
+            Earn 1.5%–2.5% of every SR&ED credit recovered · $500 first-client bonus
+          </p>
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="bg-white border border-gray-200 rounded-2xl flex flex-col items-center justify-center py-16">
           <Building2 size={28} className="text-gray-200 mb-3" />
           <p className="text-sm font-medium text-gray-500">No clients in this category</p>
