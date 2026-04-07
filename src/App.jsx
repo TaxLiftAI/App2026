@@ -37,6 +37,7 @@ import ScanReposPage   from './pages/scan/ScanReposPage'
 import ScanRunningPage from './pages/scan/ScanRunningPage'
 import ScanResultsPage from './pages/scan/ScanResultsPage'
 import PricingPage         from './pages/PricingPage'
+import SecurityPage        from './pages/SecurityPage'
 import DemoPage            from './pages/DemoPage'
 import SignupPage          from './pages/SignupPage'
 import CheckoutSuccessPage from './pages/CheckoutSuccessPage'
@@ -282,6 +283,9 @@ function AppRoutes() {
       <Route path="/success" element={<CheckoutSuccessPage />} />
       <Route path="/cancel"  element={<CheckoutCancelPage />} />
       <Route path="/welcome" element={<ProtectedRoute><WelcomePage /></ProtectedRoute>} />
+
+      {/* Free scan funnel — public, no auth required */}
+      <Route path="/security" element={<SecurityPage />} />
 
       {/* Free scan funnel — public, no auth required */}
       <Route path="/scan"         element={<ScanLandingPage />} />

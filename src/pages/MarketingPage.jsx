@@ -139,6 +139,7 @@ const TESTIMONIALS = [
     credit:  '$312K recovered',
     initial: 'M',
     color:   'bg-indigo-500',
+    logo:    { abbr: 'ZB', bg: 'bg-indigo-100', text: 'text-indigo-700', ring: 'ring-indigo-200' },
   },
   {
     quote:   "The CPA handoff package cut our prep time from three weeks to an afternoon. First year using it and zero audit issues.",
@@ -147,6 +148,7 @@ const TESTIMONIALS = [
     credit:  '$142K recovered',
     initial: 'D',
     color:   'bg-violet-500',
+    logo:    { abbr: 'PC', bg: 'bg-violet-100', text: 'text-violet-700', ring: 'ring-violet-200' },
   },
   {
     quote:   "I finally understand what SR&ED-qualifies in our stack. The narrative quality scores made our filing bulletproof.",
@@ -155,63 +157,10 @@ const TESTIMONIALS = [
     credit:  '$67K recovered',
     initial: 'S',
     color:   'bg-blue-500',
+    logo:    { abbr: 'AN', bg: 'bg-blue-100', text: 'text-blue-700', ring: 'ring-blue-200' },
   },
 ]
 
-const PRICING_TIERS = [
-  {
-    name:       'Starter',
-    price:      '$299',
-    period:     '/mo',
-    desc:       'For early-stage startups making their first SR&ED claim.',
-    cta:        'Get started free',
-    highlight:  false,
-    features:   [
-      '1 fiscal year',
-      'Up to 5 SR&ED clusters',
-      'T661 narrative generation',
-      'Basic CPA package PDF',
-      'Evidence hashing',
-      'Email support',
-    ],
-  },
-  {
-    name:       'Growth',
-    price:      '$799',
-    period:     '/mo',
-    desc:       'For scale-ups with complex multi-cluster claims.',
-    cta:        'Start free trial',
-    highlight:  true,
-    badge:      'Most popular',
-    features:   [
-      'Unlimited fiscal years',
-      'Unlimited clusters',
-      'Narrative quality scoring',
-      'Audit readiness dashboard',
-      'CPA referral portal',
-      'GitHub & Jira OAuth',
-      'Priority support',
-      'Co-branded CPA packages',
-    ],
-  },
-  {
-    name:       'Enterprise',
-    price:      'Custom',
-    period:     '',
-    desc:       'For firms with multiple entities, dedicated SR&ED counsel, and compliance SLAs.',
-    cta:        'Talk to sales',
-    highlight:  false,
-    features:   [
-      'Multi-entity management',
-      'White-label CPA portal',
-      'Dedicated SR&ED specialist',
-      'Custom integrations',
-      'SSO / SAML',
-      'SLA & audit indemnity',
-      'CRA correspondence support',
-    ],
-  },
-]
 
 const FAQS = [
   {
@@ -1135,8 +1084,18 @@ export default function MarketingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {TESTIMONIALS.map(t => (
               <div key={t.name} className="bg-white rounded-2xl border border-gray-100 p-7 shadow-sm flex flex-col">
+                {/* Company logo badge + credit recovered */}
+                <div className="flex items-center justify-between mb-5">
+                  <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl ring-1 ${t.logo.bg} ${t.logo.ring}`}>
+                    <span className={`text-xs font-extrabold tracking-wider ${t.logo.text}`}>{t.logo.abbr}</span>
+                    <span className={`text-[10px] font-semibold ${t.logo.text} opacity-70`}>{t.role.split(', ')[1]}</span>
+                  </div>
+                  <span className="text-xs font-bold text-green-600 bg-green-50 border border-green-100 px-2.5 py-1 rounded-full">
+                    {t.credit}
+                  </span>
+                </div>
                 {/* Stars */}
-                <div className="flex gap-0.5 mb-4">
+                <div className="flex gap-0.5 mb-3">
                   {Array(5).fill(0).map((_, i) => (
                     <Star key={i} size={13} className="text-amber-400 fill-amber-400" />
                   ))}
@@ -1144,18 +1103,13 @@ export default function MarketingPage() {
                 <p className="text-gray-700 text-sm leading-relaxed flex-1 mb-5">
                   "{t.quote}"
                 </p>
-                <div className="flex items-center gap-3">
-                  <div className={`w-9 h-9 ${t.color} rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>
+                <div className="flex items-center gap-3 border-t border-gray-50 pt-4">
+                  <div className={`w-8 h-8 ${t.color} rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>
                     {t.initial}
                   </div>
                   <div className="min-w-0">
                     <p className="font-semibold text-gray-900 text-sm">{t.name}</p>
-                    <p className="text-xs text-gray-400">{t.role}</p>
-                  </div>
-                  <div className="ml-auto flex-shrink-0">
-                    <span className="text-xs font-bold text-green-600 bg-green-50 px-2.5 py-1 rounded-full">
-                      {t.credit}
-                    </span>
+                    <p className="text-xs text-gray-400">{t.role.split(', ')[0]}</p>
                   </div>
                 </div>
               </div>
@@ -1319,11 +1273,11 @@ export default function MarketingPage() {
           <div className="text-center mb-14">
             <p className="text-indigo-600 text-sm font-semibold uppercase tracking-widest mb-2">Pricing</p>
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
-              Start with SR&amp;ED — unlock grants when you're ready
+              Flat fee. No contingency. You keep the full refund.
             </h2>
             <p className="mt-3 text-gray-500 max-w-xl mx-auto">
-              All plans include a 14-day free trial. No credit card required.
-              Upgrade to Plus to add the Grants module and unlock $4M+ in additional funding.
+              Annual plans from $249/mo. First-time filer? Pay once per claim — no subscription required.
+              All plans include a 14-day free trial and a complete CPA-ready T661 package.
             </p>
           </div>
 
@@ -1339,17 +1293,21 @@ export default function MarketingPage() {
           </div>
 
           <p className="text-center text-xs text-gray-400 mt-8">
-            Prices in CAD. SR&amp;ED credit recovery typically returns 80–200× the platform cost.
+            Prices in CAD · billed annually · 14-day free trial on all plans.
             Grants module available on Plus &amp; Enterprise.
           </p>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-500">
+          <div className="mt-5 flex flex-col sm:flex-row items-center justify-center gap-4 text-sm text-gray-500">
+            <p>
+              First-time filer or sporadic R&D?{' '}
+              <Link to="/pricing?track=claim" className="text-indigo-600 hover:text-indigo-700 font-semibold hover:underline">
+                See Pay-per-Claim option →
+              </Link>
+            </p>
+            <span className="hidden sm:block text-gray-300">·</span>
+            <p>
               Not ready to connect GitHub?{' '}
-              <Link
-                to="/demo"
-                className="text-indigo-600 hover:text-indigo-700 font-semibold hover:underline"
-              >
+              <Link to="/demo" className="text-indigo-600 hover:text-indigo-700 font-semibold hover:underline">
                 Try the demo first →
               </Link>
             </p>
@@ -1465,14 +1423,15 @@ export default function MarketingPage() {
               <p className="text-slate-300 font-semibold text-sm mb-3">Company</p>
               <ul className="space-y-2">
                 {[
-                  { label: 'Privacy Policy', href: '#' },
-                  { label: 'Terms of Service', href: '#' },
-                  { label: 'Sign in',  href: '/login', internal: true },
+                  { label: 'Privacy Policy',   href: 'https://taxlift.ai/privacy', internal: false },
+                  { label: 'Terms of Service', href: 'https://taxlift.ai/terms',   internal: false },
+                  { label: 'Security',         href: '/security',                  internal: true  },
+                  { label: 'Sign in',          href: '/login',                     internal: true  },
                 ].map(l => (
                   <li key={l.label}>
                     {l.internal
                       ? <Link to={l.href} className="text-slate-400 hover:text-white text-sm transition-colors">{l.label}</Link>
-                      : <a href={l.href} className="text-slate-400 hover:text-white text-sm transition-colors">{l.label}</a>
+                      : <a href={l.href} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-white text-sm transition-colors">{l.label}</a>
                     }
                   </li>
                 ))}

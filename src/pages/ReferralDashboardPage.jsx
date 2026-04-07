@@ -19,7 +19,8 @@ import {
   Building2, DollarSign, Users, TrendingUp, CheckCircle2,
   Clock, Banknote, Link2, Copy, Check, ChevronRight,
   ArrowRight, BarChart3, Mail, MapPin, UserPlus, X, Gift,
-  Star, Sparkles, Loader2, AlertTriangle,
+  Star, Sparkles, Loader2, AlertTriangle, Receipt, CreditCard,
+  CalendarCheck, Download,
 } from 'lucide-react'
 import { useAuth }              from '../context/AuthContext'
 import { referrals as referralsApi } from '../lib/api'
@@ -50,12 +51,20 @@ export function CpaPortalTabs({ active }) {
   return (
     <div className="flex items-center gap-1">
       {[
-        { id: 'clients',   label: 'Clients',   path: '/cpa-portal' },
-        { id: 'referrals', label: 'Referrals', path: '/cpa-portal/referrals', badge: 'Earn commission' },
+        { id: 'clients',   label: 'Clients',         path: '/cpa-portal' },
+        { id: 'referrals', label: 'Referrals',        path: '/cpa-portal/referrals', badge: 'Earn commission' },
+        { id: 'payouts',   label: 'Payout History',   path: '/cpa-portal/referrals#payouts' },
       ].map(tab => (
         <button
           key={tab.id}
-          onClick={() => navigate(tab.path)}
+          onClick={() => {
+            if (tab.id === 'payouts') {
+              navigate('/cpa-portal/referrals')
+              setTimeout(() => document.getElementById('payout-history')?.scrollIntoView({ behavior: 'smooth' }), 100)
+            } else {
+              navigate(tab.path)
+            }
+          }}
           className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
             active === tab.id
               ? 'bg-white text-gray-900 shadow-sm'
@@ -72,6 +81,175 @@ export function CpaPortalTabs({ active }) {
           )}
         </button>
       ))}
+    </div>
+  )
+}
+
+// ── Mock payout history data ──────────────────────────────────────────────────
+// In production this would come from referralsApi.payouts()
+const MOCK_PAYOUTS = [
+  {
+    id:           'PAY-2026-003',
+    paid_date:    '2026-03-14',
+    amount_cad:   4_000,
+    clients:      ['Zenith Biotech Ltd.'],
+    eft_ref:      'EFT-TXL-20260314-003',
+    fiscal_year:  'FY2025',
+    tier:         'Tier 2',
+    rate:         '2.0%',
+    credit_base:  200_000,
+    status:       'paid',
+    note:         null,
+  },
+  {
+    id:           'PAY-2026-002',
+    paid_date:    '2026-01-22',
+    amount_cad:   2_130,
+    clients:      ['Pulse Commerce Inc.'],
+    eft_ref:      'EFT-TXL-20260122-002',
+    fiscal_year:  'FY2025',
+    tier:         'Tier 1',
+    rate:         '1.5%',
+    credit_base:  142_000,
+    status:       'paid',
+    note:         null,
+  },
+  {
+    id:           'PAY-2025-001',
+    paid_date:    '2025-11-03',
+    amount_cad:   500,
+    clients:      ['Atlas Network (first-client bonus)'],
+    eft_ref:      'EFT-TXL-20251103-001',
+    fiscal_year:  'FY2024',
+    tier:         '—',
+    rate:         'Bonus',
+    credit_base:  null,
+    status:       'paid',
+    note:         'First-client onboarding bonus',
+  },
+]
+
+// ── Payout history component ──────────────────────────────────────────────────
+function PayoutHistory({ currentUser }) {
+  const totalPaid = MOCK_PAYOUTS.reduce((s, p) => s + p.amount_cad, 0)
+
+  function fmtDate(iso) {
+    return new Date(iso).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })
+  }
+
+  return (
+    <div id="payout-history" className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
+            <Receipt size={16} className="text-indigo-500" /> Payout History
+          </h2>
+          <p className="text-xs text-gray-500 mt-0.5">
+            EFT payments sent to your registered bank account — {formatCurrency(totalPaid)} paid to date
+          </p>
+        </div>
+        <button
+          onClick={() => {
+            const csv = [
+              ['Payment ID', 'Date Paid', 'Amount (CAD)', 'Client(s)', 'Fiscal Year', 'Tier', 'Rate', 'Credit Base', 'EFT Reference'].join(','),
+              ...MOCK_PAYOUTS.map(p => [
+                p.id, p.paid_date, p.amount_cad, '"' + p.clients.join('; ') + '"',
+                p.fiscal_year, p.tier, p.rate, p.credit_base ?? '', p.eft_ref,
+              ].join(','))
+            ].join('\n')
+            const blob = new Blob([csv], { type: 'text/csv' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url; a.download = 'taxlift-payouts.csv'; a.click()
+            URL.revokeObjectURL(url)
+          }}
+          className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg px-3 py-1.5 hover:border-gray-300 transition-colors"
+        >
+          <Download size={12} /> Export CSV
+        </button>
+      </div>
+
+      {/* Summary stats */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: 'Total paid out',   value: formatCurrency(totalPaid),           icon: Banknote,     color: 'text-green-600 bg-green-50' },
+          { label: 'Payments made',    value: MOCK_PAYOUTS.length + ' transfers',  icon: CalendarCheck, color: 'text-indigo-600 bg-indigo-50' },
+          { label: 'Payment method',   value: 'EFT (direct deposit)',              icon: CreditCard,   color: 'text-blue-600 bg-blue-50' },
+        ].map(({ label, value, icon: Icon, color }) => (
+          <div key={label} className="bg-white border border-gray-200 rounded-xl px-4 py-3 flex items-center gap-3">
+            <div className={'w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ' + color}>
+              <Icon size={16} />
+            </div>
+            <div>
+              <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">{label}</p>
+              <p className="text-sm font-bold text-gray-900">{value}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Payout table */}
+      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+        <div className="hidden sm:grid grid-cols-[120px_1fr_100px_100px_80px_160px] gap-4 px-5 py-3 bg-gray-50 border-b border-gray-100 text-[10px] font-semibold text-gray-500 uppercase tracking-wide">
+          <span>Date Paid</span>
+          <span>Client(s) / Note</span>
+          <span className="text-right">Amount</span>
+          <span>FY · Tier</span>
+          <span>Rate</span>
+          <span>EFT Reference</span>
+        </div>
+
+        {MOCK_PAYOUTS.length === 0 ? (
+          <div className="py-16 text-center text-gray-400">
+            <Receipt size={28} className="mx-auto mb-3 opacity-30" />
+            <p className="text-sm font-medium">No payouts yet</p>
+            <p className="text-xs mt-1">Your first commission will appear here after a referred client files their T661.</p>
+          </div>
+        ) : (
+          MOCK_PAYOUTS.map((p, i) => (
+            <div
+              key={p.id}
+              className={'flex flex-col sm:grid sm:grid-cols-[120px_1fr_100px_100px_80px_160px] sm:gap-4 px-5 py-4 hover:bg-gray-50 transition-colors ' + (i < MOCK_PAYOUTS.length - 1 ? 'border-b border-gray-100' : '')}
+            >
+              <div className="flex items-center gap-1.5 mb-1 sm:mb-0">
+                <CheckCircle2 size={12} className="text-green-500 flex-shrink-0" />
+                <span className="text-xs font-medium text-gray-700">{fmtDate(p.paid_date)}</span>
+              </div>
+              <div className="mb-1 sm:mb-0">
+                <p className="text-sm font-medium text-gray-900 truncate">{p.clients.join(', ')}</p>
+                {p.note && <p className="text-[11px] text-gray-400 italic">{p.note}</p>}
+              </div>
+              <div className="flex sm:justify-end items-center mb-1 sm:mb-0">
+                <span className="text-sm font-bold text-green-700">{formatCurrency(p.amount_cad)}</span>
+              </div>
+              <div className="flex items-center gap-1.5 mb-1 sm:mb-0">
+                <span className="text-xs text-gray-600">{p.fiscal_year}</span>
+                {p.tier !== '—' && <span className="text-[10px] bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-full px-1.5 py-0.5 font-semibold">{p.tier}</span>}
+              </div>
+              <div className="flex items-center mb-1 sm:mb-0">
+                <span className="text-xs font-semibold text-gray-600">{p.rate}</span>
+              </div>
+              <div className="flex items-center">
+                <span className="text-[11px] text-gray-400 font-mono truncate">{p.eft_ref}</span>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* EFT notice */}
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-start gap-3">
+        <CreditCard size={14} className="text-slate-500 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-xs font-semibold text-gray-700 mb-0.5">How payments work</p>
+          <p className="text-xs text-gray-500 leading-relaxed">
+            Commissions are calculated on the credit amount confirmed by CRA, paid by EFT (direct deposit) within 30 days
+            of T661 filing confirmation. To update your banking details or receive a payment summary letter,
+            email <a href="mailto:partners@taxlift.ai?subject=EFT%20payment%20details" className="text-indigo-600 hover:underline">hello@taxlift.ai</a>.
+          </p>
+        </div>
+      </div>
     </div>
   )
 }
@@ -595,6 +773,9 @@ export default function ReferralDashboardPage() {
           First-client bonus: $500. Commissions paid by EFT within 30 days of T661 filing confirmation. No cap, no expiry.
         </p>
       </div>
+
+      {/* Payout history */}
+      <PayoutHistory currentUser={currentUser} />
 
       <ReferClientModal
         open={referModalOpen}
