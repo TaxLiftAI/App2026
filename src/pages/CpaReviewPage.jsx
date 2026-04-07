@@ -674,8 +674,7 @@ export default function CpaReviewPage() {
   const [searchParams]    = useSearchParams()
   const annotateMode      = searchParams.get('annotate') === '1'
 
-  const payload = useMemo(() => decodeCpaToken(token ?? ''), [token])
-  const expired = payload ? isTokenExpired(payload) : false
+  const payload  = useMemo(() => decodeCpaToken(token ?? ''), [token])
   const daysLeft = payload ? daysUntilExpiry(payload) : null
 
   // ── Annotation state ───────────────────────────────────────────────────────
@@ -699,19 +698,57 @@ export default function CpaReviewPage() {
     setPackageSubmitted(true)
   }
 
-  // ── Invalid token ──
-  if (!payload) {
+  // ── Invalid / expired token ──
+  if (!payload || isTokenExpired(payload)) {
+    const isExpired = !!payload  // payload exists but expired vs never valid
+    const expiredBy  = payload?.sharedBy ?? null
+    const expiredEmail = payload?.sharedByEmail ?? null
+    const expiredCompany = payload?.companyName ?? null
+    const subject = encodeURIComponent(`TaxLift SR&ED review link — please regenerate`)
+    const body = encodeURIComponent(
+      `Hi${expiredBy ? ` ${expiredBy}` : ''},\n\nThe TaxLift review link you shared${expiredCompany ? ` for ${expiredCompany}` : ''} has expired. Could you please generate a new one from your TaxLift dashboard?\n\nThank you`
+    )
+    const mailtoHref = expiredEmail
+      ? `mailto:${expiredEmail}?subject=${subject}&body=${body}`
+      : null
+
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
         <div className="text-center max-w-sm">
-          <div className="w-16 h-16 rounded-2xl bg-red-100 flex items-center justify-center mx-auto mb-4">
-            <AlertCircle size={28} className="text-red-500" />
+          <div className={`w-16 h-16 rounded-2xl ${isExpired ? 'bg-amber-100' : 'bg-red-100'} flex items-center justify-center mx-auto mb-4`}>
+            <AlertCircle size={28} className={isExpired ? 'text-amber-500' : 'text-red-500'} />
           </div>
-          <h1 className="text-xl font-bold text-gray-900 mb-2">Invalid review link</h1>
-          <p className="text-sm text-gray-500 mb-6">This link is invalid or has been corrupted. Please ask the sender to generate a new one from TaxLift.</p>
-          <button onClick={() => navigate('/')} className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700">
-            Go to TaxLift
-          </button>
+          <h1 className="text-xl font-bold text-gray-900 mb-2">
+            {isExpired ? 'Review link has expired' : 'Invalid review link'}
+          </h1>
+          <p className="text-sm text-gray-500 mb-6">
+            {isExpired
+              ? <>This link expired on <strong>{fmtDate(payload?.expiresAt)}</strong>. Ask {expiredCompany ?? 'the sender'} to generate a fresh one from their TaxLift dashboard.</>
+              : 'This link is invalid or has been corrupted. Please ask the sender to generate a new one from TaxLift.'}
+          </p>
+          <div className="flex flex-col gap-2 items-center">
+            {isExpired && mailtoHref && (
+              <a
+                href={mailtoHref}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors w-full justify-center"
+              >
+                <Mail size={14} /> Email {expiredBy ?? 'sender'} for a new link
+              </a>
+            )}
+            {isExpired && !mailtoHref && (
+              <p className="text-xs text-gray-400 italic">Contact the sender directly to request a new review link.</p>
+            )}
+            <button
+              onClick={() => navigate('/')}
+              className="px-4 py-2 border border-gray-200 text-gray-600 hover:bg-gray-100 text-sm font-medium rounded-lg transition-colors w-full"
+            >
+              Go to TaxLift
+            </button>
+          </div>
+          <p className="text-xs text-gray-400 mt-4">
+            Are you a CPA partner?{' '}
+            <Link to="/cpa/login" className="text-indigo-600 hover:underline">Sign in to your portal →</Link>
+          </p>
         </div>
       </div>
     )
@@ -749,20 +786,17 @@ export default function CpaReviewPage() {
         </div>
       </div>
 
-      {/* ── Expiry banner ── */}
-      {expired ? (
-        <div className="bg-red-600 px-6 py-2.5 text-center">
-          <p className="text-white text-xs font-semibold">
-            This review link has expired. Please ask {companyName} to generate a new one from TaxLift.
-          </p>
-        </div>
-      ) : daysLeft != null && daysLeft <= 2 ? (
+      {/* ── Expiring-soon banner (only shown when 1–2 days left) ── */}
+      {daysLeft != null && daysLeft <= 2 && (
         <div className="bg-amber-500 px-6 py-2.5 text-center">
           <p className="text-white text-xs font-semibold">
             This link expires {daysLeft === 0 ? 'today' : `in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`} · {fmtDate(expiresAt)}
+            {sharedByEmail && (
+              <> · <a href={`mailto:${sharedByEmail}`} className="underline hover:text-amber-100">Contact {sharedBy} for a new link</a></>
+            )}
           </p>
         </div>
-      ) : null}
+      )}
 
       <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
 
@@ -935,6 +969,23 @@ export default function CpaReviewPage() {
             T661 with the T2 corporate return. TaxLift is a preparation and documentation tool.
             It does not file with the CRA on your behalf.
           </p>
+          <div className="flex items-center justify-center gap-4 mt-3 text-[11px] text-gray-400 flex-wrap">
+            <Link to="/methodology" target="_blank" className="hover:text-gray-600 underline">
+              SR&amp;ED Methodology
+            </Link>
+            <span>·</span>
+            <a href="mailto:privacy@taxlift.ai" className="hover:text-gray-600 underline">
+              Data Processing Agreement
+            </a>
+            <span>·</span>
+            <Link to="/partners" target="_blank" className="hover:text-gray-600 underline">
+              CPA Partner Program
+            </Link>
+            <span>·</span>
+            <a href="mailto:support@taxlift.ai" className="hover:text-gray-600 underline">
+              support@taxlift.ai
+            </a>
+          </div>
         </div>
       </div>
 

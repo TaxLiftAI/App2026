@@ -605,6 +605,7 @@ export default function ReportsPage() {
         companyName="Acme Corp"
         fiscalYear={new Date(start).getFullYear().toString()}
         entityType="CCPC"
+        cpaFirmName={currentUser?.role === 'CPA' ? (currentUser?.firm_name ?? null) : null}
       />
 
       {/* Share with CPA modal */}

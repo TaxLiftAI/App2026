@@ -1231,16 +1231,17 @@ export default function MarketingPage() {
                 </span>
               </h2>
               <p className="text-slate-300 text-base leading-relaxed mb-8">
-                Refer your tech clients to TaxLift and earn 0.8% of every SR&ED credit your referral recovers —
-                deposited automatically each quarter. The average CPA partner earns $4,200 per referred client per year.
+                Refer your tech clients to TaxLift and earn a tiered commission of 1.5%–2.5% of every SR&ED
+                credit recovered. Independent CPA login, annotation rights, co-branded packages, and a
+                published methodology you can cite in any CRA audit.
               </p>
 
               <div className="space-y-4 mb-8">
                 {[
-                  { icon: Link2,        text: 'Get a co-branded intake link to share with prospects' },
-                  { icon: DollarSign,   text: 'Earn 0.8% of recovered credit — no cap, no expiry' },
-                  { icon: Package,      text: 'Receive print-ready CPA packages — you just review and file' },
-                  { icon: BarChart2,    text: 'Track your pipeline, commissions, and payouts in one dashboard' },
+                  { icon: Link2,        text: 'Your own CPA login — see all referred clients in one dashboard', href: '/cpa/login' },
+                  { icon: DollarSign,   text: 'Tiered commission: 1.5% → 2.0% → 2.5% + $500 first-client bonus', href: '/partners' },
+                  { icon: Package,      text: 'Annotate, approve, or flag narratives before anything is filed', href: '/partners' },
+                  { icon: BarChart2,    text: 'Published SR&ED methodology (IC86-4R3 aligned) to defend any audit', href: '/methodology' },
                 ].map(item => {
                   const Icon = item.icon
                   return (
@@ -1254,13 +1255,21 @@ export default function MarketingPage() {
                 })}
               </div>
 
-              <button
-                onClick={() => navigate('/signup?type=cpa')}
-                className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-3 rounded-xl transition-colors shadow-lg shadow-indigo-900/40"
-              >
-                Become a TaxLift partner
-                <ArrowRight size={15} />
-              </button>
+              <div className="flex items-center gap-3 flex-wrap">
+                <button
+                  onClick={() => navigate('/partners')}
+                  className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-3 rounded-xl transition-colors shadow-lg shadow-indigo-900/40"
+                >
+                  View partner program
+                  <ArrowRight size={15} />
+                </button>
+                <button
+                  onClick={() => navigate('/cpa/register')}
+                  className="inline-flex items-center gap-2 border border-slate-600 hover:border-slate-400 text-slate-300 hover:text-white font-medium px-5 py-3 rounded-xl transition-colors"
+                >
+                  Apply free →
+                </button>
+              </div>
             </div>
 
             {/* Right: commission card */}
@@ -1270,10 +1279,10 @@ export default function MarketingPage() {
 
                 <div className="space-y-3">
                   {[
-                    { company: 'Zenith Biotech',     credit: '$312,000', commission: '$2,496',  status: 'Paid',      statusColor: 'text-green-400 bg-green-400/10' },
-                    { company: 'Pulse Commerce',     credit: '$142,000', commission: '$1,136',  status: 'Confirmed', statusColor: 'text-blue-400  bg-blue-400/10'  },
-                    { company: 'Atlas Network',      credit: '$67,000',  commission: '$536',    status: 'Confirmed', statusColor: 'text-blue-400  bg-blue-400/10'  },
-                    { company: 'Axiom Robotics',     credit: '$89,000',  commission: '$712',    status: 'Pending',   statusColor: 'text-amber-400 bg-amber-400/10' },
+                    { company: 'Zenith Biotech',     credit: '$312,000', commission: '$6,240',  status: 'Paid',      statusColor: 'text-green-400 bg-green-400/10' },
+                    { company: 'Pulse Commerce',     credit: '$142,000', commission: '$2,840',  status: 'Confirmed', statusColor: 'text-blue-400  bg-blue-400/10'  },
+                    { company: 'Atlas Network',      credit: '$67,000',  commission: '$1,005',  status: 'Confirmed', statusColor: 'text-blue-400  bg-blue-400/10'  },
+                    { company: 'Axiom Robotics',     credit: '$89,000',  commission: '$1,335',  status: 'Pending',   statusColor: 'text-amber-400 bg-amber-400/10' },
                   ].map(row => (
                     <div key={row.company} className="flex items-center gap-3 bg-slate-900/60 rounded-xl px-4 py-3">
                       <Building2 size={14} className="text-slate-500 flex-shrink-0" />

@@ -198,7 +198,7 @@ const PRINT_CSS = `
 
 // ── Main component ────────────────────────────────────────────────────────────
 const CpaHandoffPackage = forwardRef(function CpaHandoffPackage(
-  { report, devBreakdown = [], companyName = 'Company', fiscalYear = '2025', entityType = 'CCPC' },
+  { report, devBreakdown = [], companyName = 'Company', fiscalYear = '2025', entityType = 'CCPC', cpaFirmName = null },
   ref
 ) {
   const containerRef = useRef(null)
@@ -237,11 +237,23 @@ const CpaHandoffPackage = forwardRef(function CpaHandoffPackage(
       {/* ══ PAGE 1: COVER ══════════════════════════════════════════════════════ */}
       <div style={{ padding: '60px 80px', minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
         <div>
-          <div className="cover-logo">TaxLift</div>
-          <div className="cover-sub">SR&ED Compliance Platform</div>
-          <div style={{ fontSize: '10pt', color: '#555', marginTop: '6px' }}>
-            support@taxlift.ai
-          </div>
+          {cpaFirmName ? (
+            <>
+              <div className="cover-logo">{cpaFirmName}</div>
+              <div className="cover-sub">SR&ED Advisory Services</div>
+              <div style={{ fontSize: '9pt', color: '#888', marginTop: '4px' }}>
+                Prepared using TaxLift SR&ED Compliance Platform
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="cover-logo">TaxLift</div>
+              <div className="cover-sub">SR&ED Compliance Platform</div>
+              <div style={{ fontSize: '10pt', color: '#555', marginTop: '6px' }}>
+                support@taxlift.ai
+              </div>
+            </>
+          )}
         </div>
 
         <div>

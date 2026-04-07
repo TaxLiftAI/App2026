@@ -87,7 +87,7 @@ function FaqItem({ q, a }) {
 const TRUST_MARKS = [
   { label: 'CRA Compliant',   icon: ShieldCheck },
   { label: '14-day free trial', icon: Clock },
-  { label: 'Flat fee — no contingency', icon: Lock },
+  { label: 'Flat monthly fee — keep the full refund', icon: Lock },
   { label: 'CPA-ready package', icon: Star },
 ]
 
@@ -95,7 +95,7 @@ const TRUST_MARKS = [
 export default function PricingPage() {
   usePageMeta({
     title:       'Pricing — TaxLift SR&ED Tax Credit Platform',
-    description: 'Simple, transparent pricing for SR&ED claims. Start free with our eligibility scan. Paid plans charged as a percentage of credits recovered — no recovery, no fee.',
+    description: 'Simple, transparent pricing for SR&ED claims. Flat monthly subscription — no contingency, no percentage cut. You keep the full refund. Start free with our eligibility scan.',
     path:        '/pricing',
     breadcrumb:  [
       { name: 'Home',    path: '/'        },
