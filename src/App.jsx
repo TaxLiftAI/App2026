@@ -2,6 +2,10 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Layout from './components/layout/Layout'
 import LoginPage from './pages/LoginPage'
+import CpaLoginPage    from './pages/CpaLoginPage'
+import PartnersPage    from './pages/PartnersPage'
+import CpaRegisterPage from './pages/CpaRegisterPage'
+import MethodologyPage from './pages/MethodologyPage'
 import DashboardPage from './pages/DashboardPage'
 import ClustersPage from './pages/ClustersPage'
 import ClusterDetailPage from './pages/ClusterDetailPage'
@@ -259,6 +263,12 @@ function AppRoutes() {
           <QuickConnectPage />
         </ProtectedRoute>
       } />
+
+      {/* ── CPA partner public routes (Blocker 1–3 fix) ─────────────────────── */}
+      <Route path="/partners"      element={<PartnersPage />} />
+      <Route path="/cpa/login"     element={<CpaLoginPage />} />
+      <Route path="/cpa/register"  element={<CpaRegisterPage />} />
+      <Route path="/methodology"   element={<MethodologyPage />} />
 
       {/* Public routes — no auth required */}
       <Route path="/demo"     element={<DemoPage />} />

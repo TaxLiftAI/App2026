@@ -4,10 +4,14 @@
  * CPA firm's referral hub. Turns the CPA firm from a passive document recipient
  * into an active pipeline source with a financial incentive to refer clients.
  *
- * Commission model:
+ * Commission model (tiered — Blocker 5 fix):
  *   TaxLift charges 8% of credit recovered.
- *   CPA earns 10% of TaxLift's fee → 0.8% of credit as referral commission.
- *   e.g. client claims $100K → TaxLift earns $8K → CPA gets $800.
+ *   CPA commission tier based on trailing-12-month converted referrals:
+ *     Tier 1 (1–2 / yr):  1.5% of credit  (~18.75% of TaxLift fee)
+ *     Tier 2 (3–5 / yr):  2.0% of credit  (~25% of TaxLift fee)
+ *     Tier 3 (6+ / yr):   2.5% of credit  (~31.25% of TaxLift fee)
+ *   + $500 first-client bonus on first successful referral.
+ *   e.g. client claims $200K at Tier 2 → CPA earns $4,000.
  */
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate }                  from 'react-router-dom'
@@ -21,7 +25,19 @@ import { useAuth }              from '../context/AuthContext'
 import { referrals as referralsApi } from '../lib/api'
 import { formatCurrency }       from '../lib/utils'
 
-const REFERRAL_RATE = 0.008   // 0.8% of credit recovered
+// ── Tiered commission rates ───────────────────────────────────────────────────
+const COMMISSION_TIERS = [
+  { min: 0,  max: 2, rate: 0.015, label: 'Tier 1', desc: '1–2 referrals/yr' },
+  { min: 3,  max: 5, rate: 0.020, label: 'Tier 2', desc: '3–5 referrals/yr' },
+  { min: 6,  max: Infinity, rate: 0.025, label: 'Tier 3', desc: '6+ referrals/yr' },
+]
+const FIRST_CLIENT_BONUS = 500  // CAD
+function getTierForCount(convertedCount) {
+  return COMMISSION_TIERS.find(t => convertedCount >= t.min && convertedCount <= t.max)
+    ?? COMMISSION_TIERS[0]
+}
+// Legacy alias used by existing commission-calculation code in this file
+const REFERRAL_RATE = 0.015   // default Tier 1 rate (replaces old 0.8%)
 
 // ── Token helper (mirrors server decode: Buffer.from(token,'base64').toString()) ──
 function buildReferralToken(userId, firmName) {
@@ -151,8 +167,8 @@ function ReferClientModal({ open, onClose, intakeUrl, firmName, partnerName }) {
         <div className="flex items-start gap-2.5 bg-green-50 border border-green-200 rounded-xl px-3.5 py-3">
           <Gift size={14} className="text-green-600 flex-shrink-0 mt-0.5" />
           <p className="text-xs text-green-800">
-            You earn <strong>0.8% of credits recovered</strong> for every client who signs up through this link.
-            On a $200K claim, that's <strong>$1,600</strong> for one referral.
+            You earn <strong>1.5%–2.5% of credits recovered</strong> (tiered) for every client who signs up.
+            On a $200K claim at Tier 2, that's <strong>$4,000</strong>. Plus a $500 first-client bonus.
           </p>
         </div>
 
@@ -492,10 +508,10 @@ export default function ReferralDashboardPage() {
             <Sparkles size={22} className="text-yellow-300" />
           </div>
           <div>
-            <p className="text-white font-bold text-base">Earn 0.8% of every credit you refer</p>
+            <p className="text-white font-bold text-base">Earn 1.5%–2.5% of every credit you refer</p>
             <p className="text-indigo-200 text-sm mt-1 max-w-lg">
-              TaxLift charges 8% of credits recovered. You keep 10% of that as a referral fee.
-              On a $200K claim, that's <strong className="text-white">$1,600</strong> — for one email.
+              Tiered commission: 1.5% (1–2 referrals/yr) → 2.0% (3–5) → 2.5% (6+).
+              On a $200K claim at Tier 2, that's <strong className="text-white">$4,000</strong> + a $500 first-client bonus.
             </p>
           </div>
         </div>
@@ -527,7 +543,7 @@ export default function ReferralDashboardPage() {
           </div>
           <div className="flex items-center gap-1.5 text-[11px] text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
             <BarChart3 size={11} className="text-gray-400" />
-            Rate: {(REFERRAL_RATE * 100).toFixed(1)}% of credit
+            Tier 1: 1.5% · Tier 2: 2.0% · Tier 3: 2.5%
           </div>
         </div>
         <CommissionTracker referrals={referrals} stats={stats} />
@@ -560,7 +576,7 @@ export default function ReferralDashboardPage() {
             { step: '1', title: 'Share your link',    body: 'Send your co-branded intake link to any client you think qualifies for SR&ED.' },
             { step: '2', title: 'They sign up',       body: 'TaxLift guides them through onboarding and connects their GitHub or Jira.' },
             { step: '3', title: 'Package prepared',   body: 'TaxLift prepares the T661 and cluster documentation. You receive it for review.' },
-            { step: '4', title: 'You file, you earn', body: 'Once you file the T661, TaxLift invoices the client and pays your 0.8% commission.' },
+            { step: '4', title: 'You file, you earn', body: 'Once you file the T661, TaxLift pays your tiered commission (1.5%–2.5%) by EFT within 30 days.' },
           ].map(item => (
             <div key={item.step} className="flex gap-3">
               <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-600 text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -575,7 +591,8 @@ export default function ReferralDashboardPage() {
         </div>
         <p className="text-[11px] text-gray-400 mt-4 border-t border-slate-200 pt-3">
           Commission is calculated on credits recovered and confirmed by CRA. TaxLift's success fee is 8% of credits recovered.
-          Your referral commission is 10% of that fee (0.8% of credits). Commissions are invoiced after the T661 is filed.
+          Your referral commission is tiered: 1.5% (Tier 1, 1–2 referrals/yr), 2.0% (Tier 2, 3–5), or 2.5% (Tier 3, 6+).
+          First-client bonus: $500. Commissions paid by EFT within 30 days of T661 filing confirmation. No cap, no expiry.
         </p>
       </div>
 

@@ -6,19 +6,40 @@
  *   1. Header with company / fiscal year / expiry notice
  *   2. Key metrics hero (credit, hours, audit score, clusters)
  *   3. T661 financial schedule estimate
- *   4. SR&ED project narratives (expandable per cluster)
+ *   4. SR&ED project narratives (expandable per cluster) with CPA annotations
  *   5. Evidence integrity table
  *   6. "Request access / Book a review" CTA
+ *
+ * CPA Annotation Mode (Blocker 4 fix):
+ *   Activated via ?annotate=1 URL param. CPAs can:
+ *   - Approve or flag each cluster for revision with a comment
+ *   - Submit overall package approval or revision request
+ *   Annotations persist in localStorage keyed by token.
  */
-import { useState, useMemo } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useState, useMemo, useEffect } from 'react'
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import {
   ShieldCheck, Clock, DollarSign, FileText, Layers,
   ChevronDown, ChevronUp, AlertTriangle, CheckCircle2,
   Calendar, Lock, Users, Mail, ExternalLink, Info,
   BarChart2, Shield, AlertCircle, GitMerge,
+  Pencil, ThumbsUp, ThumbsDown, MessageSquare, Send,
+  BookOpen, X,
 } from 'lucide-react'
 import { decodeCpaToken, isTokenExpired, daysUntilExpiry } from '../lib/cpaToken'
+
+// ── Annotation persistence (localStorage, keyed by token) ────────────────────
+function loadAnnotations(token) {
+  try {
+    const raw = localStorage.getItem(`tl_cpa_ann_${token}`)
+    return raw ? JSON.parse(raw) : {}
+  } catch { return {} }
+}
+function saveAnnotations(token, data) {
+  try { localStorage.setItem(`tl_cpa_ann_${token}`, JSON.stringify(data)) } catch {}
+}
+const ANN_APPROVED = 'approved'
+const ANN_FLAGGED  = 'flagged'
 
 // ── Formatting helpers ────────────────────────────────────────────────────────
 const fmt = (n) =>
@@ -51,20 +72,40 @@ function RiskBadge({ score }) {
   )
 }
 
-// ── Cluster card ──────────────────────────────────────────────────────────────
-function ClusterCard({ cluster, index }) {
-  const [expanded, setExpanded] = useState(false)
+// ── Cluster card (with optional CPA annotation controls) ─────────────────────
+function ClusterCard({ cluster, index, annotateMode, annotation, onAnnotate }) {
+  const [expanded,    setExpanded]    = useState(false)
+  const [showComment, setShowComment] = useState(false)
+  const [draftNote,   setDraftNote]   = useState(annotation?.note ?? '')
   const hasNarrative = !!(cluster.narrative)
+  const annStatus    = annotation?.status ?? null
+
+  // Border colour driven by annotation status
+  const borderClass =
+    annStatus === ANN_APPROVED ? 'border-green-300 bg-green-50/30'
+    : annStatus === ANN_FLAGGED  ? 'border-amber-300 bg-amber-50/30'
+    : 'border-gray-200'
+
+  function submitNote() {
+    onAnnotate(cluster.id ?? index, { ...annotation, note: draftNote })
+    setShowComment(false)
+  }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+    <div className={`border rounded-2xl overflow-hidden transition-colors ${borderClass}`}>
       {/* Header row */}
       <button
-        className="w-full flex items-start gap-4 px-5 py-4 text-left hover:bg-gray-50 transition-colors"
+        className="w-full flex items-start gap-4 px-5 py-4 text-left hover:bg-white/60 transition-colors"
         onClick={() => setExpanded(v => !v)}
       >
-        <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0 mt-0.5">
-          <span className="text-xs font-bold text-indigo-600">{index + 1}</span>
+        <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${
+          annStatus === ANN_APPROVED ? 'bg-green-100' : annStatus === ANN_FLAGGED ? 'bg-amber-100' : 'bg-indigo-50'
+        }`}>
+          {annStatus === ANN_APPROVED
+            ? <CheckCircle2 size={14} className="text-green-600" />
+            : annStatus === ANN_FLAGGED
+            ? <AlertTriangle size={14} className="text-amber-600" />
+            : <span className="text-xs font-bold text-indigo-600">{index + 1}</span>}
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-gray-900 leading-snug">{cluster.name}</p>
@@ -82,6 +123,12 @@ function ClusterCard({ cluster, index }) {
             {hasNarrative
               ? <span className="text-xs text-indigo-600 font-medium">Narrative ready</span>
               : <span className="text-xs text-amber-600">No narrative</span>}
+            {annStatus === ANN_APPROVED && (
+              <span className="text-xs font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">CPA Approved</span>
+            )}
+            {annStatus === ANN_FLAGGED && (
+              <span className="text-xs font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">Flagged for revision</span>
+            )}
           </div>
         </div>
         <div className="flex-shrink-0 mt-1 text-gray-400">
@@ -91,7 +138,7 @@ function ClusterCard({ cluster, index }) {
 
       {/* Expanded narrative */}
       {expanded && (
-        <div className="border-t border-gray-100 px-5 py-4 space-y-4">
+        <div className="border-t border-gray-100 bg-white px-5 py-4 space-y-4">
           {/* Evidence reference */}
           {cluster.evidenceSnapshotId && (
             <div className="flex items-center gap-2 text-xs text-gray-500">
@@ -122,6 +169,206 @@ function ClusterCard({ cluster, index }) {
               <p>No narrative available for this project yet. The company needs to generate one in TaxLift before finalising the package.</p>
             </div>
           )}
+
+          {/* ── CPA Annotation controls (shown in annotate mode) ── */}
+          {annotateMode && (
+            <div className="border-t border-gray-100 pt-4 space-y-3">
+              <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+                <Pencil size={11} /> Your annotation
+              </p>
+
+              {/* Existing note */}
+              {annotation?.note && !showComment && (
+                <div className="flex items-start gap-2 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2">
+                  <MessageSquare size={12} className="text-indigo-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-indigo-800 flex-1">{annotation.note}</p>
+                  <button
+                    onClick={() => { setDraftNote(annotation.note); setShowComment(true) }}
+                    className="text-indigo-500 hover:text-indigo-700 text-[10px] underline flex-shrink-0"
+                  >
+                    Edit
+                  </button>
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => onAnnotate(cluster.id ?? index, { ...annotation, status: ANN_APPROVED })}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors border ${
+                    annStatus === ANN_APPROVED
+                      ? 'bg-green-600 text-white border-green-600'
+                      : 'bg-white text-green-700 border-green-300 hover:bg-green-50'
+                  }`}
+                >
+                  <ThumbsUp size={12} /> Approve cluster
+                </button>
+                <button
+                  onClick={() => {
+                    onAnnotate(cluster.id ?? index, { ...annotation, status: ANN_FLAGGED })
+                    setShowComment(true)
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors border ${
+                    annStatus === ANN_FLAGGED
+                      ? 'bg-amber-500 text-white border-amber-500'
+                      : 'bg-white text-amber-700 border-amber-300 hover:bg-amber-50'
+                  }`}
+                >
+                  <ThumbsDown size={12} /> Flag for revision
+                </button>
+                {annStatus && (
+                  <button
+                    onClick={() => onAnnotate(cluster.id ?? index, { status: null, note: '' })}
+                    className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs text-gray-400 hover:text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors"
+                  >
+                    <X size={11} /> Clear
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowComment(v => !v)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors ml-auto"
+                >
+                  <MessageSquare size={12} /> {annotation?.note ? 'Edit note' : 'Add note'}
+                </button>
+              </div>
+
+              {/* Comment editor */}
+              {showComment && (
+                <div className="space-y-2">
+                  <textarea
+                    value={draftNote}
+                    onChange={e => setDraftNote(e.target.value)}
+                    rows={3}
+                    placeholder="e.g. The technological uncertainty section needs to be more specific about the algorithm limitations. Please revise before filing."
+                    className="w-full text-xs bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none text-gray-800 placeholder:text-gray-400"
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      onClick={() => setShowComment(false)}
+                      className="text-xs text-gray-500 hover:text-gray-700 px-3 py-1.5 border border-gray-200 rounded-lg"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={submitNote}
+                      className="flex items-center gap-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      <Send size={11} /> Save note
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Package-level annotation action bar ───────────────────────────────────────
+function PackageActionBar({ clusters, annotations, onSubmitPackage, submitted, firmName }) {
+  const total    = clusters.length
+  const approved = clusters.filter((_, i) => annotations[i]?.status === ANN_APPROVED || annotations[clusters[i]?.id]?.status === ANN_APPROVED).length
+  const flagged  = clusters.filter((_, i) => annotations[i]?.status === ANN_FLAGGED  || annotations[clusters[i]?.id]?.status === ANN_FLAGGED).length
+  const unannotated = total - approved - flagged
+  const allDone  = unannotated === 0
+
+  const [showSubmit, setShowSubmit] = useState(false)
+  const [decision,   setDecision]   = useState('approve') // 'approve' | 'request_revision'
+  const [firmNote,   setFirmNote]   = useState('')
+
+  if (submitted) {
+    return (
+      <div className="sticky bottom-0 z-40 bg-green-600 text-white px-5 py-3 flex items-center justify-between rounded-t-2xl shadow-lg">
+        <div className="flex items-center gap-2">
+          <CheckCircle2 size={16} />
+          <span className="text-sm font-semibold">Package review submitted by {firmName}</span>
+        </div>
+        <span className="text-xs text-green-200">The client has been notified</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="sticky bottom-0 z-40 bg-white border-t-2 border-indigo-200 shadow-lg rounded-t-2xl overflow-hidden">
+      {/* Summary strip */}
+      <div className="flex items-center gap-3 px-5 py-3 bg-indigo-50 border-b border-indigo-100">
+        <Pencil size={14} className="text-indigo-600 flex-shrink-0" />
+        <span className="text-xs font-semibold text-indigo-800">CPA Annotation Progress</span>
+        <div className="flex items-center gap-2 ml-auto flex-wrap">
+          <span className="text-[11px] text-green-700 bg-green-100 px-2 py-0.5 rounded-full font-semibold">{approved} approved</span>
+          {flagged > 0 && <span className="text-[11px] text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full font-semibold">{flagged} flagged</span>}
+          {unannotated > 0 && <span className="text-[11px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{unannotated} pending</span>}
+        </div>
+      </div>
+
+      {/* Submit form */}
+      {showSubmit ? (
+        <div className="px-5 py-4 space-y-3">
+          <div className="flex gap-3">
+            <button
+              onClick={() => setDecision('approve')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-semibold border-2 transition-colors ${
+                decision === 'approve'
+                  ? 'bg-green-600 text-white border-green-600'
+                  : 'bg-white text-green-700 border-green-300 hover:bg-green-50'
+              }`}
+            >
+              <ThumbsUp size={14} /> Approve package
+            </button>
+            <button
+              onClick={() => setDecision('request_revision')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-semibold border-2 transition-colors ${
+                decision === 'request_revision'
+                  ? 'bg-amber-500 text-white border-amber-500'
+                  : 'bg-white text-amber-700 border-amber-300 hover:bg-amber-50'
+              }`}
+            >
+              <ThumbsDown size={14} /> Request revision
+            </button>
+          </div>
+          <textarea
+            value={firmNote}
+            onChange={e => setFirmNote(e.target.value)}
+            rows={2}
+            placeholder={decision === 'approve'
+              ? 'Optional: overall notes for the client team (e.g. ready to file, no issues)'
+              : 'Required: describe what needs to be revised before this package can be approved'}
+            className="w-full text-xs bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none"
+          />
+          <div className="flex gap-2 justify-end">
+            <button
+              onClick={() => setShowSubmit(false)}
+              className="text-xs text-gray-500 hover:text-gray-700 px-3 py-2 border border-gray-200 rounded-lg"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => onSubmitPackage({ decision, note: firmNote })}
+              disabled={decision === 'request_revision' && !firmNote.trim()}
+              className="flex items-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 px-5 py-2 rounded-lg transition-colors"
+            >
+              <Send size={12} /> Submit to client
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between gap-3 px-5 py-3">
+          {!allDone && (
+            <p className="text-xs text-gray-500">Annotate all {unannotated} remaining clusters before submitting</p>
+          )}
+          {allDone && (
+            <p className="text-xs text-green-700 font-medium flex items-center gap-1">
+              <CheckCircle2 size={12} /> All clusters reviewed — ready to submit
+            </p>
+          )}
+          <button
+            onClick={() => setShowSubmit(true)}
+            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
+          >
+            <Send size={12} /> Submit review
+          </button>
         </div>
       )}
     </div>
@@ -422,12 +669,35 @@ function CpaCtaSection({ sharedByEmail, companyName }) {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function CpaReviewPage() {
-  const { token }   = useParams()
-  const navigate    = useNavigate()
+  const { token }         = useParams()
+  const navigate          = useNavigate()
+  const [searchParams]    = useSearchParams()
+  const annotateMode      = searchParams.get('annotate') === '1'
 
   const payload = useMemo(() => decodeCpaToken(token ?? ''), [token])
   const expired = payload ? isTokenExpired(payload) : false
   const daysLeft = payload ? daysUntilExpiry(payload) : null
+
+  // ── Annotation state ───────────────────────────────────────────────────────
+  const [annotations,       setAnnotations]       = useState(() => token ? loadAnnotations(token) : {})
+  const [packageSubmitted,  setPackageSubmitted]  = useState(false)
+  const [firmNameInput,     setFirmNameInput]     = useState('')
+
+  function handleAnnotate(clusterId, data) {
+    setAnnotations(prev => {
+      const next = { ...prev, [clusterId]: data }
+      if (token) saveAnnotations(token, next)
+      return next
+    })
+  }
+
+  function handleSubmitPackage({ decision, note }) {
+    // In production: POST to /api/cpa-review/:token/submit
+    // For now: persist locally and show success state
+    const submission = { decision, note, annotations, submittedAt: new Date().toISOString() }
+    if (token) saveAnnotations(`${token}_submission`, submission)
+    setPackageSubmitted(true)
+  }
 
   // ── Invalid token ──
   if (!payload) {
@@ -574,6 +844,40 @@ export default function CpaReviewPage() {
         {/* ── T661 schedule ── */}
         <T661Section t661={t661} />
 
+        {/* ── CPA annotation mode banner ── */}
+        {annotateMode && (
+          <div className="bg-indigo-50 border border-indigo-200 rounded-2xl px-5 py-4 flex items-start gap-3">
+            <Pencil size={16} className="text-indigo-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-bold text-indigo-900">CPA Annotation Mode</p>
+              <p className="text-xs text-indigo-700 mt-0.5 leading-relaxed">
+                You can approve or flag each cluster below. Your notes are saved locally to this browser.
+                When done, use the action bar at the bottom to submit your review to the client.
+              </p>
+            </div>
+            <Link
+              to="/methodology"
+              target="_blank"
+              className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 border border-indigo-300 rounded-lg px-3 py-1.5 hover:bg-indigo-100 transition-colors whitespace-nowrap flex-shrink-0"
+            >
+              <BookOpen size={12} /> Methodology
+            </Link>
+          </div>
+        )}
+
+        {/* ── Liability notice (always visible) ── */}
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-2.5">
+          <AlertCircle size={14} className="text-amber-600 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-800 leading-relaxed">
+            <strong>Professional responsibility:</strong> The CPA who reviews and signs this T661 filing
+            retains full professional responsibility for the claim.
+            TaxLift is a preparatory tool.{' '}
+            <Link to="/methodology" target="_blank" className="underline font-semibold">
+              Read the methodology →
+            </Link>
+          </p>
+        </div>
+
         {/* ── SR&ED projects ── */}
         <div>
           <div className="flex items-center gap-2 mb-3">
@@ -581,7 +885,9 @@ export default function CpaReviewPage() {
             <h2 className="text-sm font-bold text-gray-900">
               SR&ED Projects ({clusters.length} cluster{clusters.length !== 1 ? 's' : ''})
             </h2>
-            <span className="ml-2 text-xs text-gray-500">Click a project to view narrative</span>
+            <span className="ml-2 text-xs text-gray-500">
+              {annotateMode ? 'Approve or flag each cluster' : 'Click a project to view narrative'}
+            </span>
           </div>
 
           {clusters.length === 0 ? (
@@ -592,7 +898,14 @@ export default function CpaReviewPage() {
           ) : (
             <div className="space-y-3">
               {clusters.map((cluster, i) => (
-                <ClusterCard key={cluster.id ?? i} cluster={cluster} index={i} />
+                <ClusterCard
+                  key={cluster.id ?? i}
+                  cluster={cluster}
+                  index={i}
+                  annotateMode={annotateMode}
+                  annotation={annotations[cluster.id ?? i]}
+                  onAnnotate={handleAnnotate}
+                />
               ))}
             </div>
           )}
@@ -602,10 +915,10 @@ export default function CpaReviewPage() {
         <EvidenceSection clusters={clusters} />
 
         {/* ── CPA action CTA ── */}
-        <CpaCtaSection sharedByEmail={sharedByEmail} companyName={companyName} />
+        {!annotateMode && <CpaCtaSection sharedByEmail={sharedByEmail} companyName={companyName} />}
 
         {/* ── Become a CPA Partner ── */}
-        <CpaPartnerBanner />
+        {!annotateMode && <CpaPartnerBanner />}
 
         {/* ── Footer ── */}
         <div className="text-center pb-6">
@@ -624,6 +937,17 @@ export default function CpaReviewPage() {
           </p>
         </div>
       </div>
+
+      {/* ── Sticky annotation action bar ── */}
+      {annotateMode && clusters.length > 0 && (
+        <PackageActionBar
+          clusters={clusters}
+          annotations={annotations}
+          onSubmitPackage={handleSubmitPackage}
+          submitted={packageSubmitted}
+          firmName={sharedBy ?? 'CPA firm'}
+        />
+      )}
     </div>
   )
 }

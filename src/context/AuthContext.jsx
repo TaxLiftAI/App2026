@@ -21,6 +21,19 @@ export const DEMO_PERSONAS = [
   { label: 'David Okafor — Auditor', userId: 'u-005', role: 'Auditor'  },
 ]
 
+// ─── CPA demo persona (Blocker 1 fix — independent CPA login) ─────────────────
+export const CPA_DEMO_PERSONA = {
+  id:                   'cpa-demo-001',
+  name:                 'Jennifer Hartwell, CPA',
+  email:                'jhartwell@hartwell-cpa.ca',
+  role:                 'CPA',
+  firm_name:            'Hartwell & Associates CPA',
+  tenant_id:            'cpa-tenant-demo',
+  subscription_tier:    'growth',
+  onboarding_completed: true,
+  _fromApi:             false,
+}
+
 // Map backend role strings → frontend role strings used in canDo()
 function normaliseRole(role) {
   if (!role) return 'Developer'
@@ -149,6 +162,14 @@ export function AuthProvider({ children }) {
     } catch { /* ignore — token may have expired */ }
   }, [])
 
+  // ── CPA demo login (Blocker 1 fix) ───────────────────────────────────────────
+  const loginCpaDemo = useCallback(() => {
+    tokenStore.clear()
+    setCurrentUser(CPA_DEMO_PERSONA)
+    setIsDemoMode(true)
+    setAuthError(null)
+  }, [])
+
   // Legacy shim — kept so any older call-site using login(userId) still works
   const login = loginDemo
 
@@ -160,6 +181,7 @@ export function AuthProvider({ children }) {
       authError,
       login,            // legacy demo shim
       loginDemo,
+      loginCpaDemo,     // CPA-specific demo login
       loginWithCredentials,
       register,
       refreshUser,
