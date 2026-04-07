@@ -352,7 +352,7 @@ export default function PartnersPage() {
             Apply now — it's free <ArrowRight size={15} />
           </button>
           <a
-            href="mailto:partners@taxlift.ai"
+            href="mailto:hello@taxlift.ai?subject=CPA%20Partner%20Program%20Inquiry"
             className="flex items-center gap-2 border border-white/30 text-white text-sm font-medium px-6 py-3 rounded-xl hover:bg-white/10 transition-colors"
           >
             <Mail size={14} /> Email the partner team
@@ -369,7 +369,7 @@ export default function PartnersPage() {
 
       {/* ── Footer ── */}
       <footer className="bg-slate-900 text-slate-400 text-xs text-center py-6 px-4">
-        <p>© {new Date().getFullYear()} TaxLift Technologies Inc. · Toronto, ON · partners@taxlift.ai</p>
+        <p>© {new Date().getFullYear()} TaxLift Technologies Inc. · Toronto, ON · hello@taxlift.ai</p>
         <p className="mt-1.5 max-w-xl mx-auto leading-relaxed">
           TaxLift is a preparatory software tool and does not provide tax advice.
           The signing CPA is responsible for all filed claims. SR&ED credits are subject to CRA review.
