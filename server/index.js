@@ -22,10 +22,12 @@ const { globalLimiter, authLimiter, scanLimiter, leadsLimiter } = require('./mid
 const { securityHeaders, botGuard, scoreInternalsScrubber }     = require('./middleware/security')
 
 // ── Bootstrap database (runs migrations + seed on first start) ────────────────
-require('./db')
+const db = require('./db')
 
-// ── Email drip scheduler ──────────────────────────────────────────────────────
-const { startDripScheduler } = require('./lib/emailDrip')
+// ── Email drip runs as a separate Railway cron job (server/drip-cron.js) ──────
+// Do NOT call startDripScheduler() here — running it in the web process causes
+// duplicate sends when Railway scales to multiple replicas.
+// Deploy drip-cron.js as a Railway cron service: node server/drip-cron.js
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express()
@@ -105,12 +107,32 @@ app.use('/api/integrations', require('./routes/integrations'))
 app.use('/api/admin',        require('./routes/admin'))
 app.use('/api/cpa',          require('./routes/cpa'))
 
-// ── Health check (both /health and /api/health are valid) ────────────────────
+// ── Health check (/healthz for Railway liveness probe) ───────────────────────
+// Returns 200 when the server and database are both reachable.
+// Returns 503 when the database is down — Railway will restart the pod.
 function healthHandler(_req, res) {
-  res.json({ status: 'ok', service: 'taxlift-api', version: '1.0.0', timestamp: new Date().toISOString() })
+  try {
+    db.prepare('SELECT 1').get()           // fast no-op query — confirms DB is alive
+    res.status(200).json({
+      status:    'ok',
+      db:        'ok',
+      service:   'taxlift-api',
+      version:   '1.0.0',
+      timestamp: new Date().toISOString(),
+    })
+  } catch (err) {
+    console.error('[healthz] DB check failed:', err.message)
+    res.status(503).json({
+      status:    'degraded',
+      db:        'error',
+      error:     err.message,
+      timestamp: new Date().toISOString(),
+    })
+  }
 }
-app.get('/health',     healthHandler)
-app.get('/api/health', healthHandler)
+app.get('/healthz',     healthHandler)   // Railway liveness probe target
+app.get('/health',      healthHandler)   // legacy alias
+app.get('/api/health',  healthHandler)   // legacy alias
 
 // ── 404 handler ───────────────────────────────────────────────────────────────
 app.use((req, res) => {
@@ -129,7 +151,6 @@ app.use((err, req, res, next) => {
 const PORT = parseInt(process.env.PORT ?? '3001', 10)
 
 app.listen(PORT, () => {
-  startDripScheduler()
   console.log(`\n🚀  TaxLift API running on http://localhost:${PORT}`)
   console.log(`    POST /api/auth/login                  → get JWT`)
   console.log(`    GET  /api/auth/me                     → current user`)
@@ -139,7 +160,7 @@ app.listen(PORT, () => {
   console.log(`    POST /api/billing/webhook             → Stripe webhook`)
   console.log(`    POST /api/leads                       → capture marketing lead`)
   console.log(`    GET  /api/leads                       → admin lead list`)
-  console.log(`    GET  /health                          → health check\n`)
+  console.log(`    GET  /healthz                         → liveness probe (DB-aware)\n`)
 
   if (!process.env.JWT_SECRET) {
     if (process.env.NODE_ENV === 'production') {

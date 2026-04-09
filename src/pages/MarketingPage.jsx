@@ -1276,7 +1276,7 @@ export default function MarketingPage() {
               Flat fee. No contingency. You keep the full refund.
             </h2>
             <p className="mt-3 text-gray-500 max-w-xl mx-auto">
-              Annual plans from $249/mo. First-time filer? Pay once per claim — no subscription required.
+              Annual plans from $249/mo · semi-annual (6-month minimum) from $299/mo. First-time filer? Pay once per claim — no subscription required.
               All plans include a 14-day free trial and a complete CPA-ready T661 package.
             </p>
           </div>

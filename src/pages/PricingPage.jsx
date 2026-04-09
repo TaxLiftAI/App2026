@@ -19,7 +19,7 @@ import {
   TrendingUp, Calendar, FileText, RefreshCw, AlertCircle, BadgeCheck,
 } from 'lucide-react'
 import PricingCard from '../components/PricingCard'
-import { PLANS, CLAIM_PLANS, redirectToCheckout } from '../lib/stripe'
+import { PLANS, CLAIM_PLANS, redirectToCheckout, getPlanForBilling } from '../lib/stripe'
 import WaitlistModal from '../components/WaitlistModal'
 
 function fmtK(n) {
@@ -31,8 +31,8 @@ function fmtK(n) {
 
 const FAQS = [
   {
-    q: "Why annual billing — can't I just pay month-to-month?",
-    a: "You can — monthly is available at $499/mo (Starter) or $899/mo (Plus). Annual billing exists because SR&ED is a once-a-year filing: monthly subscribers often prepare their package and cancel, which means no ongoing support during a CRA review, no mid-year tracking, and no head start on next year's claim. Annual subscribers get year-round audit vault updates and ongoing SR&ED hygiene that genuinely protects the claim after filing.",
+    q: "What are my commitment options?",
+    a: "Annual (12 months, best value at $249/mo) and Semi-annual (6-month minimum at $299/mo) are our standard tiers. A 6-month commitment covers one full SR&ED filing cycle plus the CRA processing window — enough time to get real value before you decide to continue. Month-to-month is also available at $499/mo (Starter) or $899/mo (Plus) for teams that need flexibility, but subscribers who file once and cancel lose year-round audit vault coverage, mid-year tracking, and the head start on next year's claim.",
   },
   {
     q: "What is the difference between Option A (Annual) and Option B (Pay-per-Claim)?",
@@ -87,7 +87,7 @@ const TRUST_MARKS = [
   { label: '14-day free trial',          icon: Clock       },
   { label: 'No contingency fee',         icon: Lock        },
   { label: 'CPA-ready package',          icon: Star        },
-  { label: 'Annual commitment included', icon: BadgeCheck  },
+  { label: '6-month minimum commitment', icon: BadgeCheck  },
 ]
 
 function RoiCalculator({ defaultCredit = 150000 }) {
@@ -265,12 +265,13 @@ export default function PricingPage() {
   const savingsHigh    = consultantHigh ? Math.max(0, consultantHigh - STARTER_ANNUAL) : null
   const highlightedPlan = searchParams.get('plan') || null
 
-  const annualPlans = Object.values(PLANS).map(p => ({
-    ...p,
-    highlighted: highlightedPlan ? p.id === highlightedPlan : p.highlighted,
-    price:  billing === 'monthly' ? (p.priceMonthly  ?? p.price)  : p.price,
-    period: billing === 'monthly' ? (p.periodMonthly ?? p.period) : p.period,
-  }))
+  const annualPlans = Object.values(PLANS).map(p => {
+    const resolved = getPlanForBilling(p, billing)
+    return {
+      ...resolved,
+      highlighted: highlightedPlan ? p.id === highlightedPlan : p.highlighted,
+    }
+  })
 
   async function handlePricingCta(planId) {
     if (planId === 'enterprise') {
@@ -379,20 +380,35 @@ export default function PricingPage() {
 
         {track === 'annual' ? (
           <div className="text-center mb-8">
-            <p className="text-sm text-gray-500 max-w-xl mx-auto mb-4">
-              Annual billing aligns with SR&ED — year-round audit vault, mid-year tracking, and your next claim starts building automatically. Monthly available at a premium.
+            <p className="text-sm text-gray-500 max-w-xl mx-auto mb-5">
+              Both tiers include year-round audit vault, mid-year tracking, and auto-start on next year's claim. Pick the commitment that fits your planning horizon.
             </p>
-            <div className="flex items-center justify-center gap-3">
-              <span className={'text-sm font-medium ' + (billing === 'annual' ? 'text-gray-900' : 'text-gray-400')}>Annual</span>
+            {/* Billing segment selector */}
+            <div className="inline-flex bg-white border border-gray-200 rounded-2xl p-1.5 shadow-sm gap-1 mb-3">
               <button
-                onClick={() => setBilling(b => b === 'annual' ? 'monthly' : 'annual')}
-                className={'relative w-11 h-6 rounded-full transition-colors ' + (billing === 'annual' ? 'bg-indigo-600' : 'bg-gray-300')}
+                onClick={() => setBilling('annual')}
+                className={'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ' + (billing === 'annual' ? 'bg-indigo-600 text-white shadow' : 'text-gray-500 hover:text-gray-700')}
               >
-                <span className={'absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ' + (billing === 'annual' ? 'left-1' : 'left-6')} />
+                Annual
+                {billing === 'annual'
+                  ? <span className="text-[10px] bg-white/20 rounded-full px-2 py-0.5 font-medium">Best value · Save 50%</span>
+                  : <span className="text-[10px] text-gray-400">$249/mo · $2,988/yr</span>}
               </button>
-              <span className={'text-sm font-medium ' + (billing === 'monthly' ? 'text-gray-900' : 'text-gray-400')}>Month-to-month</span>
-              {billing === 'annual' && <span className="text-xs bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-full px-2.5 py-0.5 font-semibold">Save ~40%</span>}
+              <button
+                onClick={() => setBilling('semiannual')}
+                className={'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ' + (billing === 'semiannual' ? 'bg-indigo-600 text-white shadow' : 'text-gray-500 hover:text-gray-700')}
+              >
+                Semi-annual
+                {billing === 'semiannual'
+                  ? <span className="text-[10px] bg-white/20 rounded-full px-2 py-0.5 font-medium">6-month minimum</span>
+                  : <span className="text-[10px] text-gray-400">$299/mo · 6-mo min</span>}
+              </button>
             </div>
+            <p className="text-xs text-gray-400">
+              Need no commitment?{' '}
+              <span className="text-gray-500 font-medium">Month-to-month available at $499/mo (Starter) or $899/mo (Plus).</span>{' '}
+              <a href="mailto:hello@taxlift.ai?subject=Month-to-month%20inquiry" className="text-indigo-500 hover:underline">Email us →</a>
+            </p>
           </div>
         ) : (
           <div className="text-center mb-8">
@@ -416,9 +432,9 @@ export default function PricingPage() {
 
         <div className="text-center mb-12 space-y-2">
           <p className="text-xs text-gray-400">Prices in CAD · 14-day free trial on all plans · SR&amp;ED credit recovery typically returns 80–200× the platform cost</p>
-          {track === 'annual' && billing === 'monthly' && (
+          {track === 'annual' && billing === 'semiannual' && (
             <p className="text-xs text-amber-600">
-              Month-to-month pricing is 40–80% higher than annual. If you plan to file SR&amp;ED annually, the annual plan pays for itself.{' '}
+              Save an extra 17% by switching to annual billing — and get a full 12-month audit vault from day one.{' '}
               <button onClick={() => setBilling('annual')} className="underline font-medium">Switch to annual →</button>
             </p>
           )}

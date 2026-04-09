@@ -2,8 +2,13 @@
  * stripe.js — client-side Stripe initialisation + plan config
  *
  * Two pricing tracks:
- *   PLANS       — Option A: Annual subscription (CPA-introduced / committed buyers)
+ *   PLANS       — Option A: Subscription (Annual · Semi-annual · Monthly fallback)
  *   CLAIM_PLANS — Option B: Pay-per-claim (self-serve SMBs, first-time filers)
+ *
+ * Commitment ladder (solves the "file once, cancel" problem):
+ *   Annual     12 mo  →  $249/mo Starter  ($2,988/yr)   — best value
+ *   Semi-annual 6 mo  →  $299/mo Starter  ($1,794/6mo)  — covers full filing cycle
+ *   Monthly     none  →  $499/mo Starter               — penalty tier, shown on request
  *
  * Usage:
  *   import { PLANS, CLAIM_PLANS, redirectToCheckout } from '../lib/stripe'
@@ -24,23 +29,29 @@ export function getStripe() {
   return stripePromise
 }
 
-// ── Option A: Annual subscription plans ───────────────────────────────────────
-// Annual billing locks in the client for 12 months — solving the "file once,
-// cancel" problem. Monthly available at a 40%+ premium.
+// ── Option A: Subscription plans ──────────────────────────────────────────────
 export const PLANS = {
   starter: {
-    id:               'starter',
-    name:             'Starter',
-    // Annual billing (default)
+    id:   'starter',
+    name: 'Starter',
+
+    // ── Annual (primary) ──────────────────────────────────────────────────────
     price:            '$249',
     priceAnnualTotal: '$2,988',
     period:           '/mo · billed annually',
-    // Month-to-month (premium)
-    priceMonthly:     '$499',
-    periodMonthly:    '/mo · cancel anytime',
-    // Stripe price IDs
     priceId:          import.meta.env.VITE_STRIPE_PRICE_STARTER ?? null,
+
+    // ── Semi-annual (6-month minimum commitment) ──────────────────────────────
+    priceSemiAnnual:       '$299',
+    priceSemiAnnualTotal:  '$1,794',
+    periodSemiAnnual:      '/mo · 6-month minimum',
+    priceIdSemiAnnual:     import.meta.env.VITE_STRIPE_PRICE_STARTER_SEMI ?? null,
+
+    // ── Monthly (penalty / no-commitment tier — not shown by default) ─────────
+    priceMonthly:     '$499',
+    periodMonthly:    '/mo · no commitment',
     priceIdMonthly:   import.meta.env.VITE_STRIPE_PRICE_STARTER_MONTHLY ?? null,
+
     description:      'SR&ED automation for Canadian tech companies making their first claim.',
     features: [
       'Unlimited SR&ED clusters',
@@ -57,16 +68,25 @@ export const PLANS = {
     badge:          null,
     grantsIncluded: false,
   },
+
   plus: {
-    id:               'plus',
-    name:             'Plus',
+    id:   'plus',
+    name: 'Plus',
+
     price:            '$499',
     priceAnnualTotal: '$5,988',
     period:           '/mo · billed annually',
-    priceMonthly:     '$899',
-    periodMonthly:    '/mo · cancel anytime',
     priceId:          import.meta.env.VITE_STRIPE_PRICE_PLUS ?? null,
+
+    priceSemiAnnual:       '$599',
+    priceSemiAnnualTotal:  '$3,594',
+    periodSemiAnnual:      '/mo · 6-month minimum',
+    priceIdSemiAnnual:     import.meta.env.VITE_STRIPE_PRICE_PLUS_SEMI ?? null,
+
+    priceMonthly:     '$899',
+    periodMonthly:    '/mo · no commitment',
     priceIdMonthly:   import.meta.env.VITE_STRIPE_PRICE_PLUS_MONTHLY ?? null,
+
     description:      'SR&ED + Grants module — unlock up to $4M+ in additional Canadian innovation funding.',
     features: [
       'Everything in Starter',
@@ -83,16 +103,25 @@ export const PLANS = {
     badge:          'Most popular',
     grantsIncluded: true,
   },
+
   enterprise: {
-    id:          'enterprise',
-    name:        'Enterprise',
-    price:       'Custom',
+    id:   'enterprise',
+    name: 'Enterprise',
+
+    price:            'Custom',
     priceAnnualTotal: null,
-    period:      '',
-    priceMonthly: 'Custom',
-    periodMonthly: '',
-    priceId:     null,
+    period:           '',
+    priceId:          null,
+
+    priceSemiAnnual:      'Custom',
+    priceSemiAnnualTotal: null,
+    periodSemiAnnual:     '',
+    priceIdSemiAnnual:    null,
+
+    priceMonthly:   'Custom',
+    periodMonthly:  '',
     priceIdMonthly: null,
+
     description: 'Everything in Plus — white-label, API access, and a dedicated CPA partner.',
     features: [
       'Everything in Plus',
@@ -112,8 +141,6 @@ export const PLANS = {
 }
 
 // ── Option B: Pay-per-claim plans ─────────────────────────────────────────────
-// One-time claim preparation fee. No subscription commitment.
-// Ideal for SMBs filing their first claim or companies with sporadic R&D.
 export const CLAIM_PLANS = {
   claim: {
     id:          'claim',
@@ -158,6 +185,26 @@ export const CLAIM_PLANS = {
   },
 }
 
+// ── Resolve price display for a given billing period ──────────────────────────
+// billingPeriod: 'annual' | 'semiannual' | 'monthly'
+export function getPlanForBilling(plan, billingPeriod) {
+  if (billingPeriod === 'semiannual') {
+    return {
+      ...plan,
+      price:  plan.priceSemiAnnual  ?? plan.price,
+      period: plan.periodSemiAnnual ?? plan.period,
+    }
+  }
+  if (billingPeriod === 'monthly') {
+    return {
+      ...plan,
+      price:  plan.priceMonthly  ?? plan.price,
+      period: plan.periodMonthly ?? plan.period,
+    }
+  }
+  return plan  // annual (default)
+}
+
 // ── Redirect to Stripe Checkout ────────────────────────────────────────────────
 export async function redirectToCheckout(planId, billingPeriod = 'annual') {
   const allPlans = { ...PLANS, ...CLAIM_PLANS }
@@ -165,11 +212,11 @@ export async function redirectToCheckout(planId, billingPeriod = 'annual') {
     return { ok: false, message: 'Invalid plan' }
   }
 
-  // Pick monthly price ID if month-to-month billing selected
   const plan = allPlans[planId]
-  const resolvedPriceId = (billingPeriod === 'monthly' && plan.priceIdMonthly)
-    ? plan.priceIdMonthly
-    : plan.priceId
+  const resolvedPriceId =
+    billingPeriod === 'semiannual' ? (plan.priceIdSemiAnnual ?? plan.priceId) :
+    billingPeriod === 'monthly'    ? (plan.priceIdMonthly    ?? plan.priceId) :
+    plan.priceId
 
   try {
     const data = await billing.createCheckoutSession(
