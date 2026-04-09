@@ -1,28 +1,26 @@
+/**
+ * GettingStartedCard — onboarding checklist shown on the Dashboard.
+ *
+ * Props (all optional — falls back to mock detection when not provided):
+ *   clusters      {Array}   live cluster array from useClusters()
+ *   integrations  {Array}   live integration array from useIntegrations()
+ *   emailVerified {boolean} from currentUser.email_verified
+ *   email         {string}  currentUser.email (for resend link)
+ */
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import {
-  Plug, GitMerge, Mic, FolderOpen, ShieldAlert, HelpCircle,
+  Plug, GitMerge, Mic, FolderOpen, ShieldAlert, HelpCircle, MailCheck,
   CheckCircle2, Circle, ChevronDown, ChevronUp, X,
   Sparkles, ArrowRight, PartyPopper,
 } from 'lucide-react'
 import { CLUSTERS, INTEGRATIONS, DOCUMENTS } from '../../data/mockData'
 
-// ─── Auto-detect completion from existing mock data ───────────────────────────
-function detectSteps() {
-  const hasIntegration = INTEGRATIONS.some(i => i.status === 'healthy')
-  const hasCluster     = CLUSTERS.length > 0
-  const hasInterview   = CLUSTERS.some(c => ['Interviewed', 'Drafted', 'Approved'].includes(c.status))
-  const hasDocuments   = DOCUMENTS.length > 0
-  return { hasIntegration, hasCluster, hasInterview, hasDocuments }
-}
-
-const detected = detectSteps()
-
 // ─── Step row ─────────────────────────────────────────────────────────────────
-function Step({ icon: Icon, iconBg, iconColor, title, description, done, ctaLabel, onCta, isLast }) {
+function Step({ icon: Icon, iconBg, iconColor, title, description, done, ctaLabel, onCta, ctaHref, isLast }) {
   return (
     <div className={`flex items-start gap-4 py-4 ${!isLast ? 'border-b border-gray-50' : ''}`}>
-      {/* Left: check / icon */}
+      {/* Left: check / circle */}
       <div className="flex flex-col items-center gap-1 flex-shrink-0">
         {done ? (
           <CheckCircle2 size={20} className="text-green-500" />
@@ -47,12 +45,21 @@ function Step({ icon: Icon, iconBg, iconColor, title, description, done, ctaLabe
 
       {/* Right: CTA */}
       {!done && ctaLabel && (
-        <button
-          onClick={onCta}
-          className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors whitespace-nowrap"
-        >
-          {ctaLabel} <ArrowRight size={11} />
-        </button>
+        ctaHref ? (
+          <Link
+            to={ctaHref}
+            className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors whitespace-nowrap"
+          >
+            {ctaLabel} <ArrowRight size={11} />
+          </Link>
+        ) : (
+          <button
+            onClick={onCta}
+            className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors whitespace-nowrap"
+          >
+            {ctaLabel} <ArrowRight size={11} />
+          </button>
+        )
       )}
       {done && (
         <span className="flex-shrink-0 text-[10px] text-green-500 font-medium">Done</span>
@@ -85,75 +92,103 @@ function AllDone({ onDismiss }) {
 }
 
 // ─── Main card ────────────────────────────────────────────────────────────────
-export default function GettingStartedCard() {
+export default function GettingStartedCard({
+  clusters:     clustersLive     = null,
+  integrations: integrationsLive = null,
+  emailVerified = true,   // default true so card doesn't nag demo users
+  email         = '',
+}) {
   const navigate = useNavigate()
-  const [collapsed, setCollapsed]   = useState(false)
-  const [dismissed, setDismissed]   = useState(false)
-  const [quizDone, setQuizDone]     = useState(false)
+  const [collapsed,    setCollapsed]    = useState(false)
+  const [dismissed,    setDismissed]    = useState(false)
+  const [quizDone,     setQuizDone]     = useState(false)
   const [readinessDone, setReadinessDone] = useState(false)
 
   if (dismissed) return null
 
+  // Use live data if provided; fall back to mock detection for demo mode
+  const clusters     = clustersLive     ?? CLUSTERS
+  const integrations = integrationsLive ?? INTEGRATIONS
+  const documents    = DOCUMENTS  // documents API not yet live
+
+  const hasIntegration = integrations.some(i => i.status === 'healthy')
+  const hasCluster     = clusters.length > 0
+  const hasInterview   = clusters.some(c => ['Interviewed', 'Drafted', 'Approved'].includes(c.status))
+  const hasDocuments   = documents.length > 0
+  const isEmailVerified = emailVerified === true  // explicit === true, undefined/null → treat as unverified only for real API users
+
   const STEPS = [
+    // ── Step 0: Verify email (only shown for real API users with email_verified = false)
+    ...(!isEmailVerified ? [{
+      icon:        MailCheck,
+      iconBg:      'bg-violet-50',
+      iconColor:   'text-violet-500',
+      title:       'Verify your email address',
+      description: `Check your inbox ${email ? `(${email}) ` : ''}and click the verification link to unlock all features.`,
+      done:        false,
+      ctaLabel:    'Resend email',
+      ctaHref:     '/verify-email',
+    }] : []),
+
     {
-      icon: Plug,
-      iconBg: 'bg-blue-50',
+      icon:      Plug,
+      iconBg:    'bg-blue-50',
       iconColor: 'text-blue-500',
-      title: 'Connect your data sources',
+      title:     'Connect your data sources',
       description: 'Link GitHub, Jira, or other tools so TaxLift can auto-detect R&D activity.',
-      done: detected.hasIntegration,
-      ctaLabel: 'Connect',
-      onCta: () => navigate('/integrations'),
+      done:      hasIntegration,
+      ctaLabel:  'Connect',
+      onCta:     () => navigate('/integrations'),
     },
     {
-      icon: GitMerge,
-      iconBg: 'bg-indigo-50',
+      icon:      GitMerge,
+      iconBg:    'bg-indigo-50',
       iconColor: 'text-indigo-500',
-      title: 'Create your first activity cluster',
+      title:     'Create your first activity cluster',
       description: 'Group related commits, tickets, and work into an SR&ED-eligible cluster.',
-      done: detected.hasCluster,
-      ctaLabel: 'View Clusters',
-      onCta: () => navigate('/clusters'),
+      done:      hasCluster,
+      ctaLabel:  'View Clusters',
+      onCta:     () => navigate('/clusters'),
     },
     {
-      icon: Mic,
-      iconBg: 'bg-purple-50',
+      icon:      Mic,
+      iconBg:    'bg-purple-50',
       iconColor: 'text-purple-500',
-      title: 'Run a developer interview',
+      title:     'Run a developer interview',
       description: 'Capture technical context from your engineers to strengthen the narrative.',
-      done: detected.hasInterview,
-      ctaLabel: 'Go to Clusters',
-      onCta: () => navigate('/clusters'),
+      done:      hasInterview,
+      ctaLabel:  'Go to Clusters',
+      onCta:     () => navigate('/clusters'),
     },
     {
-      icon: FolderOpen,
-      iconBg: 'bg-teal-50',
+      icon:      FolderOpen,
+      iconBg:    'bg-teal-50',
       iconColor: 'text-teal-500',
-      title: 'Upload evidence to the Document Vault',
+      title:     'Upload evidence to the Document Vault',
       description: 'Attach T4 slips, commit logs, and technical documents to support your claim.',
-      done: detected.hasDocuments,
-      ctaLabel: 'Open Vault',
-      onCta: () => navigate('/vault'),
+      done:      hasDocuments,
+      ctaLabel:  'Open Vault',
+      onCta:     () => navigate('/vault'),
     },
     {
-      icon: HelpCircle,
-      iconBg: 'bg-amber-50',
+      icon:      HelpCircle,
+      iconBg:    'bg-amber-50',
       iconColor: 'text-amber-500',
-      title: 'Take the SR&ED Eligibility Quiz',
+      title:     'Take the SR&ED Eligibility Quiz',
       description: 'Confirm your work qualifies under CRA criteria before investing in a full claim.',
-      done: quizDone,
-      ctaLabel: 'Start Quiz',
-      onCta: () => { setQuizDone(true); navigate('/quiz') },
+      done:      quizDone,
+      ctaLabel:  'Start Quiz',
+      onCta:     () => { setQuizDone(true); navigate('/quiz') },
     },
     {
-      icon: ShieldAlert,
-      iconBg: 'bg-red-50',
+      icon:      ShieldAlert,
+      iconBg:    'bg-red-50',
       iconColor: 'text-red-500',
-      title: 'Review your Audit Readiness score',
+      title:     'Review your Audit Readiness score',
       description: 'Ensure each cluster scores above 70/100 before your CRA filing deadline.',
-      done: readinessDone,
-      ctaLabel: 'Check Score',
-      onCta: () => { setReadinessDone(true); navigate('/audit-readiness') },
+      done:      readinessDone,
+      ctaLabel:  'Check Score',
+      onCta:     () => { setReadinessDone(true); navigate('/audit-readiness') },
     },
   ]
 

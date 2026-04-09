@@ -5,7 +5,7 @@ import {
   PieChart, Pie, Cell, Legend,
 } from 'recharts'
 import { GitMerge, Clock, CheckCircle2, DollarSign, AlertTriangle, TrendingUp, FlaskConical, Zap, Mail, X, Send, Loader2 } from 'lucide-react'
-import { getCreditTrend, INTEGRATIONS } from '../data/mockData'
+import { getCreditTrend } from '../data/mockData'
 import { formatCurrency, formatHours, STATUS_COLORS } from '../lib/utils'
 import { useClusters, useIntegrations } from '../hooks'
 import { useAuth } from '../context/AuthContext'
@@ -499,7 +499,12 @@ export default function DashboardPage() {
       </div>
 
       {/* Getting Started checklist */}
-      <GettingStartedCard />
+      <GettingStartedCard
+        clusters={clusters}
+        integrations={integrations}
+        emailVerified={currentUser?.email_verified}
+        email={currentUser?.email}
+      />
 
       {/* Alert banner */}
       {(stale.length > 0 || needsReview.length > 0) && (
@@ -651,27 +656,39 @@ export default function DashboardPage() {
         </div>
       </Card>
 
-      {/* Integration health */}
+      {/* Integration health — uses live data; falls back to mock for demo */}
       <Card>
         <CardHeader title="Integration Health" subtitle="Live status of connected data sources" />
-        <div className="grid grid-cols-3 gap-4">
-          {INTEGRATIONS.map(intg => (
-            <div key={intg.integration} className="border border-gray-100 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-900 capitalize">{intg.integration}</span>
-                <IntegrationBadge status={intg.status} />
+        {(integrations ?? []).length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-sm text-gray-400 mb-3">No integrations connected yet.</p>
+            <button
+              onClick={() => navigate('/integrations')}
+              className="text-xs font-medium text-indigo-600 hover:text-indigo-800 underline"
+            >
+              Connect GitHub or Jira →
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-4">
+            {(integrations ?? []).map(intg => (
+              <div key={intg.integration} className="border border-gray-100 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-900 capitalize">{intg.integration}</span>
+                  <IntegrationBadge status={intg.status} />
+                </div>
+                {intg.error_detail && (
+                  <p className="text-xs text-amber-700 bg-amber-50 rounded-lg p-2 mt-2">{intg.error_detail}</p>
+                )}
+                {intg.last_sync_at && (
+                  <p className="text-xs text-gray-400 mt-2">
+                    Last sync: {new Date(intg.last_sync_at).toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                )}
               </div>
-              {intg.error_detail && (
-                <p className="text-xs text-amber-700 bg-amber-50 rounded-lg p-2 mt-2">{intg.error_detail}</p>
-              )}
-              {intg.last_sync_at && (
-                <p className="text-xs text-gray-400 mt-2">
-                  Last sync: {new Date(intg.last_sync_at).toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' })}
-                </p>
-              )}
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </Card>
     </div>
   )

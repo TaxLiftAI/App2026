@@ -56,8 +56,11 @@ function shapeBackendUser(me) {
     avatar:               me.avatar ?? null,
     firm_name:            me.firm_name ?? null,
     subscription_tier:    me.subscription_tier ?? 'free',
-    // SQLite returns 0/1 integers; coerce to boolean
+    // SQLite returns 0/1 integers; coerce to booleans
     onboarding_completed: me.onboarding_completed === 1 || me.onboarding_completed === true,
+    // IMPORTANT: must forward email_verified so the verification banner in Layout.jsx fires.
+    // API returns 0/1 from SQLite; coerce to boolean so === false comparisons work correctly.
+    email_verified:       me.email_verified === 1 || me.email_verified === true,
     created_at:           me.created_at ?? null,
     _fromApi:             true,
   }
