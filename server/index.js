@@ -14,6 +14,25 @@
  */
 require('dotenv').config({ path: require('path').join(__dirname, '.env') })
 
+// ── Sentry error tracking (optional — activate by setting SENTRY_DSN) ─────────
+// Install: npm install @sentry/node   (in webapp/server/)
+// Get DSN: https://sentry.io → New Project → Node.js → copy DSN
+// Set in Railway env vars: SENTRY_DSN=https://xxx@oyyy.ingest.sentry.io/zzz
+let Sentry = null
+if (process.env.SENTRY_DSN) {
+  try {
+    Sentry = require('@sentry/node')
+    Sentry.init({
+      dsn:              process.env.SENTRY_DSN,
+      environment:      process.env.NODE_ENV || 'development',
+      tracesSampleRate: 0.1,    // capture 10% of transactions for performance
+    })
+    console.log('[sentry] Initialized — error tracking active')
+  } catch {
+    console.warn('[sentry] @sentry/node not installed — run: npm install @sentry/node')
+  }
+}
+
 const express  = require('express')
 const cors     = require('cors')
 
@@ -142,6 +161,7 @@ app.use((req, res) => {
 // ── Error handler ─────────────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
   console.error('[error]', err.message)
+  if (Sentry) Sentry.captureException(err)
   res.status(err.status ?? 500).json({
     message: err.message ?? 'Internal server error',
   })

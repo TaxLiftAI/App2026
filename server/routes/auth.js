@@ -72,6 +72,15 @@ router.post('/register', async (req, res) => {
     console.error('[auth/register] scheduleUserDrip error:', err.message)
   }
 
+  // Real-time founder alert — fire-and-forget
+  const { alertNewRegistration } = require('../lib/alertEmail')
+  alertNewRegistration({
+    email: email.toLowerCase(),
+    fullName: full_name,
+    firmName: firm_name,
+    plan: 'free',
+  }).catch(err => console.error('[auth/register] alert error:', err.message))
+
   res.status(201).json({ access_token: token, token_type: 'bearer', user: shapeUser(user) })
 })
 

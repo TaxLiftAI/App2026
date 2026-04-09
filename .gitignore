@@ -30,3 +30,9 @@ npm-debug.log*
 *.db-journal
 *.sqlite
 *.sqlite-journal
+
+# Claude Code / Cowork AI worktrees (local only)
+.claude/worktrees/
+
+# Temp Office lock files
+~$*

@@ -54,9 +54,11 @@ const OnboardingWizardPage = lazy(() => import('./pages/OnboardingWizardPage'))
 const QuickConnectPage     = lazy(() => import('./pages/QuickConnectPage'))
 const EligibilityQuizPage  = lazy(() => import('./pages/EligibilityQuizPage'))
 
-// Public marketing / pricing
+// Public marketing / pricing / legal
 const PricingPage          = lazy(() => import('./pages/PricingPage'))
 const SecurityPage         = lazy(() => import('./pages/SecurityPage'))
+const TermsPage            = lazy(() => import('./pages/TermsPage'))
+const PrivacyPage          = lazy(() => import('./pages/PrivacyPage'))
 const EstimatorPage        = lazy(() => import('./pages/EstimatorPage'))
 const ShareableSummaryPage = lazy(() => import('./pages/ShareableSummaryPage'))
 const OAuthCallbackPage    = lazy(() => import('./pages/OAuthCallbackPage'))
@@ -320,6 +322,8 @@ function AppRoutes() {
 
       {/* Free scan funnel — public, no auth required */}
       <Route path="/security" element={<SecurityPage />} />
+      <Route path="/terms"    element={<TermsPage />} />
+      <Route path="/privacy"  element={<PrivacyPage />} />
 
       {/* Free scan funnel — public, no auth required */}
       <Route path="/scan"         element={<ScanLandingPage />} />

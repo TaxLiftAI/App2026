@@ -9,6 +9,7 @@ const router    = require('express').Router()
 const db        = require('../db')
 const { requireAuth } = require('../middleware/auth')
 const { v4: uuidv4 }  = require('../utils/uuid')
+const { alertNewLead } = require('../lib/alertEmail')
 
 // ── Middleware: require admin role ─────────────────────────────────────────────
 function requireAdmin(req, res, next) {
@@ -35,6 +36,16 @@ router.post('/', (req, res) => {
     `).run(id, email.toLowerCase().trim(), name.trim(), company.trim(), plan_interest.trim(), source.trim())
 
     console.log(`[leads] New lead captured: ${email} (plan: ${plan_interest || 'unspecified'})`)
+
+    // Fire-and-forget founder alert — does not block the response
+    alertNewLead({
+      email,
+      name,
+      company,
+      source,
+      estimatedCredit: req.body?.estimated_credit ?? null,
+    }).catch(err => console.error('[leads] alert error:', err.message))
+
     res.status(201).json({ id, message: 'Lead captured successfully' })
   } catch (err) {
     // Silently succeed on duplicate email — don't tell the user we already have them

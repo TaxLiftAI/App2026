@@ -14,6 +14,7 @@ const router  = express.Router()
 const db      = require('../db')
 const { makeId } = require('../utils/uuid')
 const { scheduleDrip } = require('../lib/emailDrip')
+const { alertHighValueScan } = require('../lib/alertEmail')
 
 /**
  * POST /api/scan/free
@@ -80,6 +81,14 @@ router.post('/free', (req, res) => {
       } catch (err) {
         console.error('[scan/free] scheduleDrip error:', err.message)
       }
+
+      // High-value scan alert to founder (fire-and-forget, $50K+ threshold)
+      alertHighValueScan({
+        email,
+        estimatedCredit: estimated_credit,
+        clusterCount:    clusters?.length ?? 0,
+        repoCount:       repos_json ? JSON.parse(repos_json).length : 0,
+      }).catch(err => console.error('[scan/free] alert error:', err.message))
     }
 
     res.json({ ok: true, id, estimated_credit, cluster_count: clusters.length })
