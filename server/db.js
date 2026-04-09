@@ -31,6 +31,9 @@ db.exec(`
     github_token         TEXT,
     atlassian_token      TEXT,
     onboarding_completed INTEGER NOT NULL DEFAULT 0,
+    email_verified       INTEGER NOT NULL DEFAULT 0,
+    email_verify_token   TEXT,
+    email_verify_sent_at TEXT,
     created_at           TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -412,5 +415,16 @@ function seed() {
 }
 
 seed()
+
+// ── Additive migrations for existing databases ────────────────────────────────
+// CREATE TABLE IF NOT EXISTS won't add new columns to an existing table.
+// Use ALTER TABLE … ADD COLUMN (idempotent via try/catch) for every new column.
+;[
+  'ALTER TABLE users ADD COLUMN email_verified         INTEGER NOT NULL DEFAULT 0',
+  'ALTER TABLE users ADD COLUMN email_verify_token     TEXT',
+  'ALTER TABLE users ADD COLUMN email_verify_sent_at   TEXT',
+  'ALTER TABLE users ADD COLUMN password_reset_token   TEXT',
+  'ALTER TABLE users ADD COLUMN password_reset_sent_at TEXT',
+].forEach(sql => { try { db.exec(sql) } catch { /* column already exists — safe to ignore */ } })
 
 module.exports = db

@@ -15,8 +15,16 @@ import {
   ShieldCheck, Building2, DollarSign, Users, CheckCircle2,
   ArrowRight, FileText, Lock, Star, ChevronDown, ChevronUp,
   Layers, Clock, Mail, BarChart2, AlertCircle, BookOpen,
-  Pencil, BadgeCheck, TrendingUp, Zap,
+  Pencil, BadgeCheck, TrendingUp, Zap, Loader2,
 } from 'lucide-react'
+
+const PROVINCES = [
+  'AB','BC','MB','NB','NL','NS','NT','NU','ON','PE','QC','SK','YT',
+]
+const HEARD_OPTIONS = [
+  'Google search', 'LinkedIn', 'Referral from a colleague',
+  'Accounting association', 'Conference / event', 'Other',
+]
 
 // ── Commission tiers ───────────────────────────────────────────────────────────
 const TIERS = [
@@ -134,6 +142,185 @@ function FaqItem({ q, a }) {
         </div>
       )}
     </div>
+  )
+}
+
+// ── Partner contact / intake form section ─────────────────────────────────────
+function PartnerContactSection({ navigate }) {
+  const [showForm, setShowForm]   = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [sent, setSent]           = useState(false)
+  const [formError, setFormError] = useState('')
+
+  const EMPTY = { name: '', firm: '', designation: '', province: '', sred_clients: '', heard: '' }
+  const [fields, setFields] = useState(EMPTY)
+
+  function set(k, v) { setFields(f => ({ ...f, [k]: v })) }
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!fields.name || !fields.firm || !fields.designation || !fields.province) {
+      setFormError('Please fill in all required fields.')
+      return
+    }
+    setSubmitting(true); setFormError('')
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/leads`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          name:             fields.name,
+          email:            `${fields.firm.toLowerCase().replace(/\s+/g, '')}@partner.inquiry`,
+          company:          fields.firm,
+          source:           'partner_application',
+          message:          [
+            `CPA Designation: ${fields.designation}`,
+            `Province: ${fields.province}`,
+            `SR&ED clients: ${fields.sred_clients || 'Not specified'}`,
+            `How they heard: ${fields.heard || 'Not specified'}`,
+          ].join(' | '),
+        }),
+      })
+      if (!res.ok) throw new Error('Server error')
+      setSent(true)
+    } catch {
+      setFormError('Something went wrong — please email us at hello@taxlift.ai instead.')
+    } finally { setSubmitting(false) }
+  }
+
+  return (
+    <section className="py-16 px-6 bg-gradient-to-br from-indigo-600 to-violet-600 text-white">
+      <div className="max-w-2xl mx-auto text-center">
+        <h2 className="text-2xl font-bold mb-3">Ready to add SR&amp;ED to your practice?</h2>
+        <p className="text-indigo-100 text-sm mb-7 max-w-md mx-auto">
+          Apply in 5 minutes. Verified within 1 business day. No commitment until your first referral converts.
+        </p>
+
+        <div className="flex items-center justify-center gap-3 flex-wrap mb-7">
+          <button
+            onClick={() => navigate('/cpa/register')}
+            className="flex items-center gap-2 bg-white text-indigo-700 font-bold text-sm px-7 py-3 rounded-xl hover:bg-indigo-50 transition-colors shadow-lg"
+          >
+            Apply now — it's free <ArrowRight size={15} />
+          </button>
+          {!sent && (
+            <button
+              onClick={() => setShowForm(v => !v)}
+              className="flex items-center gap-2 border border-white/30 text-white text-sm font-medium px-6 py-3 rounded-xl hover:bg-white/10 transition-colors"
+            >
+              <Mail size={14} />
+              {showForm ? 'Hide form' : 'Contact the partner team'}
+            </button>
+          )}
+        </div>
+
+        {/* Inline contact form */}
+        {!sent && showForm && (
+          <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 text-left">
+            <h3 className="text-base font-semibold text-white mb-4">Tell us about your practice</h3>
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-indigo-100 mb-1">Full name *</label>
+                  <input
+                    type="text" required
+                    value={fields.name} onChange={e => set('name', e.target.value)}
+                    placeholder="Jane Smith"
+                    className="w-full bg-white/20 border border-white/30 text-white placeholder:text-indigo-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-white/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-indigo-100 mb-1">Firm name *</label>
+                  <input
+                    type="text" required
+                    value={fields.firm} onChange={e => set('firm', e.target.value)}
+                    placeholder="Smith & Associates CPA"
+                    className="w-full bg-white/20 border border-white/30 text-white placeholder:text-indigo-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-white/50"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-indigo-100 mb-1">CPA designation *</label>
+                  <input
+                    type="text" required
+                    value={fields.designation} onChange={e => set('designation', e.target.value)}
+                    placeholder="CPA, CA / CPA, CGA…"
+                    className="w-full bg-white/20 border border-white/30 text-white placeholder:text-indigo-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-white/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-indigo-100 mb-1">Province *</label>
+                  <select
+                    required
+                    value={fields.province} onChange={e => set('province', e.target.value)}
+                    className="w-full bg-white/20 border border-white/30 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-white/50"
+                  >
+                    <option value="" className="text-gray-800">Select…</option>
+                    {PROVINCES.map(p => <option key={p} value={p} className="text-gray-800">{p}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-indigo-100 mb-1">SR&amp;ED clients today</label>
+                  <select
+                    value={fields.sred_clients} onChange={e => set('sred_clients', e.target.value)}
+                    className="w-full bg-white/20 border border-white/30 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-white/50"
+                  >
+                    <option value="" className="text-gray-800">Select…</option>
+                    {['0','1–3','4–10','11–25','26+'].map(o => <option key={o} value={o} className="text-gray-800">{o}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-indigo-100 mb-1">How did you hear?</label>
+                  <select
+                    value={fields.heard} onChange={e => set('heard', e.target.value)}
+                    className="w-full bg-white/20 border border-white/30 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-white/50"
+                  >
+                    <option value="" className="text-gray-800">Select…</option>
+                    {HEARD_OPTIONS.map(o => <option key={o} value={o} className="text-gray-800">{o}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {formError && (
+                <p className="text-xs text-red-200 flex items-center gap-1">
+                  <AlertCircle size={12} /> {formError}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full flex items-center justify-center gap-2 bg-white text-indigo-700 font-bold text-sm py-2.5 rounded-xl hover:bg-indigo-50 transition-colors disabled:opacity-60"
+              >
+                {submitting ? <><Loader2 size={14} className="animate-spin" /> Sending…</> : 'Send inquiry →'}
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* Success state */}
+        {sent && (
+          <div className="bg-white/10 border border-white/20 rounded-2xl p-6 flex flex-col items-center gap-3">
+            <CheckCircle2 size={32} className="text-emerald-300" />
+            <p className="text-white font-semibold">Thanks! We'll be in touch within 1 business day.</p>
+            <p className="text-indigo-200 text-xs">In the meantime, you can still <button onClick={() => navigate('/cpa/register')} className="underline hover:text-white">apply now</button> and get verified immediately.</p>
+          </div>
+        )}
+
+        <p className="text-indigo-200 text-xs mt-5">
+          Questions? <Link to="/methodology" className="underline hover:text-white">Read the methodology</Link>
+          {' '}or book a call at{' '}
+          <a href="https://calendly.com/taxlift" className="underline hover:text-white" target="_blank" rel="noopener noreferrer">
+            calendly.com/taxlift
+          </a>
+        </p>
+      </div>
+    </section>
   )
 }
 
@@ -338,34 +525,8 @@ export default function PartnersPage() {
         </div>
       </section>
 
-      {/* ── Bottom CTA ── */}
-      <section className="py-16 px-6 bg-gradient-to-br from-indigo-600 to-violet-600 text-white text-center">
-        <h2 className="text-2xl font-bold mb-3">Ready to add SR&ED to your practice?</h2>
-        <p className="text-indigo-100 text-sm mb-7 max-w-md mx-auto">
-          Apply in 5 minutes. Verified within 1 business day. No commitment until your first referral converts.
-        </p>
-        <div className="flex items-center justify-center gap-3 flex-wrap">
-          <button
-            onClick={() => navigate('/cpa/register')}
-            className="flex items-center gap-2 bg-white text-indigo-700 font-bold text-sm px-7 py-3 rounded-xl hover:bg-indigo-50 transition-colors shadow-lg"
-          >
-            Apply now — it's free <ArrowRight size={15} />
-          </button>
-          <a
-            href="mailto:hello@taxlift.ai?subject=CPA%20Partner%20Program%20Inquiry"
-            className="flex items-center gap-2 border border-white/30 text-white text-sm font-medium px-6 py-3 rounded-xl hover:bg-white/10 transition-colors"
-          >
-            <Mail size={14} /> Email the partner team
-          </a>
-        </div>
-        <p className="text-indigo-200 text-xs mt-5">
-          Questions? <Link to="/methodology" className="underline hover:text-white">Read the methodology</Link>
-          {' '}or book a call at{' '}
-          <a href="https://calendly.com/taxlift" className="underline hover:text-white" target="_blank" rel="noopener noreferrer">
-            calendly.com/taxlift
-          </a>
-        </p>
-      </section>
+      {/* ── Bottom CTA + intake form ── */}
+      <PartnerContactSection navigate={navigate} />
 
       {/* ── Footer ── */}
       <footer className="bg-slate-900 text-slate-400 text-xs text-center py-6 px-4">
