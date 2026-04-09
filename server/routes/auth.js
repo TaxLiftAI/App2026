@@ -15,6 +15,42 @@ const crypto  = require('crypto')
 const { v4: uuid } = require('../utils/uuid')
 const db      = require('../db')
 const { signToken, requireAuth } = require('../middleware/auth')
+const { logSecurityEvent }       = require('../middleware/security')
+
+// ── Per-account login attempt tracking ───────────────────────────────────────
+// Counts failed logins for a given email in a rolling window.
+// Complements the IP-based authLimiter to block distributed brute-force.
+const ACCOUNT_LOCKOUT_WINDOW_MS = 60 * 60 * 1000  // 1 hour
+const ACCOUNT_LOCKOUT_THRESHOLD = 10               // max failed attempts in window
+
+function getRecentFailedAttempts(email) {
+  try {
+    const cutoff = new Date(Date.now() - ACCOUNT_LOCKOUT_WINDOW_MS).toISOString()
+    const rows = db.prepare(`
+      SELECT COUNT(*) as n
+      FROM   security_events
+      WHERE  event_type = 'login_failed'
+        AND  metadata LIKE ?
+        AND  created_at > ?
+    `).get(`%"email":"${email}"%`, cutoff)
+    return rows?.n ?? 0
+  } catch { return 0 }
+}
+
+function isAccountLocked(email) {
+  return getRecentFailedAttempts(email) >= ACCOUNT_LOCKOUT_THRESHOLD
+}
+
+function recordFailedLogin(email, ip, ua) {
+  try {
+    logSecurityEvent('anonymous', 'login_failed', ip, ua, { email })
+  } catch { /* never crash the request */ }
+}
+
+// ── Input length guards ───────────────────────────────────────────────────────
+const MAX_EMAIL    = 255
+const MAX_PASSWORD = 1024  // bcrypt caps at 72 bytes but we store the hash
+const MAX_NAME     = 255
 
 const APP_URL    = (process.env.FRONTEND_URL || 'https://taxlift.ai').replace(/\/$/, '')
 const EMAIL_FROM = process.env.EMAIL_FROM || 'hello@taxlift.ai'
@@ -108,6 +144,10 @@ router.post('/register', async (req, res) => {
   if (!email || !password) {
     return res.status(400).json({ message: 'email and password are required' })
   }
+  if (typeof email !== 'string'    || email.length    > MAX_EMAIL)    return res.status(400).json({ message: 'Email address is too long.' })
+  if (typeof password !== 'string' || password.length > MAX_PASSWORD) return res.status(400).json({ message: 'Password is too long.' })
+  if (typeof full_name === 'string' && full_name.length > MAX_NAME)   return res.status(400).json({ message: 'Name is too long.' })
+  if (typeof firm_name === 'string' && firm_name.length > MAX_NAME)   return res.status(400).json({ message: 'Firm name is too long.' })
   if (password.length < 8) {
     return res.status(400).json({ message: 'Password must be at least 8 characters' })
   }
@@ -160,22 +200,49 @@ router.post('/register', async (req, res) => {
 
 // ── POST /api/auth/login ──────────────────────────────────────────────────────
 router.post('/login', async (req, res) => {
-  const email    = (req.body?.email ?? req.body?.username ?? '').toLowerCase()
+  const email    = (req.body?.email ?? req.body?.username ?? '').toLowerCase().trim()
   const password = req.body?.password ?? ''
 
   if (!email || !password) {
     return res.status(400).json({ message: 'email and password are required' })
   }
+  if (email.length > MAX_EMAIL || password.length > MAX_PASSWORD) {
+    return res.status(400).json({ message: 'Invalid email or password' })
+  }
+
+  const ip = req.ip ?? req.socket?.remoteAddress ?? 'unknown'
+  const ua = req.headers['user-agent'] ?? ''
+
+  // Per-account lockout — prevents distributed brute-force across many IPs
+  if (isAccountLocked(email)) {
+    console.warn(`[auth/login] LOCKED: account=${email} ip=${ip}`)
+    return res.status(429).json({
+      message: 'Too many failed login attempts — this account is temporarily locked. Try again in 1 hour or reset your password.',
+    })
+  }
 
   const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email)
   if (!user) {
+    recordFailedLogin(email, ip, ua)
     return res.status(401).json({ message: 'Invalid email or password' })
   }
 
   const valid = await bcrypt.compare(password, user.password_hash)
   if (!valid) {
+    recordFailedLogin(email, ip, ua)
+    const failCount = getRecentFailedAttempts(email)
+    const remaining = Math.max(0, ACCOUNT_LOCKOUT_THRESHOLD - failCount)
+    console.warn(`[auth/login] FAILED: email=${email} ip=${ip} fail_count=${failCount}`)
+    if (remaining <= 3 && remaining > 0) {
+      return res.status(401).json({
+        message: `Invalid email or password. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining before this account is locked.`,
+      })
+    }
     return res.status(401).json({ message: 'Invalid email or password' })
   }
+
+  // Successful login — log it for audit trail
+  try { logSecurityEvent(user.id, 'login_success', ip, ua) } catch { /* non-blocking */ }
 
   const token = signToken({ id: user.id, email: user.email, role: user.role, tenant_id: user.tenant_id })
 

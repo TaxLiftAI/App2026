@@ -59,8 +59,9 @@ app.use(securityHeaders)
 app.use(globalLimiter)
 
 // Parse JSON and urlencoded bodies (for OAuth2 form POST compat)
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
+// Explicit 100 kb body limit prevents memory exhaustion from oversized payloads
+app.use(express.json({ limit: '100kb' }))
+app.use(express.urlencoded({ extended: true, limit: '100kb' }))
 
 // CORS — allow the Vite dev server and any configured frontend origin
 const ALLOWED_ORIGINS = [
@@ -159,12 +160,23 @@ app.use((req, res) => {
 })
 
 // ── Error handler ─────────────────────────────────────────────────────────────
-app.use((err, req, res, next) => {
-  console.error('[error]', err.message)
+// In production: never expose internal error messages (stack traces, DB errors,
+// internal paths) to the client — they're an information leak for attackers.
+// Log the full error on the server side and send a generic message to the client.
+app.use((err, req, res, _next) => {
+  const status = err.status ?? err.statusCode ?? 500
+  console.error(`[error] ${req.method} ${req.path} → ${status}:`, err.message)
   if (Sentry) Sentry.captureException(err)
-  res.status(err.status ?? 500).json({
-    message: err.message ?? 'Internal server error',
-  })
+
+  // Expose the real message only for known client errors (4xx that we set ourselves)
+  // or in non-production environments. Never surface 500-level details externally.
+  const isClientError = status >= 400 && status < 500
+  const isProduction  = process.env.NODE_ENV === 'production'
+  const message = (!isProduction || isClientError)
+    ? (err.message ?? 'Something went wrong')
+    : 'Internal server error'
+
+  res.status(status).json({ message })
 })
 
 // ── Start ─────────────────────────────────────────────────────────────────────
