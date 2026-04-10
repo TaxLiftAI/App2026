@@ -52,6 +52,45 @@ function recordFailedLogin(email, ip, ua) {
   } catch { /* never crash the request */ }
 }
 
+// ── Timing-safe dummy hash (Fix 1) ───────────────────────────────────────────
+// Pre-computed at startup. Used in login when the email is not found so the
+// response time is indistinguishable from a valid-email / wrong-password response.
+// Without this, an attacker can enumerate registered emails by measuring latency
+// (non-existent → ~1 ms, existing → ~100 ms bcrypt).
+const DUMMY_HASH = bcrypt.hashSync('timing-guard-placeholder-do-not-use', 10)
+
+// ── Password complexity validator (Fix 5) ────────────────────────────────────
+// Enforced on backend so API callers that bypass the frontend strength meter
+// still get complexity requirements. Mirrors the frontend strength-meter rules.
+function validatePassword(password) {
+  if (!password || password.length < 8)    return 'Password must be at least 8 characters.'
+  if (password.length > MAX_PASSWORD)      return 'Password is too long.'
+  if (!/[A-Z]/.test(password))             return 'Password must contain at least one uppercase letter.'
+  if (!/[0-9]/.test(password))             return 'Password must contain at least one number.'
+  return null // valid
+}
+
+// ── Refresh token helpers (Fix 3 + 4) ────────────────────────────────────────
+// Store a SHA-256 hash of the refresh token — not the raw token.
+// If the DB file is exfiltrated, hashed tokens cannot be replayed (unlike plaintext).
+// The raw token is only ever in the httpOnly cookie; the server never stores it.
+function hashRefreshToken(token) {
+  return crypto.createHash('sha256').update(token).digest('hex')
+}
+
+// Generate a new refresh token, persist its hash to the DB, and set the cookie.
+// Called from login, register, and the /refresh rotation step.
+function issueRefreshToken(userId, res) {
+  const raw  = crypto.randomBytes(32).toString('hex')
+  const hash = hashRefreshToken(raw)
+  db.prepare(`
+    UPDATE users
+    SET refresh_token = ?, refresh_token_expires_at = datetime('now', '+7 days')
+    WHERE id = ?
+  `).run(hash, userId)
+  res.cookie('taxlift_refresh', raw, cookieOptions(7 * 24 * 60 * 60 * 1000))
+}
+
 // ── Input length guards ───────────────────────────────────────────────────────
 const MAX_EMAIL    = 255
 const MAX_PASSWORD = 1024  // bcrypt caps at 72 bytes but we store the hash
@@ -149,13 +188,13 @@ router.post('/register', async (req, res) => {
   if (!email || !password) {
     return res.status(400).json({ message: 'email and password are required' })
   }
-  if (typeof email !== 'string'    || email.length    > MAX_EMAIL)    return res.status(400).json({ message: 'Email address is too long.' })
-  if (typeof password !== 'string' || password.length > MAX_PASSWORD) return res.status(400).json({ message: 'Password is too long.' })
-  if (typeof full_name === 'string' && full_name.length > MAX_NAME)   return res.status(400).json({ message: 'Name is too long.' })
-  if (typeof firm_name === 'string' && firm_name.length > MAX_NAME)   return res.status(400).json({ message: 'Firm name is too long.' })
-  if (password.length < 8) {
-    return res.status(400).json({ message: 'Password must be at least 8 characters' })
-  }
+  if (typeof email !== 'string' || email.length > MAX_EMAIL) return res.status(400).json({ message: 'Email address is too long.' })
+  if (typeof full_name === 'string' && full_name.length > MAX_NAME) return res.status(400).json({ message: 'Name is too long.' })
+  if (typeof firm_name === 'string' && firm_name.length > MAX_NAME) return res.status(400).json({ message: 'Firm name is too long.' })
+
+  // Backend password complexity enforcement (Fix 5)
+  const pwErr = validatePassword(typeof password === 'string' ? password : '')
+  if (pwErr) return res.status(400).json({ message: pwErr })
 
   const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase())
   if (existing) {
@@ -180,15 +219,11 @@ router.post('/register', async (req, res) => {
   sendVerificationEmail(email.toLowerCase(), verifyToken)
     .catch(err => console.error('[auth/register] verify email error:', err.message))
 
-  const user         = db.prepare(USER_SELECT).get(id)
-  const accessToken  = signToken({ id: user.id, email: user.email, role: user.role, tenant_id: user.tenant_id })
-  const refreshToken = crypto.randomBytes(32).toString('hex')
+  const user        = db.prepare(USER_SELECT).get(id)
+  const accessToken = signToken({ id: user.id, email: user.email, role: user.role, tenant_id: user.tenant_id })
 
-  db.prepare(`UPDATE users SET refresh_token = ?, refresh_token_expires_at = datetime('now', '+7 days') WHERE id = ?`)
-    .run(refreshToken, user.id)
-
-  res.cookie('taxlift_access',  accessToken,  cookieOptions(15 * 60 * 1000))
-  res.cookie('taxlift_refresh', refreshToken, cookieOptions(7 * 24 * 60 * 60 * 1000))
+  res.cookie('taxlift_access', accessToken, cookieOptions(15 * 60 * 1000))
+  issueRefreshToken(user.id, res)  // generates, hashes, stores, sets cookie (Fix 3+4)
 
   // Kick off 3-step drip sequence (fire-and-forget, never blocks the response)
   try {
@@ -235,6 +270,8 @@ router.post('/login', async (req, res) => {
 
   const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email)
   if (!user) {
+    // Always run bcrypt to equalise response time — prevents email enumeration via timing (Fix 1)
+    await bcrypt.compare(password, DUMMY_HASH)
     recordFailedLogin(email, ip, ua)
     return res.status(401).json({ message: 'Invalid email or password' })
   }
@@ -256,14 +293,10 @@ router.post('/login', async (req, res) => {
   // Successful login — log it for audit trail
   try { logSecurityEvent(user.id, 'login_success', ip, ua) } catch { /* non-blocking */ }
 
-  const accessToken  = signToken({ id: user.id, email: user.email, role: user.role, tenant_id: user.tenant_id })
-  const refreshToken = crypto.randomBytes(32).toString('hex')
+  const accessToken = signToken({ id: user.id, email: user.email, role: user.role, tenant_id: user.tenant_id })
 
-  db.prepare(`UPDATE users SET refresh_token = ?, refresh_token_expires_at = datetime('now', '+7 days') WHERE id = ?`)
-    .run(refreshToken, user.id)
-
-  res.cookie('taxlift_access',  accessToken,  cookieOptions(15 * 60 * 1000))
-  res.cookie('taxlift_refresh', refreshToken, cookieOptions(7 * 24 * 60 * 60 * 1000))
+  res.cookie('taxlift_access', accessToken, cookieOptions(15 * 60 * 1000))
+  issueRefreshToken(user.id, res)  // generates, hashes, stores, sets cookie (Fix 3+4)
 
   res.json({ user: shapeUser(user) })
 })
@@ -423,7 +456,9 @@ router.post('/forgot-password', async (req, res) => {
 router.post('/reset-password', async (req, res) => {
   const { token, password } = req.body ?? {}
   if (!token || !password) return res.status(400).json({ message: 'Token and password are required.' })
-  if (password.length < 8)  return res.status(400).json({ message: 'Password must be at least 8 characters.' })
+  // Backend complexity enforcement (Fix 5)
+  const pwErr = validatePassword(typeof password === 'string' ? password : '')
+  if (pwErr) return res.status(400).json({ message: pwErr })
 
   const user = db.prepare('SELECT id, email, password_reset_sent_at FROM users WHERE password_reset_token = ?').get(token)
   if (!user) return res.status(404).json({ message: 'This reset link is invalid or has already been used.' })
@@ -521,12 +556,13 @@ router.post('/resend-verification', requireAuth, async (req, res) => {
 // Clears auth cookies and invalidates the refresh token in the DB.
 // Accepts both authenticated and unauthenticated requests (graceful logout).
 router.post('/logout', (req, res) => {
-  // Invalidate refresh token in DB if we can identify the user
-  const refreshToken = req.cookies?.taxlift_refresh ?? null
-  if (refreshToken) {
+  // Invalidate refresh token in DB — look up by hash (Fix 4)
+  const rawRefreshToken = req.cookies?.taxlift_refresh ?? null
+  if (rawRefreshToken) {
     try {
+      const tokenHash = hashRefreshToken(rawRefreshToken)
       db.prepare('UPDATE users SET refresh_token = NULL, refresh_token_expires_at = NULL WHERE refresh_token = ?')
-        .run(refreshToken)
+        .run(tokenHash)
     } catch { /* non-blocking */ }
   }
 
@@ -540,18 +576,24 @@ router.post('/logout', (req, res) => {
 // Reads the httpOnly refresh token cookie, validates it against the DB,
 // and issues a fresh access token cookie. Called automatically by api.js on 401.
 router.post('/refresh', (req, res) => {
-  const refreshToken = req.cookies?.taxlift_refresh ?? null
-  if (!refreshToken) {
+  const rawRefreshToken = req.cookies?.taxlift_refresh ?? null
+  if (!rawRefreshToken) {
     return res.status(401).json({ message: 'No refresh token' })
   }
 
+  // Lookup by SHA-256 hash — raw token never stored in DB (Fix 4)
+  const tokenHash = hashRefreshToken(rawRefreshToken)
   const user = db.prepare(`
     SELECT id, email, role, tenant_id, refresh_token_expires_at
     FROM   users
     WHERE  refresh_token = ?
-  `).get(refreshToken)
+  `).get(tokenHash)
 
   if (!user) {
+    // Invalid or already-rotated token — could be replay attack, clear cookies
+    const clearOpts = { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'Lax', path: '/' }
+    res.clearCookie('taxlift_access',  clearOpts)
+    res.clearCookie('taxlift_refresh', clearOpts)
     return res.status(401).json({ message: 'Invalid refresh token' })
   }
 
@@ -559,6 +601,8 @@ router.post('/refresh', (req, res) => {
   if (user.refresh_token_expires_at) {
     const expiry = new Date(user.refresh_token_expires_at + 'Z')
     if (Date.now() > expiry.getTime()) {
+      // Expired — null out DB entry and clear cookies
+      db.prepare('UPDATE users SET refresh_token = NULL, refresh_token_expires_at = NULL WHERE id = ?').run(user.id)
       const clearOpts = { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'Lax', path: '/' }
       res.clearCookie('taxlift_access',  clearOpts)
       res.clearCookie('taxlift_refresh', clearOpts)
@@ -566,9 +610,11 @@ router.post('/refresh', (req, res) => {
     }
   }
 
-  // Issue fresh access token (rotate: new short-lived cookie)
+  // Issue fresh access token + rotate refresh token (Fix 3)
+  // Single-use: old hash is replaced immediately — a replayed token gets a 401 above
   const newAccessToken = signToken({ id: user.id, email: user.email, role: user.role, tenant_id: user.tenant_id })
   res.cookie('taxlift_access', newAccessToken, cookieOptions(15 * 60 * 1000))
+  issueRefreshToken(user.id, res)  // atomically replaces old hash in DB
   res.json({ ok: true })
 })
 
@@ -578,9 +624,9 @@ router.post('/change-password', requireAuth, async (req, res) => {
   if (!current_password || !new_password) {
     return res.status(400).json({ message: 'current_password and new_password are required.' })
   }
-  if (new_password.length < 8) {
-    return res.status(400).json({ message: 'New password must be at least 8 characters.' })
-  }
+  // Backend complexity enforcement (Fix 5)
+  const pwErr = validatePassword(typeof new_password === 'string' ? new_password : '')
+  if (pwErr) return res.status(400).json({ message: pwErr })
 
   const user = db.prepare('SELECT id, password_hash FROM users WHERE id = ?').get(req.user.id)
   if (!user) return res.status(404).json({ message: 'User not found.' })

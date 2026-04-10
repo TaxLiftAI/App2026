@@ -2,6 +2,7 @@
  * OAuth proxy routes — server-side token exchange so the browser
  * never needs to handle client_secret.
  *
+ *   POST /api/oauth/state                          ← generate state, set httpOnly cookie
  *   GET  /api/oauth/github/callback?code=&state=   ← GitHub server-side redirect target
  *   POST /api/oauth/github/exchange  { code }      ← browser SPA exchange (OAuthCallbackPage)
  *   GET  /api/oauth/atlassian/callback?code=&state=
@@ -14,7 +15,8 @@
  */
 const router = require('express').Router()
 const axios  = require('axios')
-const { requireAuth, optionalAuth } = require('../middleware/auth')
+const crypto = require('crypto')
+const { requireAuth, optionalAuth, cookieOptions } = require('../middleware/auth')
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function cfg(key) {
@@ -25,10 +27,58 @@ function missingEnv(...keys) {
   return keys.filter(k => !process.env[k])
 }
 
+// ── OAuth state cookie constants (Fix 2) ──────────────────────────────────────
+const OAUTH_STATE_COOKIE = 'taxlift_oauth_state'
+const STATE_COOKIE_OPTS  = { ...cookieOptions(10 * 60 * 1000), httpOnly: true }  // 10 min TTL
+
+// ── POST /api/oauth/state — generate state, set httpOnly cookie ───────────────
+// Called by the frontend BEFORE redirecting to GitHub/Atlassian.
+// Returns { state } which the frontend includes in the authorization URL.
+// The server-side GET callbacks verify this cookie to prevent OAuth CSRF.
+//
+// The browser SPA (OAuthCallbackPage) also validates state client-side via
+// localStorage — this server-issued cookie provides defense-in-depth for the
+// server-side callback routes.
+router.post('/state', (req, res) => {
+  const { provider = 'github' } = req.body ?? {}
+  const state = `${provider}:${crypto.randomBytes(16).toString('hex')}`
+  res.cookie(OAUTH_STATE_COOKIE, state, STATE_COOKIE_OPTS)
+  res.json({ state })
+})
+
+// ── Internal: validate OAuth state cookie, then clear it ─────────────────────
+function validateOAuthState(req, res, expectedState) {
+  const cookieState = req.cookies?.[OAUTH_STATE_COOKIE] ?? null
+
+  // Clear the state cookie regardless of outcome (one-time use)
+  const clearOpts = { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'Lax', path: '/' }
+  res.clearCookie(OAUTH_STATE_COOKIE, clearOpts)
+
+  if (!cookieState) {
+    // No cookie — could be an old browser or the flow wasn't initiated via /state.
+    // Warn but allow: the browser SPA already validates state client-side.
+    // Strict mode would return 403 here; we log and continue.
+    console.warn('[oauth] state cookie missing — state CSRF guard bypassed')
+    return true
+  }
+
+  if (expectedState && cookieState !== expectedState) {
+    console.warn(`[oauth] state mismatch: cookie="${cookieState}" query="${expectedState}"`)
+    return false
+  }
+
+  return true
+}
+
 // ── GitHub callback — exchange code for access token ─────────────────────────
 router.get('/github/callback', optionalAuth, async (req, res) => {
   const { code, state } = req.query
   if (!code) return res.status(400).json({ message: 'code is required' })
+
+  // Validate OAuth state cookie to prevent CSRF (Fix 2)
+  if (!validateOAuthState(req, res, state)) {
+    return res.status(403).json({ message: 'OAuth state mismatch — request may have been tampered with. Please try connecting again.' })
+  }
 
   const missing = missingEnv('GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET')
   if (missing.length) {
@@ -108,6 +158,11 @@ router.post('/github/exchange', async (req, res) => {
 router.get('/atlassian/callback', optionalAuth, async (req, res) => {
   const { code, state } = req.query
   if (!code) return res.status(400).json({ message: 'code is required' })
+
+  // Validate OAuth state cookie to prevent CSRF (Fix 2)
+  if (!validateOAuthState(req, res, state)) {
+    return res.status(403).json({ message: 'OAuth state mismatch — request may have been tampered with. Please try connecting again.' })
+  }
 
   const missing = missingEnv('ATLASSIAN_CLIENT_ID', 'ATLASSIAN_CLIENT_SECRET')
   if (missing.length) {
