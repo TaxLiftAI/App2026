@@ -196,6 +196,25 @@ app.use((err, req, res, _next) => {
 // ── Start ─────────────────────────────────────────────────────────────────────
 const PORT = parseInt(process.env.PORT ?? '3001', 10)
 
+// ── JWT_SECRET guard — checked BEFORE listen() so failure is logged clearly ──
+// Previously this was inside the listen callback; if JWT_SECRET was missing the
+// server would bind, fire the callback, then call process.exit(1) — causing the
+// Railway healthcheck to see "service unavailable" with no obvious log reason.
+if (!process.env.JWT_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('❌ FATAL: JWT_SECRET is not set. Refusing to start without a secure secret — add it to Railway Variables.')
+    process.exit(1)
+  }
+  console.warn('⚠️  JWT_SECRET not set — using insecure default. Set it in server/.env for local dev.')
+  process.env.JWT_SECRET = 'taxlift-dev-secret-change-me-in-production'
+}
+if (!process.env.GITHUB_CLIENT_ID) {
+  console.info('ℹ️   GITHUB_CLIENT_ID not set — GitHub OAuth will return demo mode response.')
+}
+if (!process.env.ATLASSIAN_CLIENT_ID) {
+  console.info('ℹ️   ATLASSIAN_CLIENT_ID not set — Atlassian OAuth will return demo mode response.')
+}
+
 app.listen(PORT, () => {
   console.log(`\n🚀  TaxLift API running on http://localhost:${PORT}`)
   console.log(`    POST /api/v1/auth/login                      → get JWT (httpOnly cookie)`)
@@ -209,21 +228,6 @@ app.listen(PORT, () => {
   console.log(`    POST /api/v1/leads                           → capture marketing lead`)
   console.log(`    GET  /api/v1/leads                           → admin lead list`)
   console.log(`    GET  /healthz                                → liveness probe (DB-aware)\n`)
-
-  if (!process.env.JWT_SECRET) {
-    if (process.env.NODE_ENV === 'production') {
-      console.error('❌ FATAL: JWT_SECRET is not set. Refusing to start without a secure secret — add it to Railway Variables.')
-      process.exit(1)
-    }
-    console.warn('⚠️  JWT_SECRET not set — using insecure default. Set it in server/.env for local dev.')
-    process.env.JWT_SECRET = 'taxlift-dev-secret-change-me-in-production'
-  }
-  if (!process.env.GITHUB_CLIENT_ID) {
-    console.info('ℹ️   GITHUB_CLIENT_ID not set — GitHub OAuth will return demo mode response.')
-  }
-  if (!process.env.ATLASSIAN_CLIENT_ID) {
-    console.info('ℹ️   ATLASSIAN_CLIENT_ID not set — Atlassian OAuth will return demo mode response.')
-  }
 })
 
 module.exports = app
