@@ -1,284 +1,171 @@
 /**
- * GettingStartedCard — onboarding checklist shown on the Dashboard.
+ * GettingStartedCard — focused 3-step onboarding.
  *
- * Props (all optional — falls back to mock detection when not provided):
- *   clusters      {Array}   live cluster array from useClusters()
- *   integrations  {Array}   live integration array from useIntegrations()
- *   emailVerified {boolean} from currentUser.email_verified
- *   email         {string}  currentUser.email (for resend link)
+ * Steps drive the primary "Connect → scan → see credit" journey:
+ *   1. Connect a data source (GitHub / Jira)
+ *   2. R&D clusters detected
+ *   3. Export your T661 package
+ *
+ * The card auto-dismisses once all 3 steps are complete.
  */
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import {
-  Plug, GitMerge, Mic, FolderOpen, ShieldAlert, HelpCircle, MailCheck,
-  CheckCircle2, Circle, ChevronDown, ChevronUp, X,
-  Sparkles, ArrowRight, PartyPopper,
-} from 'lucide-react'
-import { CLUSTERS, INTEGRATIONS, DOCUMENTS } from '../../data/mockData'
+import { useNavigate } from 'react-router-dom'
+import { Plug, GitMerge, FileText, CheckCircle2, ArrowRight, X } from 'lucide-react'
+import { CLUSTERS, INTEGRATIONS } from '../../data/mockData'
 
-// ─── Step row ─────────────────────────────────────────────────────────────────
-function Step({ icon: Icon, iconBg, iconColor, title, description, done, ctaLabel, onCta, ctaHref, isLast }) {
-  return (
-    <div className={`flex items-start gap-4 py-4 ${!isLast ? 'border-b border-gray-50' : ''}`}>
-      {/* Left: check / circle */}
-      <div className="flex flex-col items-center gap-1 flex-shrink-0">
-        {done ? (
-          <CheckCircle2 size={20} className="text-green-500" />
-        ) : (
-          <Circle size={20} className="text-gray-300" />
-        )}
-        {!isLast && <div className="w-px flex-1 bg-gray-100 min-h-[8px]" />}
-      </div>
+const STEPS = [
+  {
+    key:         'connect',
+    icon:        Plug,
+    iconBg:      'bg-blue-50',
+    iconColor:   'text-blue-500',
+    label:       'Connect a data source',
+    detail:      'Link GitHub or Jira so TaxLift auto-detects your R&D activity.',
+    ctaLabel:    'Connect now',
+    ctaTo:       '/integrations',
+  },
+  {
+    key:         'clusters',
+    icon:        GitMerge,
+    iconBg:      'bg-indigo-50',
+    iconColor:   'text-indigo-500',
+    label:       'R&D clusters detected',
+    detail:      'TaxLift groups qualifying work into SR&ED-eligible clusters automatically.',
+    ctaLabel:    'View clusters',
+    ctaTo:       '/clusters',
+  },
+  {
+    key:         'export',
+    icon:        FileText,
+    iconBg:      'bg-violet-50',
+    iconColor:   'text-violet-500',
+    label:       'Export your T661 package',
+    detail:      'Generate CPA-ready narratives and a financial schedule for filing.',
+    ctaLabel:    'See pricing',
+    ctaTo:       '/pricing',
+  },
+]
 
-      {/* Middle: icon + text */}
-      <div className="flex items-start gap-3 flex-1 min-w-0">
-        <div className={`flex-shrink-0 w-8 h-8 rounded-lg ${done ? 'bg-green-50' : iconBg} flex items-center justify-center`}>
-          <Icon size={14} className={done ? 'text-green-400' : iconColor} />
-        </div>
-        <div className="flex-1 min-w-0 pt-0.5">
-          <p className={`text-sm font-medium leading-snug ${done ? 'text-gray-400 line-through' : 'text-gray-800'}`}>
-            {title}
-          </p>
-          <p className="text-xs text-gray-400 mt-0.5 leading-snug">{description}</p>
-        </div>
-      </div>
-
-      {/* Right: CTA */}
-      {!done && ctaLabel && (
-        ctaHref ? (
-          <Link
-            to={ctaHref}
-            className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors whitespace-nowrap"
-          >
-            {ctaLabel} <ArrowRight size={11} />
-          </Link>
-        ) : (
-          <button
-            onClick={onCta}
-            className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors whitespace-nowrap"
-          >
-            {ctaLabel} <ArrowRight size={11} />
-          </button>
-        )
-      )}
-      {done && (
-        <span className="flex-shrink-0 text-[10px] text-green-500 font-medium">Done</span>
-      )}
-    </div>
-  )
-}
-
-// ─── Celebration state ────────────────────────────────────────────────────────
-function AllDone({ onDismiss }) {
-  return (
-    <div className="flex items-center gap-4 py-4 px-2">
-      <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-        <PartyPopper size={18} className="text-green-500" />
-      </div>
-      <div className="flex-1">
-        <p className="text-sm font-semibold text-gray-900">You're all set!</p>
-        <p className="text-xs text-gray-500 mt-0.5">
-          Your workspace is fully configured. Head to the <strong>Clusters</strong> page to manage your SR&amp;ED filing.
-        </p>
-      </div>
-      <button
-        onClick={onDismiss}
-        className="flex-shrink-0 px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-      >
-        Dismiss
-      </button>
-    </div>
-  )
-}
-
-// ─── Main card ────────────────────────────────────────────────────────────────
 export default function GettingStartedCard({
   clusters:     clustersLive     = null,
   integrations: integrationsLive = null,
-  emailVerified = true,   // default true so card doesn't nag demo users
-  email         = '',
 }) {
-  const navigate = useNavigate()
-  const [collapsed,    setCollapsed]    = useState(false)
-  const [dismissed,    setDismissed]    = useState(false)
-  const [quizDone,     setQuizDone]     = useState(false)
-  const [readinessDone, setReadinessDone] = useState(false)
+  const navigate   = useNavigate()
+  const [dismissed, setDismissed] = useState(false)
 
   if (dismissed) return null
 
-  // Use live data if provided; fall back to mock detection for demo mode
   const clusters     = clustersLive     ?? CLUSTERS
   const integrations = integrationsLive ?? INTEGRATIONS
-  const documents    = DOCUMENTS  // documents API not yet live
 
-  const hasIntegration = integrations.some(i => i.status === 'healthy')
-  const hasCluster     = clusters.length > 0
-  const hasInterview   = clusters.some(c => ['Interviewed', 'Drafted', 'Approved'].includes(c.status))
-  const hasDocuments   = documents.length > 0
-  const isEmailVerified = emailVerified === true  // explicit === true, undefined/null → treat as unverified only for real API users
+  const done = {
+    connect:  integrations.some(i => i.status === 'healthy'),
+    clusters: clusters.length > 0,
+    export:   clusters.some(c => ['Drafted', 'Approved'].includes(c.status)),
+  }
 
-  const STEPS = [
-    // ── Step 0: Verify email (only shown for real API users with email_verified = false)
-    ...(!isEmailVerified ? [{
-      icon:        MailCheck,
-      iconBg:      'bg-violet-50',
-      iconColor:   'text-violet-500',
-      title:       'Verify your email address',
-      description: `Check your inbox ${email ? `(${email}) ` : ''}and click the verification link to unlock all features.`,
-      done:        false,
-      ctaLabel:    'Resend email',
-      ctaHref:     '/verify-email',
-    }] : []),
+  const completedCount = Object.values(done).filter(Boolean).length
+  const allDone        = completedCount === 3
+  const pct            = Math.round((completedCount / 3) * 100)
 
-    {
-      icon:      Plug,
-      iconBg:    'bg-blue-50',
-      iconColor: 'text-blue-500',
-      title:     'Connect your data sources',
-      description: 'Link GitHub, Jira, or other tools so TaxLift can auto-detect R&D activity.',
-      done:      hasIntegration,
-      ctaLabel:  'Connect',
-      onCta:     () => navigate('/integrations'),
-    },
-    {
-      icon:      GitMerge,
-      iconBg:    'bg-indigo-50',
-      iconColor: 'text-indigo-500',
-      title:     'Create your first activity cluster',
-      description: 'Group related commits, tickets, and work into an SR&ED-eligible cluster.',
-      done:      hasCluster,
-      ctaLabel:  'View Clusters',
-      onCta:     () => navigate('/clusters'),
-    },
-    {
-      icon:      Mic,
-      iconBg:    'bg-purple-50',
-      iconColor: 'text-purple-500',
-      title:     'Run a developer interview',
-      description: 'Capture technical context from your engineers to strengthen the narrative.',
-      done:      hasInterview,
-      ctaLabel:  'Go to Clusters',
-      onCta:     () => navigate('/clusters'),
-    },
-    {
-      icon:      FolderOpen,
-      iconBg:    'bg-teal-50',
-      iconColor: 'text-teal-500',
-      title:     'Upload evidence to the Document Vault',
-      description: 'Attach T4 slips, commit logs, and technical documents to support your claim.',
-      done:      hasDocuments,
-      ctaLabel:  'Open Vault',
-      onCta:     () => navigate('/vault'),
-    },
-    {
-      icon:      HelpCircle,
-      iconBg:    'bg-amber-50',
-      iconColor: 'text-amber-500',
-      title:     'Take the SR&ED Eligibility Quiz',
-      description: 'Confirm your work qualifies under CRA criteria before investing in a full claim.',
-      done:      quizDone,
-      ctaLabel:  'Start Quiz',
-      onCta:     () => { setQuizDone(true); navigate('/quiz') },
-    },
-    {
-      icon:      ShieldAlert,
-      iconBg:    'bg-red-50',
-      iconColor: 'text-red-500',
-      title:     'Review your Audit Readiness score',
-      description: 'Ensure each cluster scores above 70/100 before your CRA filing deadline.',
-      done:      readinessDone,
-      ctaLabel:  'Check Score',
-      onCta:     () => { setReadinessDone(true); navigate('/audit-readiness') },
-    },
-  ]
+  // Find the current active step (first incomplete)
+  const activeIndex = STEPS.findIndex(s => !done[s.key])
 
-  const completedCount = STEPS.filter(s => s.done).length
-  const totalCount     = STEPS.length
-  const allDone        = completedCount === totalCount
-  const pct            = Math.round((completedCount / totalCount) * 100)
+  if (allDone) return null  // card disappears once user is fully onboarded
 
   return (
     <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
-            <Sparkles size={15} className="text-indigo-500" />
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-gray-900">Getting Started</h3>
-            <p className="text-xs text-gray-400 mt-0.5">
-              {allDone
-                ? 'All steps complete — your workspace is ready'
-                : `${completedCount} of ${totalCount} steps complete`}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Progress pill */}
-          <div className="hidden sm:flex items-center gap-2">
-            <div className="w-28 bg-gray-100 rounded-full h-1.5">
-              <div
-                className={`h-1.5 rounded-full transition-all duration-500 ${allDone ? 'bg-green-500' : 'bg-indigo-500'}`}
-                style={{ width: `${pct}%` }}
-              />
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="text-sm font-semibold text-gray-900">
+                Step {activeIndex + 1} of 3 —{' '}
+                <span className="text-indigo-600">{STEPS[activeIndex]?.label}</span>
+              </h3>
             </div>
-            <span className={`text-xs font-semibold tabular-nums ${allDone ? 'text-green-600' : 'text-gray-600'}`}>
-              {pct}%
-            </span>
+            {/* Progress bar */}
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden max-w-[180px]">
+                <div
+                  className="h-1.5 bg-indigo-500 rounded-full transition-all duration-500"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+              <span className="text-xs text-gray-400 tabular-nums">{completedCount}/3</span>
+            </div>
           </div>
-
-          <button
-            onClick={() => setCollapsed(c => !c)}
-            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-            title={collapsed ? 'Expand' : 'Collapse'}
-          >
-            {collapsed ? <ChevronDown size={15} /> : <ChevronUp size={15} />}
-          </button>
-          <button
-            onClick={() => setDismissed(true)}
-            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-            title="Dismiss"
-          >
-            <X size={15} />
-          </button>
         </div>
+
+        <button
+          onClick={() => setDismissed(true)}
+          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-300 hover:text-gray-500 transition-colors ml-4 flex-shrink-0"
+          title="Dismiss"
+        >
+          <X size={15} />
+        </button>
       </div>
 
-      {/* Body */}
-      {!collapsed && (
-        <div className="px-5">
-          {allDone ? (
-            <AllDone onDismiss={() => setDismissed(true)} />
-          ) : (
-            STEPS.map((step, i) => (
-              <Step key={step.title} {...step} isLast={i === STEPS.length - 1} />
-            ))
-          )}
-        </div>
-      )}
+      {/* Steps row */}
+      <div className="grid grid-cols-3 divide-x divide-gray-100">
+        {STEPS.map((step, i) => {
+          const Icon       = step.icon
+          const isDone     = done[step.key]
+          const isActive   = i === activeIndex
+          const isPast     = i < activeIndex
 
-      {/* Collapsed summary bar */}
-      {collapsed && !allDone && (
-        <div className="px-5 py-2.5 flex items-center gap-3">
-          <div className="flex -space-x-1">
-            {STEPS.map((s, i) => (
-              <div
-                key={i}
-                className={`w-4 h-4 rounded-full border-2 border-white ${s.done ? 'bg-green-400' : 'bg-gray-200'}`}
-              />
-            ))}
-          </div>
-          <span className="text-xs text-gray-500">{completedCount}/{totalCount} complete</span>
-          <button
-            onClick={() => setCollapsed(false)}
-            className="ml-auto text-xs text-indigo-600 hover:text-indigo-800 font-medium"
-          >
-            Show steps
-          </button>
-        </div>
-      )}
+          return (
+            <div
+              key={step.key}
+              className={`px-5 py-4 flex flex-col gap-2 transition-colors ${
+                isActive ? 'bg-indigo-50/50' : ''
+              }`}
+            >
+              {/* Icon + status */}
+              <div className="flex items-center gap-2">
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                  isDone ? 'bg-green-50' : step.iconBg
+                }`}>
+                  {isDone
+                    ? <CheckCircle2 size={14} className="text-green-500" />
+                    : <Icon size={14} className={step.iconColor} />
+                  }
+                </div>
+                <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                  isDone    ? 'text-green-500' :
+                  isActive  ? 'text-indigo-600' :
+                              'text-gray-300'
+                }`}>
+                  {isDone ? 'Done' : isActive ? 'Now' : `Step ${i + 1}`}
+                </span>
+              </div>
+
+              {/* Label + detail */}
+              <div>
+                <p className={`text-xs font-semibold leading-snug ${
+                  isDone ? 'text-gray-400 line-through' : 'text-gray-800'
+                }`}>
+                  {step.label}
+                </p>
+                {!isDone && (
+                  <p className="text-[11px] text-gray-400 mt-0.5 leading-snug">{step.detail}</p>
+                )}
+              </div>
+
+              {/* CTA — only on active step */}
+              {isActive && (
+                <button
+                  onClick={() => navigate(step.ctaTo)}
+                  className="self-start mt-1 flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors whitespace-nowrap"
+                >
+                  {step.ctaLabel} <ArrowRight size={11} />
+                </button>
+              )}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
