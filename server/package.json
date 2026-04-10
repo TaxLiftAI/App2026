@@ -18,7 +18,8 @@
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^8.0.3",
     "pdfkit": "^0.18.0",
-    "stripe": "^20.4.1"
+    "stripe": "^20.4.1",
+    "cookie-parser": "^1.4.7"
   },
   "engines": {
     "node": ">=22.5.0"

@@ -35,6 +35,9 @@ if (process.env.SENTRY_DSN) {
 
 const express  = require('express')
 const cors     = require('cors')
+// Inline cookie parser — uses the 'cookie' package already bundled with Express.
+// Equivalent to cookie-parser without signed-cookie support (not needed here).
+const cookieLib = require('cookie')
 
 // ── Security & rate-limiting middleware ───────────────────────────────────────
 const { globalLimiter, authLimiter, scanLimiter, leadsLimiter } = require('./middleware/rateLimiter')
@@ -50,6 +53,12 @@ const db = require('./db')
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express()
+
+// ── Cookie parsing (populates req.cookies for httpOnly auth cookie) ───────────
+app.use((req, _res, next) => {
+  req.cookies = cookieLib.parse(req.headers.cookie || '')
+  next()
+})
 
 // ── Global security headers (Threat 3) ───────────────────────────────────────
 // Must come before any route so headers are set on every response
@@ -87,45 +96,50 @@ app.use(cors({
   credentials: true,
 }))
 
-// ── Stripe webhook needs raw body for signature verification ──────────────────
-// Must be registered BEFORE express.json() applies to this path.
-// We register it here so the raw body is captured correctly.
-app.use('/api/billing/webhook', express.raw({ type: 'application/json' }), (req, res, next) => {
-  // Stash the raw buffer so billing.js can verify the Stripe signature
+// ── Stripe webhook — raw body BEFORE express.json(), unversioned path ────────
+// Stripe's webhook URL is registered externally and cannot change without a
+// Stripe dashboard update. Mount at BOTH paths during the transition period.
+// Once Stripe webhook URL is updated to /api/v1/billing/webhook, remove the
+// unversioned alias below.
+const stripeRawBody = express.raw({ type: 'application/json' })
+function stripeBodyStash(req, res, next) {
   if (Buffer.isBuffer(req.body)) req.rawBody = req.body
   next()
-})
+}
+app.use('/api/billing/webhook',    stripeRawBody, stripeBodyStash)  // legacy alias
+app.use('/api/v1/billing/webhook', stripeRawBody, stripeBodyStash)  // new path
 
-// ── Routes ────────────────────────────────────────────────────────────────────
+// ── Routes — all under /api/v1/ ───────────────────────────────────────────────
+const V = '/api/v1'
 
 // Auth — tighter rate limit + bot guard (Threats 4, 1)
-app.use('/api/auth', authLimiter, botGuard, require('./routes/auth'))
+app.use(`${V}/auth`, authLimiter, botGuard, require('./routes/auth'))
 
 // OAuth — same bot guard, normal rate limit
-app.use('/api/oauth', botGuard, require('./routes/oauth'))
+app.use(`${V}/oauth`, botGuard, require('./routes/oauth'))
 
-// Billing — standard (Stripe webhook already has raw-body middleware above)
-app.use('/api/billing', require('./routes/billing'))
+// Billing — standard (Stripe webhook raw-body middleware already registered above)
+app.use(`${V}/billing`, require('./routes/billing'))
 
 // Leads / marketing — spam protection (Threat 4)
-app.use('/api/leads', leadsLimiter, require('./routes/leads'))
+app.use(`${V}/leads`, leadsLimiter, require('./routes/leads'))
 
 // Clients — authenticated, standard rate limit
-app.use('/api/clients', require('./routes/clients'))
+app.use(`${V}/clients`, require('./routes/clients'))
 
 // Clusters — scraping protection + scoring internals scrubber (Threats 1, 3)
-app.use('/api/clusters', scanLimiter, scoreInternalsScrubber, require('./routes/clusters'))
+app.use(`${V}/clusters`, scanLimiter, scoreInternalsScrubber, require('./routes/clusters'))
 
-app.use('/api/referrals', require('./routes/referrals'))
-app.use('/api/grants',    require('./routes/grants'))
+app.use(`${V}/referrals`, require('./routes/referrals'))
+app.use(`${V}/grants`,    require('./routes/grants'))
 
 // Scan — scraping protection + scoring internals scrubber (Threats 1, 3)
-app.use('/api/scan', scanLimiter, scoreInternalsScrubber, require('./routes/scan'))
+app.use(`${V}/scan`, scanLimiter, scoreInternalsScrubber, require('./routes/scan'))
 
-app.use('/api/proposals',    require('./routes/proposals'))
-app.use('/api/integrations', require('./routes/integrations'))
-app.use('/api/admin',        require('./routes/admin'))
-app.use('/api/cpa',          require('./routes/cpa'))
+app.use(`${V}/proposals`,    require('./routes/proposals'))
+app.use(`${V}/integrations`, require('./routes/integrations'))
+app.use(`${V}/admin`,        require('./routes/admin'))
+app.use(`${V}/cpa`,          require('./routes/cpa'))
 
 // ── Health check (/healthz for Railway liveness probe) ───────────────────────
 // Returns 200 when the server and database are both reachable.
@@ -184,15 +198,17 @@ const PORT = parseInt(process.env.PORT ?? '3001', 10)
 
 app.listen(PORT, () => {
   console.log(`\n🚀  TaxLift API running on http://localhost:${PORT}`)
-  console.log(`    POST /api/auth/login                  → get JWT`)
-  console.log(`    GET  /api/auth/me                     → current user`)
-  console.log(`    GET  /api/clients                     → CPA client list`)
-  console.log(`    GET  /api/referrals                   → referral pipeline`)
-  console.log(`    POST /api/billing/create-checkout-session → Stripe checkout`)
-  console.log(`    POST /api/billing/webhook             → Stripe webhook`)
-  console.log(`    POST /api/leads                       → capture marketing lead`)
-  console.log(`    GET  /api/leads                       → admin lead list`)
-  console.log(`    GET  /healthz                         → liveness probe (DB-aware)\n`)
+  console.log(`    POST /api/v1/auth/login                      → get JWT (httpOnly cookie)`)
+  console.log(`    POST /api/v1/auth/refresh                    → refresh access token`)
+  console.log(`    GET  /api/v1/auth/me                         → current user`)
+  console.log(`    GET  /api/v1/clients                         → CPA client list`)
+  console.log(`    GET  /api/v1/referrals                       → referral pipeline`)
+  console.log(`    POST /api/v1/billing/create-checkout-session → Stripe checkout`)
+  console.log(`    POST /api/billing/webhook                    → Stripe webhook (legacy alias)`)
+  console.log(`    POST /api/v1/billing/webhook                 → Stripe webhook (new path)`)
+  console.log(`    POST /api/v1/leads                           → capture marketing lead`)
+  console.log(`    GET  /api/v1/leads                           → admin lead list`)
+  console.log(`    GET  /healthz                                → liveness probe (DB-aware)\n`)
 
   if (!process.env.JWT_SECRET) {
     if (process.env.NODE_ENV === 'production') {

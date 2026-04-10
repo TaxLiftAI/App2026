@@ -427,4 +427,10 @@ seed()
   'ALTER TABLE users ADD COLUMN password_reset_sent_at TEXT',
 ].forEach(sql => { try { db.exec(sql) } catch { /* column already exists — safe to ignore */ } })
 
+// ── Refresh-token columns (httpOnly cookie auth — Fix 3) ──────────────────────
+;[
+  'ALTER TABLE users ADD COLUMN refresh_token            TEXT',
+  'ALTER TABLE users ADD COLUMN refresh_token_expires_at TEXT',
+].forEach(sql => { try { db.exec(sql) } catch { /* already exists */ } })
+
 module.exports = db

@@ -1,20 +1,25 @@
 /**
- * Auth routes
- *   POST  /api/auth/register
- *   POST  /api/auth/login
- *   GET   /api/auth/me
- *   GET   /api/auth/profile
- *   PATCH /api/auth/profile
- *   PATCH /api/auth/onboarding-complete
- *   GET   /api/auth/verify-email?token=xxx  — verify email address
- *   POST  /api/auth/resend-verification     — resend verification email (auth required)
+ * Auth routes (all under /api/v1/auth/)
+ *   POST  /register              — create account, sets httpOnly cookies
+ *   POST  /login                 — authenticate, sets httpOnly cookies
+ *   POST  /logout                — clears cookies, invalidates refresh token in DB
+ *   POST  /refresh               — rotates access token using httpOnly refresh cookie
+ *   GET   /me                    — current user (auth required)
+ *   GET   /profile               — company profile (auth required)
+ *   PATCH /profile               — update company profile (auth required)
+ *   PATCH /onboarding-complete   — mark onboarding done (auth required)
+ *   POST  /forgot-password       — send reset email (public)
+ *   POST  /reset-password        — apply reset token (public)
+ *   GET   /verify-email?token=   — verify email address (public)
+ *   POST  /resend-verification   — resend verification email (auth required)
+ *   POST  /change-password       — change password (auth required)
  */
 const router  = require('express').Router()
 const bcrypt  = require('bcryptjs')
 const crypto  = require('crypto')
 const { v4: uuid } = require('../utils/uuid')
 const db      = require('../db')
-const { signToken, requireAuth } = require('../middleware/auth')
+const { signToken, cookieOptions, requireAuth } = require('../middleware/auth')
 const { logSecurityEvent }       = require('../middleware/security')
 
 // ── Per-account login attempt tracking ───────────────────────────────────────
@@ -175,8 +180,15 @@ router.post('/register', async (req, res) => {
   sendVerificationEmail(email.toLowerCase(), verifyToken)
     .catch(err => console.error('[auth/register] verify email error:', err.message))
 
-  const user  = db.prepare(USER_SELECT).get(id)
-  const token = signToken({ id: user.id, email: user.email, role: user.role, tenant_id: user.tenant_id })
+  const user         = db.prepare(USER_SELECT).get(id)
+  const accessToken  = signToken({ id: user.id, email: user.email, role: user.role, tenant_id: user.tenant_id })
+  const refreshToken = crypto.randomBytes(32).toString('hex')
+
+  db.prepare(`UPDATE users SET refresh_token = ?, refresh_token_expires_at = datetime('now', '+7 days') WHERE id = ?`)
+    .run(refreshToken, user.id)
+
+  res.cookie('taxlift_access',  accessToken,  cookieOptions(15 * 60 * 1000))
+  res.cookie('taxlift_refresh', refreshToken, cookieOptions(7 * 24 * 60 * 60 * 1000))
 
   // Kick off 3-step drip sequence (fire-and-forget, never blocks the response)
   try {
@@ -195,7 +207,7 @@ router.post('/register', async (req, res) => {
     plan: 'free',
   }).catch(err => console.error('[auth/register] alert error:', err.message))
 
-  res.status(201).json({ access_token: token, token_type: 'bearer', user: shapeUser(user) })
+  res.status(201).json({ user: shapeUser(user) })
 })
 
 // ── POST /api/auth/login ──────────────────────────────────────────────────────
@@ -244,9 +256,16 @@ router.post('/login', async (req, res) => {
   // Successful login — log it for audit trail
   try { logSecurityEvent(user.id, 'login_success', ip, ua) } catch { /* non-blocking */ }
 
-  const token = signToken({ id: user.id, email: user.email, role: user.role, tenant_id: user.tenant_id })
+  const accessToken  = signToken({ id: user.id, email: user.email, role: user.role, tenant_id: user.tenant_id })
+  const refreshToken = crypto.randomBytes(32).toString('hex')
 
-  res.json({ access_token: token, token_type: 'bearer', user: shapeUser(user) })
+  db.prepare(`UPDATE users SET refresh_token = ?, refresh_token_expires_at = datetime('now', '+7 days') WHERE id = ?`)
+    .run(refreshToken, user.id)
+
+  res.cookie('taxlift_access',  accessToken,  cookieOptions(15 * 60 * 1000))
+  res.cookie('taxlift_refresh', refreshToken, cookieOptions(7 * 24 * 60 * 60 * 1000))
+
+  res.json({ user: shapeUser(user) })
 })
 
 // ── GET /api/auth/me ──────────────────────────────────────────────────────────
@@ -496,6 +515,83 @@ router.post('/resend-verification', requireAuth, async (req, res) => {
     .catch(err => console.error('[auth/resend-verification] error:', err.message))
 
   res.json({ ok: true, message: 'Verification email sent. Check your inbox.' })
+})
+
+// ── POST /api/auth/logout ─────────────────────────────────────────────────────
+// Clears auth cookies and invalidates the refresh token in the DB.
+// Accepts both authenticated and unauthenticated requests (graceful logout).
+router.post('/logout', (req, res) => {
+  // Invalidate refresh token in DB if we can identify the user
+  const refreshToken = req.cookies?.taxlift_refresh ?? null
+  if (refreshToken) {
+    try {
+      db.prepare('UPDATE users SET refresh_token = NULL, refresh_token_expires_at = NULL WHERE refresh_token = ?')
+        .run(refreshToken)
+    } catch { /* non-blocking */ }
+  }
+
+  const clearOpts = { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'Lax', path: '/' }
+  res.clearCookie('taxlift_access',  clearOpts)
+  res.clearCookie('taxlift_refresh', clearOpts)
+  res.json({ ok: true })
+})
+
+// ── POST /api/auth/refresh ────────────────────────────────────────────────────
+// Reads the httpOnly refresh token cookie, validates it against the DB,
+// and issues a fresh access token cookie. Called automatically by api.js on 401.
+router.post('/refresh', (req, res) => {
+  const refreshToken = req.cookies?.taxlift_refresh ?? null
+  if (!refreshToken) {
+    return res.status(401).json({ message: 'No refresh token' })
+  }
+
+  const user = db.prepare(`
+    SELECT id, email, role, tenant_id, refresh_token_expires_at
+    FROM   users
+    WHERE  refresh_token = ?
+  `).get(refreshToken)
+
+  if (!user) {
+    return res.status(401).json({ message: 'Invalid refresh token' })
+  }
+
+  // Check expiry
+  if (user.refresh_token_expires_at) {
+    const expiry = new Date(user.refresh_token_expires_at + 'Z')
+    if (Date.now() > expiry.getTime()) {
+      const clearOpts = { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'Lax', path: '/' }
+      res.clearCookie('taxlift_access',  clearOpts)
+      res.clearCookie('taxlift_refresh', clearOpts)
+      return res.status(401).json({ message: 'Refresh token expired — please log in again' })
+    }
+  }
+
+  // Issue fresh access token (rotate: new short-lived cookie)
+  const newAccessToken = signToken({ id: user.id, email: user.email, role: user.role, tenant_id: user.tenant_id })
+  res.cookie('taxlift_access', newAccessToken, cookieOptions(15 * 60 * 1000))
+  res.json({ ok: true })
+})
+
+// ── PATCH /api/auth/change-password ──────────────────────────────────────────
+router.post('/change-password', requireAuth, async (req, res) => {
+  const { current_password, new_password } = req.body ?? {}
+  if (!current_password || !new_password) {
+    return res.status(400).json({ message: 'current_password and new_password are required.' })
+  }
+  if (new_password.length < 8) {
+    return res.status(400).json({ message: 'New password must be at least 8 characters.' })
+  }
+
+  const user = db.prepare('SELECT id, password_hash FROM users WHERE id = ?').get(req.user.id)
+  if (!user) return res.status(404).json({ message: 'User not found.' })
+
+  const valid = await bcrypt.compare(current_password, user.password_hash)
+  if (!valid) return res.status(401).json({ message: 'Current password is incorrect.' })
+
+  const hash = await bcrypt.hash(new_password, 10)
+  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, user.id)
+
+  res.json({ ok: true, message: 'Password changed successfully.' })
 })
 
 module.exports = router

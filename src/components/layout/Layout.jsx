@@ -120,6 +120,67 @@ function IntegrationBanner({ integrations = [], onDismiss }) {
   )
 }
 
+// ── Email verification banner ─────────────────────────────────────────────────
+function EmailVerifyBanner({ email, topOffset, onDismiss }) {
+  const [sending,   setSending]   = useState(false)
+  const [sent,      setSent]      = useState(false)
+  const [cooldown,  setCooldown]  = useState(0)
+
+  async function handleResend() {
+    setSending(true)
+    try {
+      const res = await fetch('/api/v1/auth/resend-verification', {
+        method:      'POST',
+        credentials: 'include',   // sends httpOnly auth cookie automatically
+        headers:     { 'Content-Type': 'application/json' },
+      })
+      const data = await res.json()
+      if (res.status === 429) {
+        const secs = parseInt((data.message || '').match(/\d+/)?.[0] || '60', 10)
+        setCooldown(secs)
+        const t = setInterval(() => setCooldown(c => { if (c <= 1) { clearInterval(t); return 0 } return c - 1 }), 1000)
+      } else {
+        setSent(true)
+      }
+    } catch { /* ignore */ } finally { setSending(false) }
+  }
+
+  return (
+    <div
+      className="fixed left-60 right-0 z-20 h-10 bg-violet-50 border-b border-violet-200 flex items-center gap-3 px-5"
+      style={{ top: topOffset }}
+    >
+      <AlertTriangle size={13} className="text-violet-600 flex-shrink-0" />
+      <p className="text-xs text-violet-800 flex-1">
+        {sent
+          ? <span className="font-semibold">✓ Verification email sent — check your inbox.</span>
+          : <>
+              <span className="font-semibold">Please verify your email</span>
+              {email ? ` (${email})` : ''} to unlock all features.{' '}
+              {cooldown > 0
+                ? <span className="text-violet-500">Resend available in {cooldown}s</span>
+                : <button
+                    onClick={handleResend}
+                    disabled={sending}
+                    className="font-semibold underline hover:text-violet-900 transition-colors disabled:opacity-60"
+                  >
+                    {sending ? 'Sending…' : 'Resend email →'}
+                  </button>
+              }
+            </>
+        }
+      </p>
+      <button
+        onClick={onDismiss}
+        aria-label="Dismiss"
+        className="text-violet-400 hover:text-violet-700 transition-colors flex-shrink-0 p-0.5 rounded"
+      >
+        <X size={13} />
+      </button>
+    </div>
+  )
+}
+
 // ── Layout ────────────────────────────────────────────────────────────────────
 export default function Layout({ children }) {
   const [intBannerDismissed,   setIntBannerDismissed]   = useState(false)
@@ -154,17 +215,22 @@ export default function Layout({ children }) {
     return () => document.removeEventListener('keydown', handle)
   }, [])
 
-  const isFreeUser   = (currentUser?.subscription_tier ?? 'free') === 'free'
-  const hasDegraded  = integrations.some(i => i.status === 'degraded' || i.status === 'expired')
-  const showIntBanner   = hasDegraded && !intBannerDismissed
-  const showTrialBanner = isFreeUser && !trialBannerDismissed && !!currentUser?.created_at
+  const isFreeUser      = (currentUser?.subscription_tier ?? 'free') === 'free'
+  const hasDegraded     = integrations.some(i => i.status === 'degraded' || i.status === 'expired')
+  const isUnverified    = currentUser && currentUser.email_verified === false
+  const [verifyBannerDismissed, setVerifyBannerDismissed] = useState(false)
+
+  const showIntBanner    = hasDegraded && !intBannerDismissed
+  const showTrialBanner  = isFreeUser && !trialBannerDismissed && !!currentUser?.created_at
+  const showVerifyBanner = isUnverified && !verifyBannerDismissed
 
   // Stack banners below the fixed header (top: 56px = 3.5rem)
   const HEADER_H  = 56
   const BANNER_H  = 40
   const intTop    = HEADER_H
   const trialTop  = HEADER_H + (showIntBanner ? BANNER_H : 0)
-  const bannerCount = (showIntBanner ? 1 : 0) + (showTrialBanner ? 1 : 0)
+  const verifyTop = HEADER_H + (showIntBanner ? BANNER_H : 0) + (showTrialBanner ? BANNER_H : 0)
+  const bannerCount = (showIntBanner ? 1 : 0) + (showTrialBanner ? 1 : 0) + (showVerifyBanner ? 1 : 0)
   const mainPt    = HEADER_H + bannerCount * BANNER_H
 
   function dismissTrial() {
@@ -190,6 +256,13 @@ export default function Layout({ children }) {
           createdAt={currentUser?.created_at}
           topOffset={trialTop}
           onDismiss={dismissTrial}
+        />
+      )}
+      {showVerifyBanner && (
+        <EmailVerifyBanner
+          email={currentUser?.email}
+          topOffset={verifyTop}
+          onDismiss={() => setVerifyBannerDismissed(true)}
         />
       )}
 

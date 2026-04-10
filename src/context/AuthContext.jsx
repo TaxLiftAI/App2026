@@ -1,15 +1,16 @@
 /**
  * AuthContext — supports two login modes:
  *
- *  1. Real mode   — email + password → POST /auth/login → JWT stored in localStorage
- *                   On mount, reads existing token and calls /auth/me to restore session.
+ *  1. Real mode   — email + password → POST /auth/login → JWT lives in httpOnly cookie.
+ *                   On mount, calls /auth/me; the browser sends the cookie automatically.
+ *                   Tokens never touch localStorage — eliminates XSS exfiltration risk.
  *
  *  2. Demo mode   — select a mock persona; no network required.
  *                   Falls back automatically when the API is unreachable.
  */
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { USERS } from '../data/mockData'
-import { auth as authApi, token as tokenStore, ApiError } from '../lib/api'
+import { auth as authApi, ApiError } from '../lib/api'
 
 const AuthContext = createContext(null)
 
@@ -72,31 +73,40 @@ export function AuthProvider({ children }) {
   const [authLoading, setAuthLoading]   = useState(true)   // true during initial session restore
   const [authError,   setAuthError]     = useState(null)
 
-  // ── Restore session from stored JWT on mount ────────────────────────────────────────────────
+  // ── Restore session on mount ────────────────────────────────────────────────────────────────
+  // The browser sends the httpOnly taxlift_access cookie automatically.
+  // If it's valid, /me succeeds and we restore state. If expired, api.js auto-refreshes via
+  // the taxlift_refresh cookie. If both are expired, the call fails silently → no session.
   useEffect(() => {
-    const stored = tokenStore.get()
-    if (!stored) {
-      setAuthLoading(false)
-      return
-    }
     authApi.me()
       .then(me => {
         setCurrentUser(shapeBackendUser(me))
         setIsDemoMode(false)
       })
       .catch(() => {
-        // Token expired or backend unreachable — clear token silently
-        tokenStore.clear()
+        // Cookie expired / not present — start unauthenticated
       })
       .finally(() => setAuthLoading(false))
   }, [])
 
+  // ── Global unauthorized event — fired by api.js when both tokens expire ───────
+  // Clears local state so the UI drops to the login page.
+  useEffect(() => {
+    function handleUnauthorized() {
+      setCurrentUser(null)
+      setIsDemoMode(false)
+    }
+    window.addEventListener('taxlift:unauthorized', handleUnauthorized)
+    return () => window.removeEventListener('taxlift:unauthorized', handleUnauthorized)
+  }, [])
+
   // ── Real login ──────────────────────────────────────────────────────────────────────────────
+  // Server sets httpOnly cookies on successful login; no token handling needed here.
   const loginWithCredentials = useCallback(async (email, password) => {
     setAuthError(null)
     try {
-      const data = await authApi.login(email, password)
-      tokenStore.set(data.access_token)
+      await authApi.login(email, password)
+      // Cookies are now set by the server — fetch fresh user state
       const me = await authApi.me()
       const shaped = shapeBackendUser(me)
       setCurrentUser(shaped)
@@ -112,15 +122,17 @@ export function AuthProvider({ children }) {
   }, [])
 
   // ── Register new account ──────────────────────────────────────────────────────────────────────
+  // Server sets httpOnly cookies on successful register; no token handling needed here.
   const register = useCallback(async ({ email, password, full_name = '', firm_name = '' }) => {
     setAuthError(null)
     try {
-      const data = await authApi.register({ email, password, full_name, firm_name })
-      tokenStore.set(data.access_token)
+      await authApi.register({ email, password, full_name, firm_name })
+      // Cookies are now set by the server — fetch fresh user state
       const me = await authApi.me()
-      setCurrentUser(shapeBackendUser(me))
+      const shaped = shapeBackendUser(me)
+      setCurrentUser(shaped)
       setIsDemoMode(false)
-      return { ok: true, user: shapeBackendUser(me) }
+      return { ok: true, user: shaped }
     } catch (err) {
       const msg = err instanceof ApiError
         ? err.message
@@ -134,7 +146,6 @@ export function AuthProvider({ children }) {
   const loginDemo = useCallback((userId) => {
     const raw = USERS.find(u => u.id === userId)
     if (raw) {
-      tokenStore.clear()
       // Shape the mock user so all UI components get the same fields they expect
       // from a real backend user (name, subscription_tier, onboarding_completed, etc.)
       setCurrentUser({
@@ -150,12 +161,16 @@ export function AuthProvider({ children }) {
   }, [])
 
   // ── Logout ────────────────────────────────────────────────────────────────────────────────────
-  const logout = useCallback(() => {
-    tokenStore.clear()
+  // Calls the server to clear httpOnly cookies and invalidate the refresh token in the DB.
+  // Then clears local state regardless of server response (best-effort cookie invalidation).
+  const logout = useCallback(async () => {
+    if (!isDemoMode) {
+      try { await authApi.logout() } catch { /* ignore — cookies expire naturally */ }
+    }
     setCurrentUser(null)
     setIsDemoMode(false)
     setAuthError(null)
-  }, [])
+  }, [isDemoMode])
 
   // ── Refresh current user from /me ────────────────────────────────────────────────
   const refreshUser = useCallback(async () => {
@@ -167,7 +182,6 @@ export function AuthProvider({ children }) {
 
   // ── CPA demo login (Blocker 1 fix) ───────────────────────────────────────────
   const loginCpaDemo = useCallback(() => {
-    tokenStore.clear()
     setCurrentUser(CPA_DEMO_PERSONA)
     setIsDemoMode(true)
     setAuthError(null)
