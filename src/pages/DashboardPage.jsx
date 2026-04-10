@@ -4,7 +4,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from 'recharts'
-import { GitMerge, Clock, CheckCircle2, DollarSign, AlertTriangle, TrendingUp, FlaskConical, Zap, Mail, X, Send, Loader2 } from 'lucide-react'
+import { GitMerge, Clock, CheckCircle2, DollarSign, AlertTriangle, TrendingUp, FlaskConical, Zap, Mail, X, Send, Loader2, Calendar, ArrowRight, Sparkles, Plug } from 'lucide-react'
 import { getCreditTrend } from '../data/mockData'
 import { formatCurrency, formatHours, STATUS_COLORS } from '../lib/utils'
 import { useClusters, useIntegrations } from '../hooks'
@@ -353,6 +353,196 @@ function StatCard({ label, value, sub, icon: Icon, iconColor = 'text-indigo-600'
   )
 }
 
+// ── A: Credit Estimate Hero ───────────────────────────────────────────────────
+// Shown when a user arrives from the free scan flow and has a credit estimate.
+// Replaces the subtle indigo banner with a full-bleed hero that puts the $ front-and-centre.
+function CreditEstimateHero({ scan, onDismiss, navigate }) {
+  const totalCredit  = (scan.clusters ?? []).reduce((s, c) => s + (c.estimated_credit_cad ?? c.estimatedCredit ?? 0), 0)
+  const clusterCount = scan.clusters?.length ?? 0
+  if (totalCredit === 0 && clusterCount === 0) return null
+
+  const repoList = (scan.repos ?? []).slice(0, 3).join(', ')
+  const moreRepos = (scan.repos ?? []).length > 3 ? ` +${scan.repos.length - 3} more` : ''
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 text-white px-7 py-7 shadow-xl">
+      {/* Decorative circles */}
+      <div className="pointer-events-none absolute -top-12 -right-12 w-52 h-52 rounded-full bg-white opacity-5" />
+      <div className="pointer-events-none absolute bottom-0 left-1/3 w-32 h-32 rounded-full bg-violet-400 opacity-10" />
+
+      <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+        {/* Left: big number */}
+        <div>
+          <p className="text-indigo-200 text-xs font-bold uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+            <Sparkles size={11} /> Your estimated SR&amp;ED credit
+          </p>
+          <p className="text-5xl font-extrabold tabular-nums tracking-tight leading-none mb-2">
+            {totalCredit > 0 ? formatCurrency(totalCredit) : `${clusterCount} clusters found`}
+          </p>
+          <p className="text-indigo-200 text-sm leading-snug">
+            {clusterCount} qualifying cluster{clusterCount !== 1 ? 's' : ''} detected
+            {repoList ? <> across <span className="text-white font-medium">{repoList}{moreRepos}</span></> : ''}
+          </p>
+          <p className="text-indigo-300 text-xs mt-2">
+            Based on your free GitHub scan · Generate the full T661 package to file with your CPA
+          </p>
+        </div>
+
+        {/* Right: CTAs */}
+        <div className="flex flex-col gap-2.5 flex-shrink-0 min-w-[200px]">
+          <button
+            onClick={() => navigate('/pricing')}
+            className="flex items-center justify-center gap-2 px-6 py-3 bg-white text-indigo-700 font-bold text-sm rounded-xl hover:bg-indigo-50 transition-colors shadow-lg whitespace-nowrap"
+          >
+            <Sparkles size={14} />
+            Generate T661 package
+          </button>
+          <button
+            onClick={() => navigate('/scan/results')}
+            className="text-xs text-indigo-300 hover:text-white text-center transition-colors py-1"
+          >
+            View detailed breakdown →
+          </button>
+        </div>
+      </div>
+
+      {/* Dismiss */}
+      <button
+        onClick={onDismiss}
+        className="absolute top-3 right-3 p-1 text-indigo-300 hover:text-white transition-colors rounded-lg hover:bg-white/10"
+        title="Dismiss"
+      >
+        <X size={14} />
+      </button>
+    </div>
+  )
+}
+
+// ── B: Filing Deadline Countdown ──────────────────────────────────────────────
+// CRA allows SR&ED claims within 18 months of fiscal year-end.
+// Defaults to Dec 31 of the most recently completed fiscal year.
+function FilingDeadlineStrip({ navigate, fiscalYearEnd }) {
+  const now = new Date()
+
+  // Parse fiscal year end month (e.g. "December" → 11, "June" → 5)
+  const MONTH_MAP = {
+    january: 0, february: 1, march: 2, april: 3, may: 4, june: 5,
+    july: 6, august: 7, september: 8, october: 9, november: 10, december: 11,
+  }
+  const fyMonth = MONTH_MAP[(fiscalYearEnd ?? 'december').toLowerCase()] ?? 11
+
+  // Find most recently completed fiscal year-end date
+  let fyEndDate = new Date(now.getFullYear(), fyMonth, new Date(now.getFullYear(), fyMonth + 1, 0).getDate())
+  if (fyEndDate >= now) fyEndDate.setFullYear(fyEndDate.getFullYear() - 1)  // step back if not yet passed
+
+  // CRA filing deadline: 18 months after fiscal year-end
+  const deadline = new Date(fyEndDate)
+  deadline.setMonth(deadline.getMonth() + 18)
+
+  const daysLeft = Math.ceil((deadline - now) / 86_400_000)
+  if (daysLeft <= 0) return null   // past deadline — don't show
+
+  const fyYear    = fyEndDate.getFullYear()
+  const urgent    = daysLeft <= 60
+  const warning   = daysLeft <= 120
+
+  const deadlineStr = deadline.toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' })
+
+  return (
+    <div className={`flex items-center gap-3 px-4 py-2.5 rounded-xl border text-xs ${
+      urgent  ? 'bg-red-50 border-red-200 text-red-800' :
+      warning ? 'bg-amber-50 border-amber-200 text-amber-800' :
+                'bg-slate-50 border-slate-200 text-slate-700'
+    }`}>
+      <Calendar size={13} className={`flex-shrink-0 ${urgent ? 'text-red-500' : warning ? 'text-amber-500' : 'text-slate-400'}`} />
+      <span className="flex-1">
+        <span className="font-semibold">SR&amp;ED filing deadline (FY{fyYear}):</span>{' '}
+        {deadlineStr} —{' '}
+        <span className={`font-bold ${urgent ? 'text-red-700' : warning ? 'text-amber-700' : 'text-indigo-600'}`}>
+          {daysLeft} day{daysLeft !== 1 ? 's' : ''} remaining
+        </span>
+        {urgent && <span className="ml-1 font-semibold text-red-700"> · Act now</span>}
+      </span>
+      <button
+        onClick={() => navigate('/pricing')}
+        className={`flex-shrink-0 flex items-center gap-1 font-semibold whitespace-nowrap hover:underline ${
+          urgent ? 'text-red-700' : 'text-indigo-600'
+        }`}
+      >
+        Start filing <ArrowRight size={11} />
+      </button>
+    </div>
+  )
+}
+
+// ── C: Empty-state upgrade nudge ──────────────────────────────────────────────
+// Shown in place of the zero stat cards when a real user has no clusters yet.
+// Communicates value and drives to the first meaningful action.
+const INDUSTRY_MEDIAN_CREDIT = 87000  // CAD — approximate median SR&ED refund for SMBs
+
+function EmptyDashboardCTA({ navigate, pendingScan }) {
+  const scanCredit = (pendingScan?.clusters ?? []).reduce((s, c) => s + (c.estimated_credit_cad ?? 0), 0)
+  const displayCredit = scanCredit > 0 ? scanCredit : INDUSTRY_MEDIAN_CREDIT
+  const isEstimate    = scanCredit === 0
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Hero value prop */}
+      <div className="md:col-span-2 flex flex-col justify-between gap-4 bg-gradient-to-br from-slate-900 to-indigo-950 rounded-2xl p-6 text-white">
+        <div>
+          <p className="text-indigo-300 text-xs font-bold uppercase tracking-widest mb-2">
+            {isEstimate ? 'Industry median SR&ED credit' : 'Your estimated SR&ED credit'}
+          </p>
+          <p className="text-4xl font-extrabold tabular-nums tracking-tight mb-1">
+            {formatCurrency(displayCredit)}
+            {isEstimate && <span className="text-lg font-normal text-indigo-300 ml-2">avg</span>}
+          </p>
+          <p className="text-slate-300 text-sm mt-1">
+            {isEstimate
+              ? 'Canadian SMBs in your sector claim $50K–$200K per year on average.'
+              : `Detected across ${pendingScan.clusters.length} qualifying clusters in your codebase.`}
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <button
+            onClick={() => navigate('/quick-connect')}
+            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-500 hover:bg-indigo-400 text-white font-semibold text-sm rounded-xl transition-colors"
+          >
+            <Plug size={14} /> Connect GitHub
+          </button>
+          <button
+            onClick={() => navigate('/pricing')}
+            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white font-semibold text-sm rounded-xl transition-colors"
+          >
+            See pricing <ArrowRight size={13} />
+          </button>
+        </div>
+      </div>
+
+      {/* 3 quick-win steps */}
+      <div className="flex flex-col gap-3">
+        {[
+          { n: '1', label: 'Connect GitHub or Jira',       sub: 'TaxLift scans your commits automatically',   to: '/quick-connect', color: 'bg-blue-50 text-blue-600' },
+          { n: '2', label: 'Review detected clusters',     sub: 'AI groups qualifying R&D into SR&ED clusters', to: '/clusters',      color: 'bg-indigo-50 text-indigo-600' },
+          { n: '3', label: 'Export your T661 package',     sub: 'CPA-ready narratives + financial schedule',   to: '/pricing',       color: 'bg-violet-50 text-violet-600' },
+        ].map(({ n, label, sub, to, color }) => (
+          <button
+            key={n}
+            onClick={() => navigate(to)}
+            className="flex items-start gap-3 p-4 bg-white border border-gray-100 rounded-xl hover:border-indigo-200 hover:shadow-sm transition-all text-left"
+          >
+            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${color}`}>{n}</span>
+            <div>
+              <p className="text-sm font-semibold text-gray-800">{label}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function DashboardPage() {
   const navigate = useNavigate()
   const { currentUser } = useAuth()
@@ -396,10 +586,11 @@ export default function DashboardPage() {
     if (associatedRef.current) return
     associatedRef.current = true
 
-    fetch(`/api/scan/free/${pendingScan.scanId}/associate`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id: currentUser.id }),
+    fetch(`/api/v1/scan/free/${pendingScan.scanId}/associate`, {
+      method:      'PATCH',
+      credentials: 'include',
+      headers:     { 'Content-Type': 'application/json' },
+      body:        JSON.stringify({ user_id: currentUser.id }),
     }).catch(() => { /* fire-and-forget */ })
   }, [pendingScan, currentUser])
 
@@ -433,35 +624,18 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Pending free scan banner */}
+      {/* B: Filing deadline countdown — real users only, not demo */}
+      {!usingMock && currentUser?._fromApi && (
+        <FilingDeadlineStrip navigate={navigate} fiscalYearEnd={null} />
+      )}
+
+      {/* A: Credit Estimate Hero — shown when user arrived from free scan flow */}
       {pendingScan && (
-        <div className="flex items-center justify-between gap-4 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-xl">
-          <div className="flex items-start gap-3 min-w-0">
-            <Zap size={15} className="text-indigo-600 mt-0.5 flex-shrink-0" />
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-indigo-900">
-                You have a pending scan — {pendingScan.clusters?.length} qualifying cluster{pendingScan.clusters?.length !== 1 ? 's' : ''} found
-              </p>
-              <p className="text-[11px] text-indigo-600 mt-0.5 truncate">
-                Repos: {(pendingScan.repos ?? []).join(', ') || 'demo repos'} · Complete setup to generate your CPA-ready package
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <button
-              onClick={() => navigate('/scan/results')}
-              className="text-xs font-semibold text-indigo-700 hover:text-indigo-900 transition-colors whitespace-nowrap"
-            >
-              View results →
-            </button>
-            <button
-              onClick={() => { sessionStorage.removeItem('taxlift_scan_results'); setPendingScan(null) }}
-              className="text-xs text-indigo-400 hover:text-indigo-600 transition-colors"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
+        <CreditEstimateHero
+          scan={pendingScan}
+          navigate={navigate}
+          onDismiss={() => { sessionStorage.removeItem('taxlift_scan_results'); setPendingScan(null) }}
+        />
       )}
 
       {/* Invite accountant modal */}
@@ -520,39 +694,43 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard
-          label="Total Clusters"
-          value={stats.total}
-          sub={`${stats.pending} pending review`}
-          icon={GitMerge}
-        />
-        <StatCard
-          label="Approved Q1 2026"
-          value={stats.approved}
-          sub="clusters fully processed"
-          icon={CheckCircle2}
-          iconColor="text-green-600"
-          iconBg="bg-green-50"
-        />
-        <StatCard
-          label="Total Eligible Hours"
-          value={formatHours(stats.totalHours)}
-          sub="across all pipeline clusters"
-          icon={Clock}
-          iconColor="text-blue-600"
-          iconBg="bg-blue-50"
-        />
-        <StatCard
-          label="Estimated Credit (CAD)"
-          value={formatCurrency(stats.totalCreditCAD)}
-          sub="pipeline estimate"
-          icon={DollarSign}
-          iconColor="text-emerald-600"
-          iconBg="bg-emerald-50"
-        />
-      </div>
+      {/* C: Stats — show upgrade nudge when empty (real user, no clusters yet) */}
+      {!usingMock && clusters !== null && clusters.length === 0 ? (
+        <EmptyDashboardCTA navigate={navigate} pendingScan={pendingScan} />
+      ) : (
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+          <StatCard
+            label="Total Clusters"
+            value={stats.total}
+            sub={`${stats.pending} pending review`}
+            icon={GitMerge}
+          />
+          <StatCard
+            label="Approved Q1 2026"
+            value={stats.approved}
+            sub="clusters fully processed"
+            icon={CheckCircle2}
+            iconColor="text-green-600"
+            iconBg="bg-green-50"
+          />
+          <StatCard
+            label="Total Eligible Hours"
+            value={formatHours(stats.totalHours)}
+            sub="across all pipeline clusters"
+            icon={Clock}
+            iconColor="text-blue-600"
+            iconBg="bg-blue-50"
+          />
+          <StatCard
+            label="Estimated Credit (CAD)"
+            value={formatCurrency(stats.totalCreditCAD)}
+            sub="pipeline estimate"
+            icon={DollarSign}
+            iconColor="text-emerald-600"
+            iconBg="bg-emerald-50"
+          />
+        </div>
+      )}
 
       {/* Charts row */}
       <div className="grid grid-cols-3 gap-4">
