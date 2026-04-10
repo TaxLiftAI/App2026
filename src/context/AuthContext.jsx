@@ -78,6 +78,10 @@ export function AuthProvider({ children }) {
   // If it's valid, /me succeeds and we restore state. If expired, api.js auto-refreshes via
   // the taxlift_refresh cookie. If both are expired, the call fails silently → no session.
   useEffect(() => {
+    // Safety timeout: if the server takes > 12 s (Railway cold start), stop
+    // blocking the UI so the user at least sees the login page instead of
+    // a blank white screen.
+    const timeout = setTimeout(() => setAuthLoading(false), 12_000)
     authApi.me()
       .then(me => {
         setCurrentUser(shapeBackendUser(me))
@@ -86,7 +90,11 @@ export function AuthProvider({ children }) {
       .catch(() => {
         // Cookie expired / not present — start unauthenticated
       })
-      .finally(() => setAuthLoading(false))
+      .finally(() => {
+        clearTimeout(timeout)
+        setAuthLoading(false)
+      })
+    return () => clearTimeout(timeout)
   }, [])
 
   // ── Global unauthorized event — fired by api.js when both tokens expire ───────
