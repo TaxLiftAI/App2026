@@ -695,7 +695,7 @@ export default function DashboardPage() {
       )}
 
       {/* C: Stats — show upgrade nudge when empty (real user, no clusters yet) */}
-      {!usingMock && clusters !== null && clusters.length === 0 ? (
+      {!usingMock && clusters != null && clusters.length === 0 ? (
         <EmptyDashboardCTA navigate={navigate} pendingScan={pendingScan} />
       ) : (
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
