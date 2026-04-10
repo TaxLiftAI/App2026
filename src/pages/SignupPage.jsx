@@ -149,8 +149,9 @@ export default function SignupPage() {
       if (raw) {
         const scan = JSON.parse(raw)
         if (scan?.scanId && result.user?.id) {
-          fetch(`/api/scan/free/${scan.scanId}/associate`, {
+          fetch(`/api/v1/scan/free/${scan.scanId}/associate`, {
             method: 'PATCH',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: result.user.id }),
           }).catch(() => {})

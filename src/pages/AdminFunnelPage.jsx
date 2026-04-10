@@ -234,8 +234,8 @@ export default function AdminFunnelPage() {
   function handleExport() {
     const tok = token.get()
     setLoading(true)
-    fetch(`${BASE_URL}/api/admin/funnel/export`, {
-      headers: tok ? { Authorization: `Bearer ${tok}` } : {},
+    fetch(`${BASE_URL}/api/v1/admin/funnel/export`, {
+      credentials: 'include',
     })
       .then(r => r.blob())
       .then(blob => {

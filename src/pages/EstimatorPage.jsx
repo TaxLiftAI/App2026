@@ -538,7 +538,7 @@ function LeadModal({ totalStr, onClose }) {
   async function submit(e) {
     e.preventDefault(); setBusy(true)
     try {
-      await fetch('/api/leads', {
+      await fetch('/api/v1/leads', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, source: 'estimator_cta', plan: 'plus' }),
       })

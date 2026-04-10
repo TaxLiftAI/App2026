@@ -21,7 +21,7 @@ export default function VerifyEmailPage() {
   useEffect(() => {
     if (!token) { setState('no_token'); return }
 
-    fetch(`${import.meta.env.VITE_API_URL || ''}/api/auth/verify-email?token=${encodeURIComponent(token)}`)
+    fetch(`${import.meta.env.VITE_API_URL || ''}/api/v1/auth/verify-email?token=${encodeURIComponent(token)}`, { credentials: 'include' })
       .then(r => r.json())
       .then(data => {
         if (data.ok && data.already) { setState('already'); setMessage(data.message); return }
@@ -35,7 +35,7 @@ export default function VerifyEmailPage() {
   async function handleResend() {
     setResending(true)
     try {
-      const res = await api.post('/api/auth/resend-verification')
+      const res = await fetch('/api/v1/auth/resend-verification', { method: 'POST', credentials: 'include' })
       if (res.ok) { setResent(true) }
     } catch {
       // user not authenticated — redirect to login so they can log in and resend from banner

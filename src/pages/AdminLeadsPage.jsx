@@ -239,9 +239,9 @@ export default function AdminLeadsPage() {
 
   function handleExport() {
     const tok = token.get()
-    const url = `${BASE_URL}/api/leads/export`
+    const url = `${BASE_URL}/api/v1/leads/export`
     setLoading(true)
-    fetch(url, { headers: tok ? { Authorization: `Bearer ${tok}` } : {} })
+    fetch(url, { credentials: 'include' })
       .then(r => r.blob())
       .then(blob => {
         const href = URL.createObjectURL(blob)

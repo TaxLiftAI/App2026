@@ -43,7 +43,7 @@ export default function ResetPasswordPage() {
     if (msg) { setError(msg); return }
     setLoading(true); setError('')
     try {
-      const res  = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/auth/reset-password`, {
+      const res  = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/v1/auth/reset-password`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ token, password }),

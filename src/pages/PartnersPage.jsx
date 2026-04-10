@@ -165,7 +165,7 @@ function PartnerContactSection({ navigate }) {
     }
     setSubmitting(true); setFormError('')
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/leads`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/v1/leads`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({

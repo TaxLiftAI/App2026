@@ -131,7 +131,7 @@ export default function ScanResultsPage() {
     setEmailBusy(true)
     localStorage.setItem('taxlift_scan_email', email)
     try {
-      await fetch('/api/leads', {
+      await fetch('/api/v1/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -151,13 +151,13 @@ export default function ScanResultsPage() {
     if (isDemoMode) { setShowDemoModal(true); return }
     const scanId = results?.scanId
     if (scanId) {
-      window.open(`/api/proposals/pdf/${scanId}`, '_blank')
+      window.open(`/api/v1/proposals/pdf/${scanId}`, '_blank')
       return
     }
     // Fallback: POST scan data directly (backend was unreachable during scan)
     setPdfBusy(true)
     try {
-      const res = await fetch('/api/proposals/pdf', {
+      const res = await fetch('/api/v1/proposals/pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

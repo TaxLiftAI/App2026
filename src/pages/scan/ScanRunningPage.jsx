@@ -182,8 +182,9 @@ export default function ScanRunningPage() {
     // Persist to backend (best-effort — don't block UX if backend unreachable)
     let scanId = null
     try {
-      const res = await fetch('/api/scan/free', {
+      const res = await fetch('/api/v1/scan/free', {
         method:  'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify(payload),
       })

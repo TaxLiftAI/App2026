@@ -102,7 +102,7 @@ export function getJiraAuthUrl(state, pkceChallenge) {
  */
 export async function exchangeGitHubCode(code) {
   try {
-    const res = await fetch('/api/oauth/github/exchange', {
+    const res = await fetch('/api/v1/oauth/github/exchange', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ code }),
@@ -131,7 +131,7 @@ export async function exchangeGitHubCode(code) {
  */
 export async function exchangeJiraCode(code, verifier) {
   try {
-    const res = await fetch('/api/oauth/jira/exchange', {
+    const res = await fetch('/api/v1/oauth/jira/exchange', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ code, verifier }),

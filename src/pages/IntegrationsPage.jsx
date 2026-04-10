@@ -150,8 +150,8 @@ export default function IntegrationsPage() {
         <CardHeader title="Webhook Endpoints" subtitle="Register these URLs in your tools to enable real-time event ingestion" />
         <div className="space-y-3">
           {[
-            { label: 'GitHub Webhook', url: `${BASE_URL}/api/webhooks/github` },
-            { label: 'Jira Webhook',   url: `${BASE_URL}/api/webhooks/jira` },
+            { label: 'GitHub Webhook', url: `${BASE_URL}/api/v1/webhooks/github` },
+            { label: 'Jira Webhook',   url: `${BASE_URL}/api/v1/webhooks/jira` },
           ].map(wh => (
             <div key={wh.label} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
               <span className="text-xs font-medium text-gray-700 w-32">{wh.label}</span>

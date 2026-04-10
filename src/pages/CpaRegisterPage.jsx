@@ -104,7 +104,7 @@ export default function CpaRegisterPage() {
       if (err instanceof ApiError && err.status === 404) {
         // Endpoint not yet deployed — capture via waitlist
         try {
-          await fetch('/api/waitlist', {
+          await fetch('/api/v1/waitlist', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: form.email, name: `${form.partner_name} — ${form.firm_name}`, source: 'cpa_partner' }),
