@@ -103,4 +103,4 @@ function optionalAuth(req, res, next) {
   next()
 }
 
-module.exports = { signToken, requireAuth, optionalAuth }
+module.exports = { signToken, requireAuth, optionalAuth, cookieOptions }
