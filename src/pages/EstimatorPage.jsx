@@ -529,6 +529,78 @@ function useAnimatedNumber(target, duration = 550) {
   return display
 }
 
+// Email gate overlay — shown over the results column until email is captured
+function EmailGateOverlay({ totalStr, onUnlock }) {
+  const [form, setForm]   = useState({ name: '', email: '', company: '' })
+  const [busy, setBusy]   = useState(false)
+  const [error, setError] = useState('')
+
+  async function submit(e) {
+    e.preventDefault()
+    if (!form.email.includes('@')) { setError('Please enter a valid email.'); return }
+    setBusy(true); setError('')
+    try {
+      await fetch('/api/v1/leads', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, source: 'estimator_gate', plan: 'plus' }),
+      })
+    } catch (_) {}
+    localStorage.setItem('taxlift_estimator_email', form.email)
+    localStorage.setItem('taxlift_estimator_name',  form.name)
+    setBusy(false)
+    onUnlock(form.email)
+  }
+
+  return (
+    <div className="absolute inset-0 z-20 flex flex-col items-center justify-start pt-10 px-4"
+      style={{ backdropFilter: 'blur(8px)', background: 'rgba(15,23,42,0.72)' }}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-7">
+        {/* Lock icon + headline */}
+        <div className="flex flex-col items-center mb-5 text-center">
+          <div className="w-11 h-11 bg-indigo-100 rounded-full flex items-center justify-center mb-3">
+            <Lock size={20} className="text-indigo-600" />
+          </div>
+          <h3 className="text-base font-bold text-gray-900 leading-tight">
+            Your estimate is ready
+          </h3>
+          <p className="text-sm text-gray-500 mt-1">
+            Enter your email to reveal your full<br />
+            <span className="font-semibold text-indigo-700">{totalStr}</span> funding estimate
+          </p>
+        </div>
+
+        <form onSubmit={submit} className="space-y-3">
+          {[
+            { key: 'name',    label: 'Your name',    type: 'text',  ph: 'Jane Smith'   },
+            { key: 'email',   label: 'Work email',   type: 'email', ph: 'jane@acme.com' },
+            { key: 'company', label: 'Company name', type: 'text',  ph: 'Acme Inc.'    },
+          ].map(f => (
+            <div key={f.key}>
+              <label className="block text-xs font-medium text-gray-700 mb-1">{f.label}</label>
+              <input type={f.type} required placeholder={f.ph} value={form[f.key]}
+                onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+          ))}
+          {error && <p className="text-xs text-red-600">{error}</p>}
+          <button type="submit" disabled={busy}
+            className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 transition-colors">
+            {busy ? 'Unlocking…' : <><span>Reveal my estimate</span><ArrowRight size={14} /></>}
+          </button>
+          <p className="text-[10px] text-gray-400 text-center">
+            No spam. No credit card. A specialist may follow up within 1 business day.
+          </p>
+        </form>
+      </div>
+
+      {/* Teaser stat visible behind the blur */}
+      <p className="mt-5 text-indigo-300 text-xs text-center opacity-80">
+        Average Canadian tech company recovers <span className="font-bold text-white">$187K</span> in SR&ED credits
+      </p>
+    </div>
+  )
+}
+
 // Lead capture modal
 function LeadModal({ totalStr, onClose }) {
   const [form, setForm] = useState({ name: '', email: '', company: '' })
@@ -628,6 +700,11 @@ export default function EstimatorPage() {
   const [fyMonth,     setFyMonth]    = useState(() => Number(searchParams.get('fym'))  || 12)
   const [fyYear,      setFyYear]     = useState(() => Number(searchParams.get('fyy'))  || 2025)
   const [yearsMissed, setYearsMissed]= useState(() => Number(searchParams.get('ym'))   || 1)
+
+  // Email gate — persist across page refreshes
+  const [emailGated, setEmailGated] = useState(
+    () => !!localStorage.getItem('taxlift_estimator_email')
+  )
 
   // UI state
   const [copied,        setCopied]       = useState(false)
@@ -987,7 +1064,17 @@ export default function EstimatorPage() {
         </div>
 
         {/* ── Results ── */}
-        <div className="lg:col-span-3 space-y-4">
+        <div className="lg:col-span-3 relative">
+          {/* Email gate overlay */}
+          {!emailGated && (
+            <EmailGateOverlay
+              totalStr={fmtK(animCombined)}
+              onUnlock={() => setEmailGated(true)}
+            />
+          )}
+
+          {/* Results content — blurred until gated */}
+          <div className={`space-y-4 transition-all duration-300 ${!emailGated ? 'pointer-events-none select-none blur-sm' : ''}`}>
 
           {/* Combined hero */}
           <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-2xl p-6 text-white shadow-xl">
@@ -1556,6 +1643,9 @@ export default function EstimatorPage() {
               </div>
             </div>
           </div>
+          {/* end results content */}
+        </div>
+        {/* end results relative wrapper */}
         </div>
       </div>
 
