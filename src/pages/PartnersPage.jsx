@@ -26,34 +26,50 @@ const HEARD_OPTIONS = [
   'Accounting association', 'Conference / event', 'Other',
 ]
 
-// ── Commission tiers ───────────────────────────────────────────────────────────
-const TIERS = [
+// ── Commission stats ───────────────────────────────────────────────────────────
+const COMMISSION_STATS = [
+  { label: 'Flat commission rate',          value: '1.5%',   sub: 'of every dollar recovered'         },
+  { label: 'Avg annual earnings per client', value: '$6,200', sub: '10-person Ontario team example'    },
+  { label: 'No cap · no expiry',            value: '∞',      sub: 'runs as long as the client does'   },
+]
+
+// ── Why TaxLift (non-revenue reasons) ─────────────────────────────────────────
+const WHY_TAXLIFT = [
   {
-    tier: 'Tier 1',
-    referrals: '1–2 clients / year',
-    rate: '1.5%',
-    example: '$3,000',
-    basis: 'of credit recovered',
-    color: 'border-gray-200 bg-white',
-    badge: null,
+    icon: Users,
+    color: 'text-indigo-600', bg: 'bg-indigo-50',
+    title: 'Your client relationship stays yours',
+    body: 'Traditional SR&ED consultants go direct — and eventually cut the CPA out. TaxLift is structurally different: you have your own login, annotation rights, and your firm name appears on every deliverable. Clients see TaxLift as an extension of your practice, not a competitor.',
   },
   {
-    tier: 'Tier 2',
-    referrals: '3–5 clients / year',
-    rate: '2.0%',
-    example: '$4,000',
-    basis: 'of credit recovered',
-    color: 'border-indigo-300 bg-indigo-50',
-    badge: 'Most common',
+    icon: Clock,
+    color: 'text-violet-600', bg: 'bg-violet-50',
+    title: 'Turn 60–80 hours into 2–3',
+    body: 'T661 documentation from memory takes weeks. TaxLift generates it from 100% of your client\'s GitHub commits automatically. You review, annotate, and approve — nothing more. That means you can service 5× the SR&ED clients with the same team.',
   },
   {
-    tier: 'Tier 3',
-    referrals: '6+ clients / year',
-    rate: '2.5%',
-    example: '$5,000',
-    basis: 'of credit recovered',
-    color: 'border-violet-300 bg-violet-50',
-    badge: 'Volume partner',
+    icon: ShieldCheck,
+    color: 'text-blue-600', bg: 'bg-blue-50',
+    title: 'A stronger audit defence',
+    body: 'CRA is increasingly scrutinising T661 narratives. A claim backed by a commit-level SHA-256 audit trail is harder to dispute than one reconstructed from memory. Every TaxLift package includes a methodology document aligned with IC86-4R3 — cite it in any CRA review.',
+  },
+  {
+    icon: TrendingUp,
+    color: 'text-emerald-600', bg: 'bg-emerald-50',
+    title: 'Win tech mandates competitors can\'t',
+    body: 'A CPA who can say "I have a platform that scans 100% of your GitHub commits and prepares your T661 same-day" wins tech company engagements that accountants using spreadsheets cannot. SR&ED is often the foot in the door that becomes a 10-year audit relationship.',
+  },
+  {
+    icon: Lock,
+    color: 'text-amber-600', bg: 'bg-amber-50',
+    title: 'Professional liability is clear',
+    body: 'TaxLift is a preparatory tool — you retain responsibility for the filed T661, exactly as you do with any preparation software. Our published methodology (IC86-4R3 aligned) is available at taxlift.ai/methodology. You review and approve before anything goes to the client.',
+  },
+  {
+    icon: Star,
+    color: 'text-rose-600', bg: 'bg-rose-50',
+    title: 'A differentiated service your clients notice',
+    body: 'Same-day T661 drafts, commit-level evidence chains, and a co-branded handoff PDF your client can actually read — this is a materially better deliverable than a manually-drafted narrative. CPAs who use TaxLift routinely hear "I didn\'t know my accountant could do this."',
   },
 ]
 
@@ -82,7 +98,7 @@ const STEPS = [
   {
     n: '05', icon: DollarSign, color: 'text-amber-600', bg: 'bg-amber-50',
     title: 'File & earn commission',
-    body: 'You file the T661 with CRA. Once the credit is processed, TaxLift pays your commission by EFT within 30 days.',
+    body: 'You file the T661 with CRA. Commission is paid by EFT on the same cycle as your client\'s TaxLift subscription — annual or semi-annual — so you\'re not waiting 12–18 months for CRA to process.',
   },
 ]
 
@@ -116,7 +132,7 @@ const FAQS = [
   },
   {
     q: 'When and how are commissions paid?',
-    a: 'Commissions are triggered once CRA issues the credit (NOA confirmation or T2 refund). TaxLift pays by EFT within 30 days of confirmation. Your commission dashboard shows accrued, pending, and paid status for every referred client. There is no cap and no expiry on earned commissions.',
+    a: 'Commissions are paid by EFT on the same cycle as your client\'s TaxLift subscription — annual or semi-annual — so you are not waiting 12–18 months for CRA to process. Commission is calculated at 1.5% of the estimated credit at the time of client payment. If CRA issues the NOA at a materially different amount (>20% variance), a true-up is applied on the next payment date. There is no cap and no expiry on earned commissions.',
   },
   {
     q: 'Can I white-label TaxLift for my clients?',
@@ -371,7 +387,7 @@ export default function PartnersPage() {
             CPA Partner Program — Verified Firms Only
           </div>
           <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight mb-5">
-            Earn up to 2.5% of every<br />SR&amp;ED credit you refer
+            Earn 1.5% of every<br />SR&amp;ED credit you refer
           </h1>
           <p className="text-slate-300 text-lg leading-relaxed max-w-2xl mx-auto mb-8">
             TaxLift prepares the complete T661 package from your client's GitHub and Jira.
@@ -381,9 +397,9 @@ export default function PartnersPage() {
           {/* Hero stats */}
           <div className="grid grid-cols-3 gap-4 max-w-lg mx-auto mb-8">
             {[
-              { v: '2.5%',    l: 'Max commission rate'     },
-              { v: '$4,200',  l: 'Avg annual earnings/client' },
-              { v: '1 day',   l: 'Partner verification'    },
+              { v: '1.5%',    l: 'Flat commission rate'       },
+              { v: '$6,200',  l: 'Avg annual earnings/client' },
+              { v: '1 day',   l: 'Partner verification'       },
             ].map(({ v, l }) => (
               <div key={l} className="bg-white/10 rounded-xl py-3 px-2">
                 <p className="text-xl font-extrabold text-white">{v}</p>
@@ -450,41 +466,60 @@ export default function PartnersPage() {
         </div>
       </section>
 
-      {/* ── Commission tiers ── */}
-      <section className="bg-gray-50 py-16 px-6 border-y border-gray-100">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">Commission structure</h2>
-          <p className="text-gray-500 text-sm text-center mb-3">
-            Based on a $200,000 credit recovered · No cap · No expiry
+      {/* ── Why TaxLift (non-revenue) ── */}
+      <section className="py-16 px-6 border-t border-gray-100">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">
+            More than a referral fee
+          </h2>
+          <p className="text-gray-500 text-sm text-center mb-10 max-w-xl mx-auto">
+            The commission is one reason. Here's why CPAs who've used TaxLift for a year wouldn't go back.
           </p>
-          <p className="text-xs text-gray-400 text-center mb-10">
-            + $500 first-client bonus on your first successful referral
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
-            {TIERS.map(t => (
-              <div key={t.tier} className={`relative rounded-2xl border-2 p-6 ${t.color}`}>
-                {t.badge && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-[10px] font-bold px-3 py-1 rounded-full whitespace-nowrap">
-                    {t.badge}
-                  </span>
-                )}
-                <p className="text-xs font-semibold text-gray-500 mb-1">{t.tier}</p>
-                <p className="text-sm text-gray-600 mb-3">{t.referrals}</p>
-                <p className="text-3xl font-extrabold text-gray-900">{t.rate}</p>
-                <p className="text-xs text-gray-500 mb-3">{t.basis}</p>
-                <div className="flex items-center gap-1.5 bg-white/60 rounded-lg px-3 py-2 border border-gray-200">
-                  <DollarSign size={13} className="text-green-600" />
-                  <span className="text-sm font-bold text-green-700">{t.example}</span>
-                  <span className="text-[11px] text-gray-400">on $200K credit</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {WHY_TAXLIFT.map(({ icon: Icon, color, bg, title, body }) => (
+              <div key={title} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+                <div className={`w-9 h-9 rounded-xl ${bg} flex items-center justify-center mb-3`}>
+                  <Icon size={16} className={color} />
                 </div>
+                <h3 className="text-sm font-semibold text-gray-900 mb-1.5">{title}</h3>
+                <p className="text-xs text-gray-500 leading-relaxed">{body}</p>
               </div>
             ))}
           </div>
-          <div className="bg-white border border-gray-200 rounded-xl p-5 max-w-lg mx-auto text-center">
-            <p className="text-xs text-gray-500 mb-2">How your tier is calculated</p>
-            <p className="text-sm font-medium text-gray-700 leading-relaxed">
-              Tier is based on the number of <strong>converted</strong> referrals in the trailing 12 months.
-              Upgrades apply to all new commissions from the date of tier upgrade.
+        </div>
+      </section>
+
+      {/* ── Commission structure ── */}
+      <section className="bg-gray-50 py-16 px-6 border-y border-gray-100">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">Commission structure</h2>
+          <p className="text-gray-500 text-sm text-center mb-10">
+            Flat rate · No cap · No expiry · Paid on client billing cycle
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
+            {COMMISSION_STATS.map(({ label, value, sub }) => (
+              <div key={label} className="bg-white rounded-2xl border-2 border-indigo-100 p-6 text-center">
+                <p className="text-4xl font-extrabold text-indigo-600 mb-1">{value}</p>
+                <p className="text-xs font-semibold text-gray-700 mb-0.5">{label}</p>
+                <p className="text-[11px] text-gray-400">{sub}</p>
+              </div>
+            ))}
+          </div>
+          <div className="bg-white border border-gray-200 rounded-xl p-5 text-center">
+            <p className="text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wider">The math — 10-person dev team (Ontario)</p>
+            <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 max-w-sm mx-auto text-left text-sm mb-3">
+              <span className="text-gray-500">10 devs × $120K avg salary</span><span className="font-semibold text-gray-800 text-right">$1.2M payroll</span>
+              <span className="text-gray-500">Qualified Expenditure (PPA)</span><span className="font-semibold text-gray-800 text-right">$966,240</span>
+              <span className="text-gray-500">Federal ITC (35%)</span><span className="font-semibold text-gray-800 text-right">$338,184</span>
+              <span className="text-gray-500">Ontario ITC (8%)</span><span className="font-semibold text-gray-800 text-right">$77,299</span>
+              <span className="text-gray-700 font-semibold">Total estimated credit</span><span className="font-bold text-gray-900 text-right">$415,483</span>
+            </div>
+            <div className="bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-2.5 inline-flex items-center gap-2">
+              <DollarSign size={15} className="text-indigo-600" />
+              <span className="text-sm font-bold text-indigo-700">Your 1.5% share: $6,232 / year</span>
+            </div>
+            <p className="text-[11px] text-gray-400 mt-3">
+              Paid on client billing cycle (annual or semi-annual). True-up applied if CRA NOA varies by &gt;20%.
             </p>
           </div>
         </div>
