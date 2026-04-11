@@ -17,12 +17,16 @@
  *   - GitHub's token endpoint does not support CORS
  *   - Atlassian's token endpoint requires the client_secret (must stay server-side)
  *
- * Backend endpoints to implement:
- *   POST /api/oauth/github/exchange  { code }           → { access_token }
- *   POST /api/oauth/jira/exchange    { code, verifier }  → { access_token, refresh_token }
+ * Backend endpoints (all under /api/v1/ — Vercel rewrites forward to Railway):
+ *   POST /api/v1/oauth/github/exchange  { code }           → { access_token }
+ *   POST /api/v1/oauth/jira/exchange    { code, verifier }  → { access_token, refresh_token }
  *
- * When the backend is unavailable, exchangeGitHubCode / exchangeJiraCode return null
- * and QuickConnectPage falls back to demo-mode scanning.
+ * Railway env vars required for exchange to work:
+ *   GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET
+ *   ATLASSIAN_CLIENT_ID, ATLASSIAN_CLIENT_SECRET
+ *
+ * When exchange fails, functions return null and caller falls back to demo-mode scanning.
+ * Check browser console for [exchangeGitHubCode] errors to diagnose Railway env var issues.
  */
 
 // ── Client IDs from environment ────────────────────────────────────────────────
@@ -107,11 +111,17 @@ export async function exchangeGitHubCode(code) {
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ code }),
     })
-    if (!res.ok) throw new Error(`Exchange failed: ${res.status}`)
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      console.error('[exchangeGitHubCode] Exchange failed:', res.status, body)
+      // 503 with demo:true means Railway is missing GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET env vars
+      return null
+    }
     const data = await res.json()
     return data.access_token ?? null
-  } catch {
-    // Backend not available — caller falls back to demo mode
+  } catch (err) {
+    // Network error or JSON parse failure — caller falls back to demo mode
+    console.error('[exchangeGitHubCode] Unexpected error:', err.message)
     return null
   }
 }
@@ -136,13 +146,18 @@ export async function exchangeJiraCode(code, verifier) {
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ code, verifier }),
     })
-    if (!res.ok) throw new Error(`Exchange failed: ${res.status}`)
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      console.error('[exchangeJiraCode] Exchange failed:', res.status, body)
+      return null
+    }
     const data = await res.json()
     return {
       accessToken:  data.access_token  ?? null,
       refreshToken: data.refresh_token ?? null,
     }
-  } catch {
+  } catch (err) {
+    console.error('[exchangeJiraCode] Unexpected error:', err.message)
     return null
   }
 }

@@ -443,6 +443,56 @@ export default function PricingPage() {
           )}
         </div>
 
+        {/* ── CPA Referral Pricing ─────────────────────────────────────────────── */}
+        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-7 mb-12">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+            <div className="w-12 h-12 bg-emerald-100 border border-emerald-200 rounded-2xl flex items-center justify-center flex-shrink-0">
+              <BadgeCheck size={22} className="text-emerald-600" />
+            </div>
+            <div className="flex-1">
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <h3 className="text-base font-bold text-gray-900">Referred by your CPA?</h3>
+                <span className="text-[10px] bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-full px-2.5 py-0.5 font-semibold uppercase tracking-wide">CPA Referral Pricing</span>
+              </div>
+              <p className="text-sm text-gray-600 leading-relaxed max-w-2xl">
+                If your accountant or CPA firm sent you here, you qualify for a special one-time engagement fee:{' '}
+                <strong className="text-gray-900">3% of your recovered SR&ED credits</strong>, with nothing due until CRA pays you.
+                No subscription, no upfront payment — we succeed when you do.
+              </p>
+              <div className="flex flex-wrap gap-4 mt-3">
+                <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                  <Check size={12} className="text-emerald-500" /> No payment until CRA refund received
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                  <Check size={12} className="text-emerald-500" /> One-time fee — no ongoing subscription
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                  <Check size={12} className="text-emerald-500" /> Full T661 package + audit vault included
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                  <Check size={12} className="text-emerald-500" /> CPA keeps their relationship with the client
+                </div>
+              </div>
+              {estimate && (
+                <div className="mt-3 inline-flex items-center gap-2 bg-white border border-emerald-200 rounded-xl px-4 py-2 text-sm">
+                  <TrendingUp size={14} className="text-emerald-600" />
+                  <span className="text-gray-500">Your estimated 3% fee:</span>
+                  <span className="font-bold text-gray-900">{fmtK(estimate * 0.03)}</span>
+                  <span className="text-gray-400 text-xs">on {fmtK(estimate)} credit estimate</span>
+                </div>
+              )}
+            </div>
+            <div className="flex-shrink-0">
+              <a
+                href="mailto:hello@taxlift.ai?subject=CPA%20Referral%20Pricing%20Inquiry"
+                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors shadow-sm whitespace-nowrap"
+              >
+                Get referral pricing <ArrowRight size={14} />
+              </a>
+            </div>
+          </div>
+        </div>
+
         <RoiCalculator defaultCredit={estimate ?? 150000} />
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 mb-16">

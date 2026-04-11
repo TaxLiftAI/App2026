@@ -2,16 +2,16 @@
  * OAuth proxy routes — server-side token exchange so the browser
  * never needs to handle client_secret.
  *
- *   POST /api/oauth/state                          ← generate state, set httpOnly cookie
- *   GET  /api/oauth/github/callback?code=&state=   ← GitHub server-side redirect target
- *   POST /api/oauth/github/exchange  { code }      ← browser SPA exchange (OAuthCallbackPage)
- *   GET  /api/oauth/atlassian/callback?code=&state=
- *   POST /api/oauth/jira/exchange  { code, verifier } ← browser SPA exchange (OAuthCallbackPage)
- *   GET  /api/oauth/github/repos          (proxy, requires Bearer token in header)
- *   GET  /api/oauth/github/commits?repo=  (proxy)
- *   GET  /api/oauth/github/user           (proxy)
- *   GET  /api/oauth/atlassian/resources   (proxy — lists accessible Jira sites)
- *   GET  /api/oauth/atlassian/issues?cloudId=&projectKey= (proxy)
+ *   POST /api/v1/oauth/state                          ← generate state, set httpOnly cookie
+ *   GET  /api/v1/oauth/github/callback?code=&state=   ← GitHub server-side redirect target
+ *   POST /api/v1/oauth/github/exchange  { code }      ← browser SPA exchange (OAuthCallbackPage)
+ *   GET  /api/v1/oauth/atlassian/callback?code=&state=
+ *   POST /api/v1/oauth/jira/exchange  { code, verifier } ← browser SPA exchange (OAuthCallbackPage)
+ *   GET  /api/v1/oauth/github/repos          (proxy, requires Bearer token in header)
+ *   GET  /api/v1/oauth/github/commits?repo=  (proxy)
+ *   GET  /api/v1/oauth/github/user           (proxy)
+ *   GET  /api/v1/oauth/atlassian/resources   (proxy — lists accessible Jira sites)
+ *   GET  /api/v1/oauth/atlassian/issues?cloudId=&projectKey= (proxy)
  */
 const router = require('express').Router()
 const axios  = require('axios')
