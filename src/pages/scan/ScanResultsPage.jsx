@@ -98,7 +98,7 @@ export default function ScanResultsPage() {
     } catch { return null }
   })
 
-  const [email,     setEmail]     = useState(() => localStorage.getItem('taxlift_scan_email') ?? '')
+  const [email,     setEmail]     = useState(() => { try { return localStorage.getItem('taxlift_scan_email') ?? '' } catch { return '' } })
   const [emailSent, setEmailSent] = useState(false)
   const [emailBusy, setEmailBusy] = useState(false)
   const [pdfBusy,   setPdfBusy]   = useState(false)

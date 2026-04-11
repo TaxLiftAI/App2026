@@ -87,7 +87,7 @@ router.post('/free', (req, res) => {
         email,
         estimatedCredit: estimated_credit,
         clusterCount:    clusters?.length ?? 0,
-        repoCount:       repos_json ? JSON.parse(repos_json).length : 0,
+        repoCount:       repos.length,
       }).catch(err => console.error('[scan/free] alert error:', err.message))
     }
 

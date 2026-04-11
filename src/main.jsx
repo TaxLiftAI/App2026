@@ -29,10 +29,15 @@ class ErrorBoundary extends React.Component {
           <h2 style={{ color: '#1e293b', fontSize: 22, fontWeight: 700, marginBottom: 8 }}>
             Something went wrong
           </h2>
-          <p style={{ color: '#64748b', fontSize: 15, maxWidth: 400, marginBottom: 24, lineHeight: 1.6 }}>
+          <p style={{ color: '#64748b', fontSize: 15, maxWidth: 400, marginBottom: 12, lineHeight: 1.6 }}>
             We hit an unexpected error. Try refreshing — if it keeps happening,
             reach out to <a href="mailto:support@taxlift.ai" style={{ color: '#4f46e5' }}>support@taxlift.ai</a>.
           </p>
+          {this.state.error?.message && (
+            <p style={{ color: '#94a3b8', fontSize: 12, fontFamily: 'monospace', background: '#f1f5f9', padding: '8px 12px', borderRadius: 6, maxWidth: 480, marginBottom: 24, wordBreak: 'break-all' }}>
+              {this.state.error.message}
+            </p>
+          )}
           <button
             onClick={() => window.location.reload()}
             style={{
