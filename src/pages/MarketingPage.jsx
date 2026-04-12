@@ -21,7 +21,7 @@ import {
   GitBranch, FileText, Shield, Package, BarChart2, Calculator,
   CheckCircle2, AlertTriangle, Clock, Zap, Users, Lock,
   Star, DollarSign, TrendingUp, Link2, Sparkles, Search,
-  Building2, Mail, ExternalLink,
+  Building2, Mail, ExternalLink, BadgeCheck, Pencil,
 } from 'lucide-react'
 import WaitlistModal  from '../components/WaitlistModal'
 import CalendlyEmbed  from '../components/CalendlyEmbed'
@@ -34,8 +34,8 @@ const NAV_LINKS = [
   { label: 'How it works', href: '#how-it-works' },
   { label: 'Features',     href: '#features'     },
   { label: 'Grants',       href: '#grants'       },
-  { label: 'For CPAs',     href: '#for-cpas'     },
   { label: 'Pricing',      href: '#pricing'      },
+  { label: 'For CPAs',     href: '/partners',    isRoute: true, isCpa: true },
   { label: 'Estimator',    href: '/estimate',    isRoute: true },
 ]
 
@@ -666,9 +666,13 @@ export default function MarketingPage() {
               <Link
                 key={l.label}
                 to={l.href}
-                className="text-sm text-indigo-600 hover:text-indigo-700 font-semibold transition-colors flex items-center gap-1 border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-full"
+                className={`text-sm font-semibold transition-colors flex items-center gap-1 px-3 py-1 rounded-full ${
+                  l.isCpa
+                    ? 'text-emerald-700 hover:text-emerald-800 border border-emerald-200 bg-emerald-50 hover:bg-emerald-100'
+                    : 'text-indigo-600 hover:text-indigo-700 border border-indigo-200 bg-indigo-50 hover:bg-indigo-100'
+                }`}
               >
-                <Calculator size={13} />
+                {l.isCpa ? <BadgeCheck size={13} /> : <Calculator size={13} />}
                 {l.label}
               </Link>
             ) : (
@@ -719,9 +723,9 @@ export default function MarketingPage() {
                   key={l.label}
                   to={l.href}
                   onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-indigo-600 hover:bg-indigo-50"
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold ${l.isCpa ? 'text-emerald-700 hover:bg-emerald-50' : 'text-indigo-600 hover:bg-indigo-50'}`}
                 >
-                  <Calculator size={14} />
+                  {l.isCpa ? <BadgeCheck size={14} /> : <Calculator size={14} />}
                   {l.label}
                 </Link>
               ) : (
@@ -817,7 +821,7 @@ export default function MarketingPage() {
             </div>
 
             {/* CTAs */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-14">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6">
               <button
                 onClick={() => openWaitlist('', 'hero')}
                 className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-base px-7 py-3.5 rounded-xl transition-colors shadow-lg shadow-indigo-900/40"
@@ -831,6 +835,23 @@ export default function MarketingPage() {
               >
                 See a live demo
                 <ArrowRight size={16} />
+              </Link>
+            </div>
+
+            {/* CPA self-selection strip */}
+            <div className="flex justify-center mb-14">
+              <Link
+                to="/partners"
+                className="group inline-flex items-center gap-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 hover:border-emerald-500/50 rounded-2xl px-5 py-3 transition-all"
+              >
+                <div className="w-7 h-7 bg-emerald-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <BadgeCheck size={14} className="text-emerald-400" />
+                </div>
+                <div className="text-left">
+                  <p className="text-emerald-300 text-xs font-semibold leading-none mb-0.5">Are you a CPA or accountant?</p>
+                  <p className="text-emerald-400/70 text-xs leading-none">Earn $750–$9K per client referral · Partner program →</p>
+                </div>
+                <ArrowRight size={13} className="text-emerald-500 group-hover:translate-x-0.5 transition-transform ml-1" />
               </Link>
             </div>
 
@@ -883,6 +904,99 @@ export default function MarketingPage() {
               )
             })}
           </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          3b. CPA PARTNER CALLOUT (early — before features)
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section className="py-16 bg-gradient-to-br from-emerald-950 via-slate-900 to-indigo-950">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+
+          {/* Header */}
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-semibold px-4 py-1.5 rounded-full mb-4">
+              <BadgeCheck size={12} /> For CPA Firms &amp; Accountants
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3">
+              Add SR&amp;ED to your practice.<br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400">
+                Earn $750–$9,000 per client referral.
+              </span>
+            </h2>
+            <p className="text-slate-400 max-w-xl mx-auto text-sm leading-relaxed">
+              TaxLift prepares the complete T661 package from your client's GitHub and Jira.
+              You review, annotate, and file. Flat referral fee paid at package delivery — not contingent on CRA outcome.
+            </p>
+          </div>
+
+          {/* Three value props */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
+            {[
+              {
+                icon: Clock,
+                color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20',
+                title: 'Turn 60–80 hours into 2–3',
+                body: 'TaxLift generates T661 narratives from 100% of your client\'s GitHub commits. You review and approve — nothing more. Service 5× the SR&ED clients with the same team.',
+              },
+              {
+                icon: Pencil,
+                color: 'text-teal-400', bg: 'bg-teal-500/10 border-teal-500/20',
+                title: 'Your name on every deliverable',
+                body: 'Independent CPA login, annotation rights, and your firm logo on the co-branded handoff PDF. Clients see TaxLift as an extension of your practice — not a competitor.',
+              },
+              {
+                icon: DollarSign,
+                color: 'text-indigo-400', bg: 'bg-indigo-500/10 border-indigo-500/20',
+                title: 'Flat fee, paid at delivery',
+                body: 'Referral fees from $750 to $9,000 per client based on credit size. Paid by EFT when the T661 package is delivered — no waiting 12–18 months for CRA to process.',
+              },
+            ].map(({ icon: Icon, color, bg, title, body }) => (
+              <div key={title} className={`bg-white/5 border rounded-2xl p-6 ${bg}`}>
+                <div className={`w-9 h-9 rounded-xl ${bg} border flex items-center justify-center mb-3`}>
+                  <Icon size={16} className={color} />
+                </div>
+                <h3 className="text-sm font-semibold text-white mb-2">{title}</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">{body}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Fee table strip */}
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-8">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4 text-center">Referral fee schedule — paid at T661 package delivery</p>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              {[
+                { range: 'Up to $75K',       fee: '$750'   },
+                { range: '$75K – $150K',      fee: '$1,500' },
+                { range: '$150K – $300K',     fee: '$3,000' },
+                { range: '$300K – $600K',     fee: '$5,500' },
+                { range: '$600K+',            fee: '$9,000' },
+              ].map(({ range, fee }) => (
+                <div key={range} className="text-center bg-white/5 rounded-xl py-3 px-2">
+                  <p className="text-lg font-extrabold text-emerald-400 mb-0.5">{fee}</p>
+                  <p className="text-[10px] text-slate-500 leading-tight">{range} credit</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* CTA row */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              to="/partners"
+              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm px-7 py-3 rounded-xl transition-colors shadow-lg"
+            >
+              Apply to partner — it's free <ArrowRight size={14} />
+            </Link>
+            <Link
+              to="/cpa/login"
+              className="flex items-center gap-2 border border-white/20 text-white text-sm font-medium px-6 py-3 rounded-xl hover:bg-white/10 transition-colors"
+            >
+              Already a partner? Sign in
+            </Link>
+          </div>
+
         </div>
       </section>
 
