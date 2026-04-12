@@ -25,8 +25,6 @@ import {
 } from 'lucide-react'
 import WaitlistModal  from '../components/WaitlistModal'
 import CalendlyEmbed  from '../components/CalendlyEmbed'
-import PricingCard    from '../components/PricingCard'
-import { PLANS, redirectToCheckout } from '../lib/stripe'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Data
@@ -612,8 +610,6 @@ export default function MarketingPage() {
   const [waitlistPlan, setWaitlistPlan] = useState('')
   const [waitlistSource, setWaitlistSource] = useState('marketing')
   const [calendlyOpen, setCalendlyOpen]   = useState(false)
-  const [checkoutLoading, setCheckoutLoading] = useState(null) // planId or null
-
   // Primary CTA: send founders to the free scan flow
   function openWaitlist(plan = '', source = 'marketing') {
     // Pricing & enterprise leads still go to the waitlist modal.
@@ -625,21 +621,6 @@ export default function MarketingPage() {
     setWaitlistPlan(plan)
     setWaitlistSource(source)
     setWaitlistOpen(true)
-  }
-
-  async function handlePricingCta(planId) {
-    if (planId === 'enterprise') {
-      openWaitlist('enterprise', 'pricing')
-      return
-    }
-    // Try Stripe checkout; fall back to waitlist if Stripe not configured
-    setCheckoutLoading(planId)
-    const result = await redirectToCheckout(planId)
-    setCheckoutLoading(null)
-    if (!result.ok) {
-      // Stripe not configured or failed — capture lead instead
-      openWaitlist(planId, 'pricing')
-    }
   }
 
   // Sticky nav shadow on scroll
@@ -1269,35 +1250,73 @@ export default function MarketingPage() {
           8. PRICING
       ══════════════════════════════════════════════════════════════════════ */}
       <section id="pricing" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
             <p className="text-indigo-600 text-sm font-semibold uppercase tracking-widest mb-2">Pricing</p>
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
               3% of your SR&amp;ED credit — not 15–25% like consultants.
             </h2>
             <p className="mt-3 text-gray-500 max-w-xl mx-auto">
-              Starter is 3% · Plus (SR&amp;ED + Grants) is 5% · Enterprise is custom.
-              All based on your scan estimate. 14-day free trial and a complete CPA-ready T661 package included.
+              Pricing is based on your scan estimate. Tell us where to send it and we'll show you the exact numbers.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-            {Object.values(PLANS).map(plan => (
-              <PricingCard
-                key={plan.id}
-                plan={plan}
-                ctaLoading={checkoutLoading === plan.id}
-                onCta={() => handlePricingCta(plan.id)}
-              />
+          {/* Plan teasers — no prices shown, drives to gated /pricing */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
+            {[
+              {
+                name:  'Starter',
+                desc:  'SR&ED automation for Canadian tech companies making their first claim.',
+                badge: null,
+                highlights: ['AI T661 narratives', 'GitHub & Jira integration', 'CPA handoff package', 'Audit vault — 3 years'],
+                highlighted: false,
+              },
+              {
+                name:  'Plus',
+                desc:  'SR&ED + Grants module — unlock up to $4M+ in additional Canadian funding.',
+                badge: 'Most popular',
+                highlights: ['Everything in Starter', 'Grants module — 9 programs', 'NRC-IRAP, OITC, NGen + provincial', 'Priority Slack support'],
+                highlighted: true,
+              },
+              {
+                name:  'Enterprise',
+                desc:  'White-label portal, API access, and a dedicated CPA partner.',
+                badge: null,
+                highlights: ['Everything in Plus', 'White-label CPA portal', 'API access', 'SSO / SAML + on-prem'],
+                highlighted: false,
+              },
+            ].map(({ name, desc, badge, highlights, highlighted }) => (
+              <div
+                key={name}
+                className={`relative rounded-2xl border p-6 flex flex-col ${highlighted ? 'border-indigo-500 bg-indigo-600 text-white shadow-xl shadow-indigo-500/20' : 'border-gray-200 bg-white text-gray-900 shadow-sm'}`}
+              >
+                {badge && (
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                    <span className="rounded-full px-4 py-1 text-xs font-bold text-white shadow bg-gradient-to-r from-amber-400 to-orange-400">{badge}</span>
+                  </div>
+                )}
+                <h3 className={`font-bold text-lg mb-1 ${highlighted ? 'text-white' : 'text-gray-900'}`}>{name}</h3>
+                <p className={`text-sm mb-4 ${highlighted ? 'text-indigo-200' : 'text-gray-500'}`}>{desc}</p>
+                <ul className="flex-1 space-y-2 mb-5">
+                  {highlights.map(f => (
+                    <li key={f} className={`flex items-start gap-2 text-sm ${highlighted ? 'text-indigo-100' : 'text-gray-600'}`}>
+                      <span className={`mt-1 w-3.5 h-3.5 rounded-full flex items-center justify-center flex-shrink-0 text-[9px] font-bold ${highlighted ? 'bg-white/20 text-white' : 'bg-indigo-100 text-indigo-600'}`}>✓</span>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                {/* Price intentionally hidden — shown after lead capture on /pricing */}
+                <Link
+                  to="/pricing"
+                  className={`w-full text-center rounded-xl py-2.5 text-sm font-semibold transition-all ${highlighted ? 'bg-white text-indigo-600 hover:bg-indigo-50' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
+                >
+                  See {name} pricing →
+                </Link>
+              </div>
             ))}
           </div>
 
-          <p className="text-center text-xs text-gray-400 mt-8">
-            Prices in CAD · billed annually · 14-day free trial on all plans.
-            Grants module available on Plus &amp; Enterprise.
-          </p>
-
-          <div className="mt-5 flex flex-col sm:flex-row items-center justify-center gap-4 text-sm text-gray-500">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm text-gray-500">
             <p>
               First-time filer or sporadic R&D?{' '}
               <Link to="/pricing?track=claim" className="text-indigo-600 hover:text-indigo-700 font-semibold hover:underline">
