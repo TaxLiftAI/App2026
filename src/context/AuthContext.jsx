@@ -84,8 +84,14 @@ export function AuthProvider({ children }) {
     const timeout = setTimeout(() => setAuthLoading(false), 12_000)
     authApi.me()
       .then(me => {
-        setCurrentUser(shapeBackendUser(me))
-        setIsDemoMode(false)
+        // Guard: don't overwrite a demo session the user started while the
+        // server was warming up (Railway cold start can take 5–12 s).
+        // Demo users always have _fromApi === false; real API users have _fromApi === true.
+        setCurrentUser(prev => {
+          if (prev?._fromApi === false) return prev   // keep demo persona
+          return shapeBackendUser(me)
+        })
+        setIsDemoMode(prev => prev ? prev : false)
       })
       .catch(() => {
         // Cookie expired / not present — start unauthenticated
