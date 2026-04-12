@@ -1254,10 +1254,10 @@ export default function MarketingPage() {
           <div className="text-center mb-12">
             <p className="text-indigo-600 text-sm font-semibold uppercase tracking-widest mb-2">Pricing</p>
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
-              3% of your SR&amp;ED credit — not 15–25% like consultants.
+              A fraction of what consultants charge — based on your results.
             </h2>
             <p className="mt-3 text-gray-500 max-w-xl mx-auto">
-              Pricing is based on your scan estimate. Tell us where to send it and we'll show you the exact numbers.
+              Pricing is tied to your SR&amp;ED credit estimate. Tell us where to send it and we'll show you the exact numbers.
             </p>
           </div>
 
