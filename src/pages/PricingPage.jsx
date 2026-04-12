@@ -228,27 +228,69 @@ function ClaimCard({ plan, onCta, ctaLoading = false }) {
 }
 
 /**
- * PricingGate — shown when no scan results exist in session.
- * Requires either completing the free scan OR entering an estimate manually.
- * Unlocks by calling onUnlock(estimateCad).
+ * LeadCaptureGate — shown when no lead info exists in session.
+ * Collects name + work email + company (optional), saves to backend,
+ * then unlocks pricing. Matches the boast.ai/Paladin gate pattern.
+ *
+ * Bypass paths (no form shown):
+ *   • ?estimate=NNN URL param   — CPA referral links
+ *   • taxlift_scan_results in sessionStorage  — returning from scan
+ *   • taxlift_pricing_lead in sessionStorage  — same-session returning visitor
  */
-function PricingGate({ onUnlock }) {
+function LeadCaptureGate({ onUnlock }) {
   const navigate = useNavigate()
-  const [mode,       setMode]       = useState(null)         // null | 'estimate'
-  const [rawVal,     setRawVal]     = useState('')
-  const [err,        setErr]        = useState('')
+  const [fields,      setFields]      = useState({ name: '', email: '', company: '' })
+  const [submitting,  setSubmitting]  = useState(false)
+  const [err,         setErr]         = useState('')
 
-  function handleManual(e) {
+  function set(k, v) { setFields(f => ({ ...f, [k]: v })) }
+
+  function validate() {
+    if (!fields.name.trim())  return 'Please enter your first name.'
+    if (!fields.email.trim()) return 'Please enter your work email.'
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email.trim())) return 'Please enter a valid email address.'
+    return null
+  }
+
+  async function handleSubmit(e) {
     e.preventDefault()
-    const n = Number(rawVal.replace(/[^0-9]/g, ''))
-    if (!n || n < 10000) { setErr('Please enter a credit estimate of at least $10,000.'); return }
-    if (n > 10_000_000)  { setErr('Please enter a realistic estimate (under $10M).'); return }
-    onUnlock(n)
+    const validationErr = validate()
+    if (validationErr) { setErr(validationErr); return }
+
+    setSubmitting(true); setErr('')
+
+    // Save lead to backend (fire-and-forget — don't block on errors)
+    try {
+      await fetch(`${import.meta.env.VITE_API_URL || ''}/api/v1/leads`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name:    fields.name.trim(),
+          email:   fields.email.trim().toLowerCase(),
+          company: fields.company.trim() || undefined,
+          source:  'pricing_gate',
+          message: `Pricing page lead capture — company: ${fields.company || 'not provided'}`,
+        }),
+      })
+    } catch { /* non-blocking — gate still unlocks */ }
+
+    // Persist to sessionStorage so returning visitors within the same session skip the gate
+    try {
+      sessionStorage.setItem('taxlift_pricing_lead', JSON.stringify({
+        name:    fields.name.trim(),
+        email:   fields.email.trim().toLowerCase(),
+        company: fields.company.trim(),
+        ts:      Date.now(),
+      }))
+    } catch { /* ignore */ }
+
+    setSubmitting(false)
+    onUnlock()
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center px-4 py-16">
-      <div className="max-w-lg w-full">
+      <div className="max-w-md w-full">
 
         {/* Logo */}
         <div className="flex items-center justify-center gap-2 mb-10">
@@ -258,92 +300,107 @@ function PricingGate({ onUnlock }) {
           <span className="text-white font-bold text-lg tracking-tight">TaxLift</span>
         </div>
 
-        {/* Locked card */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-8 text-center backdrop-blur-sm">
-          <div className="w-14 h-14 bg-indigo-600/20 border border-indigo-500/30 rounded-2xl flex items-center justify-center mx-auto mb-5">
-            <Lock size={22} className="text-indigo-400" />
+        {/* Gate card */}
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-8 backdrop-blur-sm">
+
+          {/* Header */}
+          <div className="text-center mb-7">
+            <div className="w-12 h-12 bg-indigo-600/20 border border-indigo-500/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <DollarSign size={20} className="text-indigo-400" />
+            </div>
+            <h1 className="text-2xl font-bold text-white mb-2">
+              Where should we send your SR&amp;ED estimate?
+            </h1>
+            <p className="text-slate-400 text-sm leading-relaxed max-w-xs mx-auto">
+              We'll show you pricing immediately and follow up with a tailored estimate for your codebase.
+            </p>
           </div>
 
-          <h1 className="text-2xl font-bold text-white mb-2">
-            Your pricing is personalised
-          </h1>
-          <p className="text-slate-400 text-sm leading-relaxed mb-8 max-w-sm mx-auto">
-            TaxLift charges a percentage of <em>your</em> SR&amp;ED credit — so pricing
-            is tied to your estimate. Run a free scan or enter your estimate to see
-            your exact numbers.
-          </p>
-
-          {mode === null && (
-            <div className="space-y-3">
-              {/* Primary: run the scan */}
-              <button
-                onClick={() => navigate('/scan')}
-                className="w-full flex items-center justify-center gap-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3.5 rounded-xl transition-colors shadow-lg shadow-indigo-900/40"
-              >
-                <Github size={16} />
-                Run my free GitHub scan
-                <ArrowRight size={14} className="ml-auto opacity-60" />
-              </button>
-              <p className="text-slate-500 text-xs">Takes 60 seconds · no credit card</p>
-
-              {/* Secondary: enter estimate manually */}
-              <button
-                onClick={() => setMode('estimate')}
-                className="w-full flex items-center justify-center gap-2 text-slate-400 hover:text-white text-sm py-2.5 rounded-xl border border-white/10 hover:border-white/20 transition-colors mt-2"
-              >
-                <DollarSign size={14} />
-                I already have a credit estimate
-              </button>
-            </div>
-          )}
-
-          {mode === 'estimate' && (
-            <form onSubmit={handleManual} className="text-left space-y-3">
-              <label className="block text-slate-300 text-sm font-medium mb-1">
-                Your estimated SR&amp;ED credit (CAD)
-              </label>
-              <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-semibold">$</span>
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1">First name *</label>
                 <input
                   type="text"
-                  inputMode="numeric"
-                  placeholder="e.g. 150,000"
-                  value={rawVal}
-                  onChange={e => { setRawVal(e.target.value); setErr('') }}
-                  className="w-full bg-white/10 border border-white/20 text-white placeholder-slate-500 rounded-xl pl-8 pr-4 py-3 text-sm focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+                  required
+                  placeholder="Alex"
+                  value={fields.name}
+                  onChange={e => { set('name', e.target.value); setErr('') }}
+                  className="w-full bg-white/10 border border-white/20 text-white placeholder-slate-500 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
                   autoFocus
                 />
               </div>
-              {err && <p className="text-red-400 text-xs">{err}</p>}
-              <button
-                type="submit"
-                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-colors text-sm"
-              >
-                See my pricing →
-              </button>
-              <button
-                type="button"
-                onClick={() => { setMode(null); setErr('') }}
-                className="w-full text-slate-500 hover:text-slate-300 text-xs py-1 transition-colors"
-              >
-                ← Back
-              </button>
-            </form>
-          )}
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1">Company</label>
+                <input
+                  type="text"
+                  placeholder="Acme Corp (optional)"
+                  value={fields.company}
+                  onChange={e => set('company', e.target.value)}
+                  className="w-full bg-white/10 border border-white/20 text-white placeholder-slate-500 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1">Work email *</label>
+              <input
+                type="email"
+                required
+                placeholder="alex@yourcompany.com"
+                value={fields.email}
+                onChange={e => { set('email', e.target.value); setErr('') }}
+                className="w-full bg-white/10 border border-white/20 text-white placeholder-slate-500 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+              />
+            </div>
+
+            {err && (
+              <p className="flex items-center gap-1.5 text-red-400 text-xs">
+                <AlertCircle size={12} /> {err}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-colors text-sm shadow-lg shadow-indigo-900/40 mt-1"
+            >
+              {submitting
+                ? <><Loader2 size={15} className="animate-spin" /> Sending…</>
+                : <>See SR&amp;ED pricing <ArrowRight size={14} /></>}
+            </button>
+
+            <p className="text-center text-slate-600 text-[11px] mt-1">
+              No spam · no credit card · unsubscribe anytime
+            </p>
+          </form>
         </div>
 
         {/* Trust marks */}
         <div className="flex justify-center flex-wrap gap-4 mt-6">
           {[
-            { icon: ShieldCheck, label: 'CRA compliant' },
-            { icon: Lock,        label: '3–5% vs 15–25% consultant' },
-            { icon: Star,        label: 'CPA-ready package' },
+            { icon: ShieldCheck, label: 'CRA compliant'              },
+            { icon: Lock,        label: '3–5% vs 15–25% consultant'  },
+            { icon: Star,        label: 'CPA-ready package'          },
           ].map(({ icon: Icon, label }) => (
             <div key={label} className="flex items-center gap-1.5 text-slate-500 text-xs">
               <Icon size={12} className="text-indigo-500" />{label}
             </div>
           ))}
         </div>
+
+        {/* Already a partner / scan link */}
+        <p className="text-center text-slate-600 text-xs mt-5">
+          Already have scan results?{' '}
+          <button
+            onClick={() => navigate('/scan')}
+            className="text-indigo-400 hover:text-indigo-300 underline transition-colors"
+          >
+            Run a free GitHub scan instead
+          </button>
+        </p>
+
       </div>
     </div>
   )
@@ -369,14 +426,16 @@ export default function PricingPage() {
   const [clusterCount,    setClusterCount]    = useState(null)
   const [gateCleared,     setGateCleared]     = useState(false)
 
-  // Auto-unlock: ?estimate= param or existing scan in session
+  // Auto-unlock: ?estimate= param, existing scan results, or returning visitor (same session)
   useEffect(() => {
+    // Path 1: CPA referral link with ?estimate= param
     const paramEstimate = searchParams.get('estimate')
     if (paramEstimate && !isNaN(Number(paramEstimate))) {
       setEstimate(Number(paramEstimate))
       setGateCleared(true)
       return
     }
+    // Path 2: returning from scan — scan results in session
     try {
       const raw = sessionStorage.getItem('taxlift_scan_results')
       if (raw) {
@@ -385,20 +444,25 @@ export default function PricingPage() {
           setEstimate(scan.estimated_credit)
           setClusterCount(scan.clusters?.length ?? null)
           setGateCleared(true)
+          return
         }
       }
     } catch { /* ignore */ }
+    // Path 3: same-session returning visitor already submitted lead form
+    try {
+      const lead = sessionStorage.getItem('taxlift_pricing_lead')
+      if (lead) { setGateCleared(true); return }
+    } catch { /* ignore */ }
   }, [searchParams])
 
-  // Manual unlock from gate (user entered estimate without scanning)
-  function handleGateUnlock(estimateCad) {
-    setEstimate(estimateCad)
+  // Lead form unlock (no estimate yet — they'll see standard pricing and scan upsell)
+  function handleGateUnlock() {
     setGateCleared(true)
   }
 
-  // Show gate if no scan results and no ?estimate param and gate not manually cleared
+  // Show lead capture gate until one of the bypass paths clears it
   if (!gateCleared) {
-    return <PricingGate onUnlock={handleGateUnlock} />
+    return <LeadCaptureGate onUnlock={handleGateUnlock} />
   }
 
   const creditLow     = estimate ? Math.round(estimate * 0.65) : null
@@ -558,6 +622,42 @@ export default function PricingPage() {
             <p className="text-xs text-gray-400">Want year-round coverage?{' '}<button onClick={() => setTrack('annual')} className="text-indigo-500 hover:underline">See feature plans →</button></p>
           )}
         </div>
+
+        {/* ── Scan upsell — shown when no personalised estimate yet ───────────── */}
+        {!estimate && (
+          <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-2xl p-7 mb-12 text-white shadow-lg shadow-indigo-900/20">
+            <div className="flex flex-col sm:flex-row items-center gap-6">
+              <div className="w-12 h-12 bg-white/10 border border-white/20 rounded-2xl flex items-center justify-center flex-shrink-0">
+                <Github size={22} className="text-white" />
+              </div>
+              <div className="flex-1 text-center sm:text-left">
+                <h3 className="text-base font-bold mb-1">Want a number specific to your codebase?</h3>
+                <p className="text-indigo-200 text-sm leading-relaxed max-w-lg">
+                  Connect GitHub and TaxLift scans every commit in ~60 seconds — you'll see your personalised SR&amp;ED credit estimate and your exact 3%/5% fee before you choose a plan.
+                </p>
+                <div className="flex flex-wrap gap-4 mt-3 justify-center sm:justify-start">
+                  {[
+                    '60-second scan',
+                    'No credit card',
+                    'Personalised estimate',
+                  ].map(l => (
+                    <div key={l} className="flex items-center gap-1.5 text-indigo-200 text-xs">
+                      <Check size={12} className="text-indigo-300" /> {l}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="flex-shrink-0">
+                <button
+                  onClick={() => navigate('/scan')}
+                  className="flex items-center gap-2 bg-white text-indigo-700 font-bold text-sm px-6 py-3 rounded-xl hover:bg-indigo-50 transition-colors shadow-lg whitespace-nowrap"
+                >
+                  Run my free scan <ArrowRight size={14} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── CPA Referral Pricing ─────────────────────────────────────────────── */}
         <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-7 mb-12">
