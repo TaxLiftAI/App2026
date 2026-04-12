@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { ShieldCheck, ChevronDown, Loader2, AlertCircle, FlaskConical } from 'lucide-react'
 import { useAuth, DEMO_PERSONAS } from '../context/AuthContext'
 import Button from '../components/ui/Button'
@@ -7,6 +7,7 @@ import Button from '../components/ui/Button'
 export default function LoginPage() {
   const { currentUser, isDemoMode, loginWithCredentials, loginDemo, authError } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
   // After loginDemo commits state, navigate to dashboard.
   // useEffect fires post-commit, guaranteeing currentUser is set
@@ -19,7 +20,8 @@ export default function LoginPage() {
   }, [currentUser, isDemoMode]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Mode: 'real' | 'demo'
-  const [mode, setMode]           = useState('real')
+  // ?mode=demo in the URL (linked from the homepage demo CTA) auto-selects demo tab
+  const [mode, setMode]           = useState(() => searchParams.get('mode') === 'demo' ? 'demo' : 'real')
   const [email, setEmail]         = useState('admin@taxlift.dev')
   const [password, setPassword]   = useState('')
   const [loading, setLoading]     = useState(false)

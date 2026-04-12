@@ -10,7 +10,7 @@
  *   Demo mode  → loginCpaDemo() → sets a CPA persona from CPA_FIRM mock data
  */
 import { useState, useEffect } from 'react'
-import { useNavigate, Link }   from 'react-router-dom'
+import { useNavigate, Link, useSearchParams }   from 'react-router-dom'
 import {
   Building2, Loader2, AlertCircle, ArrowRight,
   ShieldCheck, Users, DollarSign, CheckCircle2,
@@ -28,6 +28,7 @@ const PARTNER_PERKS = [
 export default function CpaLoginPage() {
   const { currentUser, loginWithCredentials, loginCpaDemo, authError } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
   // Redirect if already authenticated as CPA
   useEffect(() => {
@@ -38,7 +39,8 @@ export default function CpaLoginPage() {
   const [password,   setPassword]   = useState('')
   const [loading,    setLoading]    = useState(false)
   const [localError, setLocalError] = useState(null)
-  const [mode,       setMode]       = useState('real') // 'real' | 'demo'
+  // ?mode=demo in the URL (linked from the homepage CPA section) auto-selects demo tab
+  const [mode,       setMode]       = useState(() => searchParams.get('mode') === 'demo' ? 'demo' : 'real')
 
   async function handleLogin(e) {
     e.preventDefault()

@@ -21,7 +21,7 @@ import {
   GitBranch, FileText, Shield, Package, BarChart2, Calculator,
   CheckCircle2, AlertTriangle, Clock, Zap, Users, Lock,
   Star, DollarSign, TrendingUp, Link2, Sparkles, Search,
-  Building2, Mail, ExternalLink, BadgeCheck, Pencil,
+  Building2, Mail, ExternalLink, BadgeCheck, Pencil, FlaskConical,
 } from 'lucide-react'
 import WaitlistModal  from '../components/WaitlistModal'
 import CalendlyEmbed  from '../components/CalendlyEmbed'
@@ -875,16 +875,16 @@ export default function MarketingPage() {
                 <ArrowRight size={16} />
               </button>
               <Link
-                to="/demo"
+                to="/login?mode=demo"
                 className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 text-white font-semibold text-base px-7 py-3.5 rounded-xl border border-white/20 transition-colors"
               >
-                See a live demo
-                <ArrowRight size={16} />
+                <FlaskConical size={16} />
+                Try live demo
               </Link>
             </div>
 
             {/* CPA self-selection strip */}
-            <div className="flex justify-center mb-14">
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-3 mb-14">
               <Link
                 to="/partners"
                 className="group inline-flex items-center gap-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 hover:border-emerald-500/50 rounded-2xl px-5 py-3 transition-all"
@@ -897,6 +897,13 @@ export default function MarketingPage() {
                   <p className="text-emerald-400/70 text-xs leading-none">Earn $750–$9K per client referral · Partner program →</p>
                 </div>
                 <ArrowRight size={13} className="text-emerald-500 group-hover:translate-x-0.5 transition-transform ml-1" />
+              </Link>
+              <Link
+                to="/cpa/login?mode=demo"
+                className="inline-flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-emerald-500/30 rounded-2xl px-5 py-3 transition-all"
+              >
+                <FlaskConical size={13} className="text-emerald-400" />
+                <span className="text-emerald-400/80 text-xs font-medium">Try CPA portal demo →</span>
               </Link>
             </div>
 
@@ -1325,17 +1332,15 @@ export default function MarketingPage() {
                 </span>
               </h2>
               <p className="text-slate-300 text-base leading-relaxed mb-8">
-                Refer your tech clients to TaxLift and earn a tiered commission of 1.5%–2.5% of every SR&ED
-                credit recovered. Independent CPA login, annotation rights, co-branded packages, and a
-                published methodology you can cite in any CRA audit.
+                Refer your tech clients to TaxLift and earn a <strong className="text-white">flat referral fee of $750–$9,000</strong> per client — paid when the T661 package is delivered, not when CRA processes the claim. Independent CPA login, annotation rights, co-branded packages, and a published methodology you can cite in any CRA audit.
               </p>
 
               <div className="space-y-4 mb-8">
                 {[
-                  { icon: Link2,        text: 'Your own CPA login — see all referred clients in one dashboard', href: '/cpa/login' },
-                  { icon: DollarSign,   text: 'Tiered commission: 1.5% → 2.0% → 2.5% + $500 first-client bonus', href: '/partners' },
-                  { icon: Package,      text: 'Annotate, approve, or flag narratives before anything is filed', href: '/partners' },
-                  { icon: BarChart2,    text: 'Published SR&ED methodology (IC86-4R3 aligned) to defend any audit', href: '/methodology' },
+                  { icon: Link2,      text: 'Your own CPA login — see all referred clients in one dashboard' },
+                  { icon: DollarSign, text: 'Flat referral fee $750–$9K by credit size — paid at T661 delivery, not CRA processing' },
+                  { icon: Package,    text: 'Annotate, approve, or flag narratives before anything is filed' },
+                  { icon: BarChart2,  text: 'Published SR&ED methodology (IC86-4R3 aligned) to defend any audit' },
                 ].map(item => {
                   const Icon = item.icon
                   return (
@@ -1357,12 +1362,13 @@ export default function MarketingPage() {
                   View partner program
                   <ArrowRight size={15} />
                 </button>
-                <button
-                  onClick={() => navigate('/cpa/register')}
-                  className="inline-flex items-center gap-2 border border-slate-600 hover:border-slate-400 text-slate-300 hover:text-white font-medium px-5 py-3 rounded-xl transition-colors"
+                <Link
+                  to="/cpa/login?mode=demo"
+                  className="inline-flex items-center gap-2 border border-slate-600 hover:border-emerald-500/50 text-slate-300 hover:text-emerald-300 font-medium px-5 py-3 rounded-xl transition-colors"
                 >
-                  Apply free →
-                </button>
+                  <FlaskConical size={14} />
+                  Try CPA portal demo
+                </Link>
               </div>
             </div>
 
@@ -1373,10 +1379,10 @@ export default function MarketingPage() {
 
                 <div className="space-y-3">
                   {[
-                    { company: 'Zenith Biotech',     credit: '$312,000', commission: '$6,240',  status: 'Paid',      statusColor: 'text-green-400 bg-green-400/10' },
-                    { company: 'Pulse Commerce',     credit: '$142,000', commission: '$2,840',  status: 'Confirmed', statusColor: 'text-blue-400  bg-blue-400/10'  },
-                    { company: 'Atlas Network',      credit: '$67,000',  commission: '$1,005',  status: 'Confirmed', statusColor: 'text-blue-400  bg-blue-400/10'  },
-                    { company: 'Axiom Robotics',     credit: '$89,000',  commission: '$1,335',  status: 'Pending',   statusColor: 'text-amber-400 bg-amber-400/10' },
+                    { company: 'Zenith Biotech',  credit: '$312,000', fee: '$9,000', status: 'Paid',      statusColor: 'text-green-400 bg-green-400/10' },
+                    { company: 'Pulse Commerce',  credit: '$142,000', fee: '$1,500', status: 'Paid',      statusColor: 'text-green-400 bg-green-400/10' },
+                    { company: 'Atlas Network',   credit: '$67,000',  fee: '$750',   status: 'Confirmed', statusColor: 'text-blue-400  bg-blue-400/10'  },
+                    { company: 'Axiom Robotics',  credit: '$89,000',  fee: '$750',   status: 'Pending',   statusColor: 'text-amber-400 bg-amber-400/10' },
                   ].map(row => (
                     <div key={row.company} className="flex items-center gap-3 bg-slate-900/60 rounded-xl px-4 py-3">
                       <Building2 size={14} className="text-slate-500 flex-shrink-0" />
@@ -1385,7 +1391,7 @@ export default function MarketingPage() {
                         <p className="text-slate-500 text-[10px]">Credit: {row.credit}</p>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <p className="text-green-400 text-sm font-bold">{row.commission}</p>
+                        <p className="text-green-400 text-sm font-bold">{row.fee}</p>
                         <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${row.statusColor}`}>
                           {row.status}
                         </span>
@@ -1395,10 +1401,10 @@ export default function MarketingPage() {
                 </div>
 
                 <div className="mt-4 pt-4 border-t border-slate-700 flex items-center justify-between">
-                  <span className="text-slate-400 text-xs">Total commissions</span>
-                  <span className="text-white font-extrabold text-lg">$4,880</span>
+                  <span className="text-slate-400 text-xs">Total referral fees</span>
+                  <span className="text-white font-extrabold text-lg">$12,000</span>
                 </div>
-                <p className="text-slate-500 text-[10px] mt-1">Based on 4 active referrals · 0.8% of credit</p>
+                <p className="text-slate-500 text-[10px] mt-1">4 referrals · flat fee by credit size · paid at T661 delivery</p>
               </div>
             </div>
           </div>
