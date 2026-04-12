@@ -54,6 +54,13 @@ const db = require('./db')
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express()
 
+// ── Trust Railway's reverse proxy ────────────────────────────────────────────
+// Railway (and most PaaS providers) sit behind a load balancer that sets the
+// X-Forwarded-For header. Without this, express-rate-limit throws
+// ERR_ERL_UNEXPECTED_X_FORWARDED_FOR and cannot identify real client IPs.
+// '1' means trust exactly one proxy hop (the Railway edge) — safe default.
+app.set('trust proxy', 1)
+
 // ── Cookie parsing (populates req.cookies for httpOnly auth cookie) ───────────
 app.use((req, _res, next) => {
   req.cookies = cookieLib.parse(req.headers.cookie || '')
