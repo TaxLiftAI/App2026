@@ -168,6 +168,45 @@ export default function ScanLandingPage() {
             </span>
           ))}
         </div>
+
+        {/* Not ready to connect GitHub? */}
+        <div className="max-w-md mx-auto mt-8">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-white/10" />
+            </div>
+            <div className="relative flex justify-center">
+              <span className="bg-transparent px-3 text-xs text-slate-600">Not ready to connect GitHub?</span>
+            </div>
+          </div>
+
+          <div className="mt-4 bg-white/5 border border-white/10 rounded-2xl p-5 text-left">
+            <div className="flex items-start gap-4">
+              <div className="w-9 h-9 bg-indigo-500/20 border border-indigo-500/30 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+                <BarChart3 size={16} className="text-indigo-400" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-white mb-0.5">Use the questionnaire estimator</p>
+                <p className="text-xs text-slate-400 leading-relaxed mb-3">
+                  Answer 6 questions about your team size, salaries, and province. Get a ballpark SR&ED estimate in under 2 minutes — no GitHub, no OAuth, no code access.
+                </p>
+                <div className="flex flex-wrap gap-3 mb-4">
+                  {['No GitHub required', 'No account needed', '~2 minutes'].map(l => (
+                    <span key={l} className="flex items-center gap-1 text-[11px] text-slate-500">
+                      <CheckCircle2 size={10} className="text-emerald-500" /> {l}
+                    </span>
+                  ))}
+                </div>
+                <button
+                  onClick={() => navigate('/estimate')}
+                  className="flex items-center gap-2 bg-white/10 hover:bg-white/15 border border-white/10 hover:border-white/20 text-white text-sm font-medium px-4 py-2 rounded-xl transition-all"
+                >
+                  Try the estimator <ArrowRight size={13} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Social proof: example qualifying commits */}

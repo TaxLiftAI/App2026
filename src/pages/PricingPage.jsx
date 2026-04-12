@@ -390,16 +390,24 @@ function LeadCaptureGate({ onUnlock }) {
           ))}
         </div>
 
-        {/* Already a partner / scan link */}
-        <p className="text-center text-slate-600 text-xs mt-5">
-          Already have scan results?{' '}
-          <button
-            onClick={() => navigate('/scan')}
-            className="text-indigo-400 hover:text-indigo-300 underline transition-colors"
-          >
-            Run a free GitHub scan instead
-          </button>
-        </p>
+        {/* Alternative paths */}
+        <div className="mt-6 flex flex-col items-center gap-2">
+          <p className="text-slate-600 text-xs">Prefer not to fill in a form?</p>
+          <div className="flex flex-wrap justify-center gap-3">
+            <button
+              onClick={() => navigate('/scan')}
+              className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 border border-indigo-500/30 hover:border-indigo-400/50 rounded-lg px-3 py-1.5 transition-all"
+            >
+              <Github size={12} /> Connect GitHub for a real scan
+            </button>
+            <button
+              onClick={() => navigate('/estimate')}
+              className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 border border-white/10 hover:border-white/20 rounded-lg px-3 py-1.5 transition-all"
+            >
+              <DollarSign size={12} /> Use the questionnaire estimator
+            </button>
+          </div>
+        </div>
 
       </div>
     </div>
