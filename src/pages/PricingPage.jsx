@@ -531,6 +531,33 @@ export default function PricingPage() {
 
       <div className="max-w-6xl mx-auto px-4 py-12 sm:py-16">
 
+        {/* ── June 30 filing deadline urgency ── */}
+        {(() => {
+          const daysLeft = Math.max(0, Math.ceil((new Date('2026-06-30T23:59:59') - new Date()) / 86_400_000))
+          if (daysLeft <= 0) return null
+          return (
+            <div className="flex items-center gap-3 bg-amber-50 border border-amber-300 rounded-xl px-4 py-3 mb-8 shadow-sm">
+              <div className="w-8 h-8 bg-amber-400 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Calendar size={15} className="text-amber-900" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-amber-900 text-sm font-bold leading-snug">
+                  June 30 SR&amp;ED filing deadline — <span className="tabular-nums">{daysLeft} days</span> to file your FY 2024 claim
+                </p>
+                <p className="text-amber-700 text-xs mt-0.5">
+                  CRA allows claims up to 18 months after fiscal year-end. For Dec 31 companies, June 30 is the hard cutoff.
+                </p>
+              </div>
+              <button
+                onClick={() => navigate('/scan')}
+                className="hidden sm:flex items-center gap-1 text-xs font-semibold text-amber-900 bg-amber-200 hover:bg-amber-300 rounded-lg px-3 py-1.5 transition-colors flex-shrink-0 whitespace-nowrap"
+              >
+                Start claim <ArrowRight size={11} />
+              </button>
+            </div>
+          )
+        })()}
+
         {creditLow && creditHigh && (
           <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-2xl px-6 py-5 mb-10 shadow-lg shadow-indigo-900/20 text-white">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

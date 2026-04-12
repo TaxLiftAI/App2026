@@ -610,6 +610,18 @@ export default function MarketingPage() {
   const [waitlistPlan, setWaitlistPlan] = useState('')
   const [waitlistSource, setWaitlistSource] = useState('marketing')
   const [calendlyOpen, setCalendlyOpen]   = useState(false)
+
+  // ── June 30 filing deadline urgency banner ──────────────────────────────────
+  const DEADLINE = new Date('2026-06-30T23:59:59')
+  const daysLeft = Math.max(0, Math.ceil((DEADLINE - new Date()) / 86_400_000))
+  const [bannerDismissed, setBannerDismissed] = useState(
+    () => sessionStorage.getItem('deadline_banner_v1') === '1'
+  )
+  const showBanner = !bannerDismissed && daysLeft > 0
+  function dismissBanner() {
+    sessionStorage.setItem('deadline_banner_v1', '1')
+    setBannerDismissed(true)
+  }
   // Primary CTA: send founders to the free scan flow
   function openWaitlist(plan = '', source = 'marketing') {
     // Pricing & enterprise leads still go to the waitlist modal.
@@ -646,9 +658,41 @@ export default function MarketingPage() {
     <div className="min-h-screen bg-white font-sans antialiased">
 
       {/* ══════════════════════════════════════════════════════════════════════
+          0. DEADLINE URGENCY BANNER
+      ══════════════════════════════════════════════════════════════════════ */}
+      {showBanner && (
+        <div className="fixed top-0 inset-x-0 z-[60] h-10 bg-amber-500 flex items-center justify-between px-4 sm:px-6 gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <Clock size={13} className="text-amber-900 flex-shrink-0" />
+            <p className="text-amber-950 text-xs sm:text-sm font-semibold truncate">
+              <span className="font-extrabold">{daysLeft} days left</span>
+              {' '}to file your FY 2024 SR&amp;ED claim — June 30 deadline
+            </p>
+          </div>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <Link
+              to="/scan"
+              className="hidden sm:inline-flex items-center gap-1 text-xs font-bold text-amber-950 underline underline-offset-2 hover:no-underline"
+            >
+              Start your claim <ArrowRight size={11} />
+            </Link>
+            <button
+              onClick={dismissBanner}
+              aria-label="Dismiss deadline banner"
+              className="text-amber-900 hover:text-amber-950 opacity-70 hover:opacity-100 transition-opacity"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════════
           1. NAVBAR
       ══════════════════════════════════════════════════════════════════════ */}
-      <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-200 ${
+      <header className={`fixed inset-x-0 z-50 transition-all duration-200 ${
+        showBanner ? 'top-10' : 'top-0'
+      } ${
         scrolled ? 'bg-white/95 backdrop-blur border-b border-gray-100 shadow-sm' : 'bg-transparent'
       }`}>
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -759,7 +803,8 @@ export default function MarketingPage() {
       ══════════════════════════════════════════════════════════════════════ */}
       <section
         ref={heroRef}
-        className="relative pt-28 pb-20 sm:pt-36 sm:pb-28 overflow-hidden bg-gradient-to-b from-slate-950 via-indigo-950 to-slate-900"
+        className="relative pb-20 sm:pb-28 overflow-hidden bg-gradient-to-b from-slate-950 via-indigo-950 to-slate-900"
+        style={{ paddingTop: showBanner ? 'calc(7rem + 2.5rem)' : '7rem' }}
       >
         {/* Background grid */}
         <div
@@ -774,10 +819,10 @@ export default function MarketingPage() {
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
-            {/* Pill badge */}
-            <div className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold px-4 py-1.5 rounded-full mb-6">
-              <Sparkles size={11} />
-              SR&ED + Grants automation for Canadian tech companies
+            {/* Deadline pill badge */}
+            <div className="inline-flex items-center gap-2 bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-semibold px-4 py-1.5 rounded-full mb-6">
+              <Clock size={11} className="text-amber-400" />
+              FY 2024 SR&amp;ED filing deadline: June 30, 2026 · {daysLeft} days remaining
             </div>
 
             {/* Headline */}
