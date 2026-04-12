@@ -21,7 +21,7 @@ import { useAuth } from '../context/AuthContext'
 const PARTNER_PERKS = [
   { icon: Users,        text: 'Single dashboard across all referred clients'         },
   { icon: ShieldCheck,  text: 'Audit-ready T661 packages — no prep work required'   },
-  { icon: DollarSign,   text: 'Tiered commission up to 2.5% of credit recovered'    },
+  { icon: DollarSign,   text: 'Flat referral fee $750–$9,000 per client — paid at package delivery' },
   { icon: CheckCircle2, text: 'Co-branded packages under your firm name'            },
 ]
 
@@ -53,7 +53,8 @@ export default function CpaLoginPage() {
   function handleDemoLogin() {
     if (loginCpaDemo) {
       loginCpaDemo()
-      navigate('/cpa-portal')
+      // Don't navigate here — loginCpaDemo schedules an async state update.
+      // The useEffect above fires once currentUser is committed and navigates correctly.
     }
   }
 
@@ -206,7 +207,7 @@ export default function CpaLoginPage() {
                 <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
                   <p className="text-xs font-semibold text-indigo-800 mb-1">Demo: Hartwell & Associates CPA</p>
                   <p className="text-[11px] text-indigo-600 leading-relaxed">
-                    3 referred clients · $247K credit pipeline · 0.8% → 1.5% tiered commission
+                    3 referred clients · $247K credit pipeline · $5,500 referral fee earned
                   </p>
                 </div>
                 <button
