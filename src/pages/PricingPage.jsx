@@ -617,7 +617,11 @@ export default function PricingPage() {
         )}
 
         <div className="text-center mb-12 space-y-2">
-          <p className="text-xs text-gray-400">Prices in CAD · 3% of estimated SR&amp;ED credit · 14-day free trial on all plans · payment processed via Stripe</p>
+          <p className="text-xs text-gray-400">
+            {track === 'claim'
+              ? 'Prices in CAD · one-time fee per fiscal year · payment processed via Stripe'
+              : 'Prices in CAD · 3% of estimated SR&ED credit · 14-day free trial on all plans · payment processed via Stripe'}
+          </p>
           {track === 'claim' && (
             <p className="text-xs text-gray-400">Want year-round coverage?{' '}<button onClick={() => setTrack('annual')} className="text-indigo-500 hover:underline">See feature plans →</button></p>
           )}
