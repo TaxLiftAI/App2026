@@ -2,33 +2,58 @@
  * stripe.js — client-side Stripe initialisation + plan config
  *
  * Pricing model (performance-based):
- *   PERFORMANCE_RATE — 3% of the customer's estimated SR&ED credit
- *   CPA_RATE         — 1.5% of credit allocated to CPA partner (internal only)
- *   NET_RATE         — 1.5% retained by TaxLift (internal only)
+ *   PERFORMANCE_RATE      — 3% of the customer's estimated SR&ED credit (Starter)
+ *   PERFORMANCE_RATE_PLUS — 5% of the customer's estimated SR&ED credit (Plus)
+ *
+ * CPA partner referral fees (flat, paid at T661 package delivery — not % contingency):
+ *   CPA_REFERRAL_TIERS — tiered flat fees by credit size range
+ *   CPA_PLUS_BONUS     — additional $750 when client is on Plus plan
+ *   calcCpaFee()       — returns the applicable flat fee for a given credit estimate + plan
  *
  * Two product tracks:
- *   PLANS       — Feature tiers (Starter / Plus / Enterprise), all at 3% of credit
+ *   PLANS       — Feature tiers (Starter / Plus / Enterprise)
  *   CLAIM_PLANS — Pay-per-claim (self-serve SMBs, first-time filers)
  *
- * Stripe billing: variable one-time invoice per customer, amount = credit_estimate × 0.03
+ * Stripe billing: variable one-time invoice per customer, amount = credit_estimate × rate
  *
  * Usage:
- *   import { PLANS, CLAIM_PLANS, PERFORMANCE_RATE, redirectToCheckout } from '../lib/stripe'
+ *   import { PLANS, CLAIM_PLANS, PERFORMANCE_RATE, calcCpaFee, redirectToCheckout } from '../lib/stripe'
  */
 import { loadStripe } from '@stripe/stripe-js'
 import { billing } from './api'
 
-// ── Performance pricing rates (not shown publicly — CPA split is internal) ────
+// ── Performance pricing rates ─────────────────────────────────────────────────
 export const PERFORMANCE_RATE      = 0.03   // 3% — Starter plan
 export const PERFORMANCE_RATE_PLUS = 0.05   // 5% — Plus plan (includes Grants module)
 
-// Starter internal split (3% total):
-export const CPA_RATE     = 0.015  // 1.5% → CPA partner commission
-export const NET_RATE     = 0.015  // 1.5% → TaxLift net
+// ── CPA partner referral fees (flat, paid at T661 package delivery) ───────────
+// Flat structure avoids CPA Canada Rule 205 independence concerns that arise
+// from % contingency fees tied to SR&ED claim outcomes.
+//
+// Tier thresholds are based on the TaxLift scan estimate of the SR&ED credit.
+// Fee is paid when the CPA-ready T661 package is delivered — not on CRA assessment.
+export const CPA_REFERRAL_TIERS = [
+  { maxCredit:   75_000, fee:   750 },  // $0–$75K credit estimate
+  { maxCredit:  150_000, fee: 1_500 },  // $75K–$150K credit estimate
+  { maxCredit:  300_000, fee: 3_000 },  // $150K–$300K credit estimate
+  { maxCredit:  600_000, fee: 5_500 },  // $300K–$600K credit estimate
+  { maxCredit: Infinity, fee: 9_000 },  // $600K+ credit estimate
+]
 
-// Plus internal split (5% total):
-export const CPA_RATE_PLUS = 0.02  // 2.0% → CPA partner commission (higher to incentivise Plus upsell)
-export const NET_RATE_PLUS = 0.03  // 3.0% → TaxLift net
+// Additional flat bonus when the referred client is on the Plus plan (SR&ED + Grants)
+export const CPA_PLUS_BONUS = 750
+
+/**
+ * calcCpaFee — returns the flat CPA referral fee for a given credit estimate + plan.
+ *
+ * @param {number} creditEstimate — estimated SR&ED credit (CAD) from TaxLift scan
+ * @param {string} planId         — 'starter' | 'plus'
+ * @returns {number}              — flat referral fee in CAD
+ */
+export function calcCpaFee(creditEstimate, planId = 'starter') {
+  const tier = CPA_REFERRAL_TIERS.find(t => creditEstimate <= t.maxCredit) ?? CPA_REFERRAL_TIERS.at(-1)
+  return tier.fee + (planId === 'plus' ? CPA_PLUS_BONUS : 0)
+}
 
 // ── Stripe instance (singleton promise) ───────────────────────────────────────
 let stripePromise = null

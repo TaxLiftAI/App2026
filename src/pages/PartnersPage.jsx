@@ -7,7 +7,7 @@
  *   ✓ Partner application flow
  *   ✓ Liability + methodology links
  *   ✓ CPA annotation rights
- *   ✓ Tiered commission economics (1.5% → 2.5%)
+ *   ✓ Tiered flat referral fee ($750 → $9,000 by credit size)
  */
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -28,9 +28,9 @@ const HEARD_OPTIONS = [
 
 // ── Commission stats ───────────────────────────────────────────────────────────
 const COMMISSION_STATS = [
-  { label: 'Flat commission rate',          value: '1.5%',   sub: 'of every dollar recovered'         },
-  { label: 'Avg annual earnings per client', value: '$6,200', sub: '10-person Ontario team example'    },
-  { label: 'No cap · no expiry',            value: '∞',      sub: 'runs as long as the client does'   },
+  { label: 'Referral fee range',             value: '$750–$9K', sub: 'flat fee by client credit size'       },
+  { label: 'Typical mid-market client',      value: '$5,500',   sub: '$300K–$600K credit estimate'          },
+  { label: 'Paid at package delivery',       value: 'Day 0',    sub: 'not when CRA processes — no wait'     },
 ]
 
 // ── Why TaxLift (non-revenue reasons) ─────────────────────────────────────────
@@ -97,8 +97,8 @@ const STEPS = [
   },
   {
     n: '05', icon: DollarSign, color: 'text-amber-600', bg: 'bg-amber-50',
-    title: 'File & earn commission',
-    body: 'You file the T661 with CRA. Commission is paid by EFT when your client\'s TaxLift fee is collected — at package completion, before CRA processes the claim — so you\'re not waiting 12–18 months for CRA to process.',
+    title: 'File & earn your referral fee',
+    body: 'You file the T661 with CRA. Your flat referral fee is paid by EFT at T661 package delivery — before CRA even receives the claim. No waiting 12–18 months. The fee is fixed and not contingent on CRA outcome.',
   },
 ]
 
@@ -131,8 +131,8 @@ const FAQS = [
     a: 'TaxLift stores commit metadata, ticket descriptions, and developer identifiers — no source code is stored. All data is encrypted at rest (AES-256) and in transit (TLS 1.3). A Data Processing Agreement (DPA) is available on request and is included in all Enterprise partner agreements. TaxLift is PIPEDA compliant.',
   },
   {
-    q: 'When and how are commissions paid?',
-    a: 'Commissions are paid by EFT when your client\'s TaxLift fee is collected — at package completion, before CRA processes the claim. Commission is 1.5% of the estimated credit (Starter clients) or 2% (Plus clients) at the time of client payment. If the CRA NOA varies by more than 30% from the scan estimate, a true-up is applied. There is no cap and no expiry on earned commissions.',
+    q: 'When and how are referral fees paid?',
+    a: 'Referral fees are paid by EFT at T661 package delivery — before CRA even receives the claim, so you\'re not waiting 12–18 months for CRA to process. The fee is a flat amount determined by the client\'s TaxLift scan estimate of their SR&ED credit: $750 for credits up to $75K, $1,500 up to $150K, $3,000 up to $300K, $5,500 up to $600K, and $9,000 for $600K+. An additional $750 applies if the client is on the Plus plan. The fee is not contingent on the CRA assessment outcome and is not subject to true-up.',
   },
   {
     q: 'Can I white-label TaxLift for my clients?',
@@ -387,19 +387,20 @@ export default function PartnersPage() {
             CPA Partner Program — Verified Firms Only
           </div>
           <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight mb-5">
-            Earn 1.5% of every<br />SR&amp;ED credit you refer
+            Earn $750–$9,000 flat<br />for every SR&amp;ED client you refer
           </h1>
           <p className="text-slate-300 text-lg leading-relaxed max-w-2xl mx-auto mb-8">
             TaxLift prepares the complete T661 package from your client's GitHub and Jira.
             You review, annotate, and file. No documentation burden. Full professional control.
+            Flat referral fee paid at package delivery — not contingent on CRA outcome.
           </p>
 
           {/* Hero stats */}
           <div className="grid grid-cols-3 gap-4 max-w-lg mx-auto mb-8">
             {[
-              { v: '1.5%',    l: 'Flat commission rate'       },
-              { v: '$6,200',  l: 'Avg annual earnings/client' },
-              { v: '1 day',   l: 'Partner verification'       },
+              { v: '$750–$9K', l: 'Flat referral fee / client'  },
+              { v: '$5,500',   l: 'Typical mid-market client'    },
+              { v: '1 day',    l: 'Partner verification'         },
             ].map(({ v, l }) => (
               <div key={l} className="bg-white/10 rounded-xl py-3 px-2">
                 <p className="text-xl font-extrabold text-white">{v}</p>
@@ -494,7 +495,7 @@ export default function PartnersPage() {
         <div className="max-w-3xl mx-auto">
           <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">Commission structure</h2>
           <p className="text-gray-500 text-sm text-center mb-10">
-            Flat rate · No cap · No expiry · Paid on client billing cycle
+            Flat fee by credit size · Paid at T661 package delivery · No CRA outcome dependency
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
             {COMMISSION_STATS.map(({ label, value, sub }) => (
@@ -505,8 +506,43 @@ export default function PartnersPage() {
               </div>
             ))}
           </div>
+
+          {/* Tier table */}
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden mb-5">
+            <div className="px-5 py-3 bg-gray-50 border-b border-gray-200">
+              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Referral fee schedule (CAD) — paid at package delivery</p>
+            </div>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider border-b border-gray-100">
+                  <th className="text-left px-5 py-2.5">Client credit estimate</th>
+                  <th className="text-right px-5 py-2.5">Starter plan</th>
+                  <th className="text-right px-5 py-2.5">Plus plan</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {[
+                  { range: 'Up to $75,000',          starter: '$750',   plus: '$1,500'  },
+                  { range: '$75,001 – $150,000',      starter: '$1,500', plus: '$2,250'  },
+                  { range: '$150,001 – $300,000',     starter: '$3,000', plus: '$3,750'  },
+                  { range: '$300,001 – $600,000',     starter: '$5,500', plus: '$6,250'  },
+                  { range: '$600,001+',               starter: '$9,000', plus: '$9,750'  },
+                ].map(({ range, starter, plus }) => (
+                  <tr key={range} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-5 py-3 text-gray-700 font-medium">{range}</td>
+                    <td className="px-5 py-3 text-right text-gray-800 font-semibold">{starter}</td>
+                    <td className="px-5 py-3 text-right text-indigo-600 font-bold">{plus}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="px-5 py-3 bg-indigo-50 border-t border-indigo-100 text-[11px] text-indigo-700">
+              Plus plan bonus (+$750) reflects the higher 5% TaxLift fee on Plus — SR&ED + Grants module.
+            </div>
+          </div>
+
           <div className="bg-white border border-gray-200 rounded-xl p-5 text-center">
-            <p className="text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wider">The math — 10-person dev team (Ontario)</p>
+            <p className="text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wider">Example — 10-person dev team (Ontario)</p>
             <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 max-w-sm mx-auto text-left text-sm mb-3">
               <span className="text-gray-500">10 devs × $120K avg salary</span><span className="font-semibold text-gray-800 text-right">$1.2M payroll</span>
               <span className="text-gray-500">Qualified Expenditure (PPA)</span><span className="font-semibold text-gray-800 text-right">$966,240</span>
@@ -516,10 +552,10 @@ export default function PartnersPage() {
             </div>
             <div className="bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-2.5 inline-flex items-center gap-2">
               <DollarSign size={15} className="text-indigo-600" />
-              <span className="text-sm font-bold text-indigo-700">Your 1.5–2% share: $6,232 per client</span>
+              <span className="text-sm font-bold text-indigo-700">Your flat referral fee: $5,500 (Starter) or $6,250 (Plus)</span>
             </div>
             <p className="text-[11px] text-gray-400 mt-3">
-              Paid at package completion (before CRA processes). True-up applied if CRA NOA varies by &gt;30%.
+              Paid by EFT at T661 package delivery. $415K credit falls in the $300K–$600K tier.
             </p>
           </div>
         </div>

@@ -103,48 +103,63 @@ export default function TermsPage() {
             <p>When you connect a third-party account (e.g., GitHub), you authorize TaxLift to access that account with read-only permissions as described in our Privacy Policy. You can revoke these connections at any time through your account settings or the third-party provider's settings.</p>
           </Section>
 
-          <Section title="7. CPA and Professional Advisor Use">
+          <Section title="7. CPA Partner Referral Fees">
+            <p><strong>Flat Referral Fee.</strong> TaxLift pays verified CPA partners a flat referral fee for each client they refer who completes a paid T661 package. The fee is determined by the TaxLift scan estimate of the client's SR&ED credit at the time of package delivery, according to the following schedule:</p>
+            <ul className="list-disc list-inside space-y-1 ml-2">
+              <li>Credit estimate up to $75,000 — $750 CAD</li>
+              <li>Credit estimate $75,001–$150,000 — $1,500 CAD</li>
+              <li>Credit estimate $150,001–$300,000 — $3,000 CAD</li>
+              <li>Credit estimate $300,001–$600,000 — $5,500 CAD</li>
+              <li>Credit estimate over $600,000 — $9,000 CAD</li>
+            </ul>
+            <p>An additional $750 CAD applies when the referred client is on the Plus plan. The current fee schedule is available at {WEBSITE}/partners and is subject to change with 30 days' notice to enrolled partners.</p>
+            <p><strong>Payment Timing.</strong> Referral fees are paid by electronic funds transfer (EFT) at the time the client's T661 package is delivered and the TaxLift platform fee is collected. Payment is not contingent on CRA review or approval of the claim and is not subject to true-up based on the final Notice of Assessment.</p>
+            <p><strong>Independence.</strong> Referral fees are structured as flat compensation for client introduction services and are not calculated as a percentage of the SR&ED credit or CRA assessment. CPA partners are responsible for ensuring their participation in the TaxLift partner program complies with their applicable professional rules of conduct, including CPA Canada Rule 205 and any provincial equivalent.</p>
+            <p><strong>Eligibility.</strong> Referral fees are payable only to CPA partners whose credentials have been verified by TaxLift and who have executed a Partner Agreement. Fees are forfeited for referrals involving fraudulent, ineligible, or improperly filed claims.</p>
+          </Section>
+
+          <Section title="8. CPA and Professional Advisor Use">
             <p>TaxLift produces CPA-ready documentation packages. CPAs and SR&ED consultants who access the Platform on behalf of their clients are responsible for independently verifying the accuracy and completeness of all output before filing with the Canada Revenue Agency (CRA).</p>
             <p>TaxLift does not guarantee that any SR&ED claim prepared using the Platform will be approved by CRA. CRA approval depends on the eligibility of your specific research and development activities and the accuracy of the information you provide.</p>
           </Section>
 
-          <Section title="8. Disclaimers and Limitation of Liability">
+          <Section title="9. Disclaimers and Limitation of Liability">
             <p><strong>No Tax Advice.</strong> The Platform does not provide tax, legal, accounting, or financial advice. All output should be reviewed by a qualified professional before filing.</p>
             <p><strong>As-Is Service.</strong> THE PLATFORM IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR NON-INFRINGEMENT.</p>
             <p><strong>Limitation of Liability.</strong> TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, TAXLIFT'S TOTAL LIABILITY TO YOU FOR ANY CLAIMS ARISING OUT OF OR RELATED TO THESE TERMS OR THE PLATFORM SHALL NOT EXCEED THE GREATER OF (A) THE TOTAL FEES PAID BY YOU TO TAXLIFT IN THE 12 MONTHS PRECEDING THE CLAIM, OR (B) $500 CAD.</p>
             <p><strong>Consequential Damages.</strong> IN NO EVENT SHALL TAXLIFT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, LOST REVENUE, OR LOSS OF DATA, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.</p>
           </Section>
 
-          <Section title="9. Indemnification">
+          <Section title="10. Indemnification">
             <p>You agree to indemnify and hold harmless TaxLift, its officers, directors, employees, and agents from any claims, losses, damages, liabilities, and expenses (including reasonable legal fees) arising out of: (a) your use of the Platform; (b) Your Data; (c) your violation of these Terms; or (d) your violation of any law or the rights of a third party.</p>
           </Section>
 
-          <Section title="10. Privacy">
+          <Section title="11. Privacy">
             <p>Your use of the Platform is also governed by our Privacy Policy, available at {WEBSITE}/privacy, which is incorporated into these Terms by reference.</p>
           </Section>
 
-          <Section title="11. Modifications to Terms">
+          <Section title="12. Modifications to Terms">
             <p>We may update these Terms from time to time. We will notify you of material changes by email or by posting a notice on the Platform at least 14 days before the changes take effect. Your continued use of the Platform after the effective date of any changes constitutes acceptance of the updated Terms.</p>
           </Section>
 
-          <Section title="12. Termination">
+          <Section title="13. Termination">
             <p>TaxLift may suspend or terminate your access to the Platform at any time, with or without cause, with reasonable notice. Upon termination, you may export Your Data for 30 days, after which it will be deleted in accordance with our Privacy Policy.</p>
             <p>You may terminate your account at any time by contacting {EMAIL}. Termination does not entitle you to a refund of any prepaid fees.</p>
           </Section>
 
-          <Section title="13. Governing Law and Disputes">
+          <Section title="14. Governing Law and Disputes">
             <p>These Terms are governed by the laws of the Province of Ontario and the federal laws of Canada applicable therein, without regard to conflict of law principles.</p>
             <p>Any dispute arising out of or relating to these Terms or the Platform shall first be attempted to be resolved through good-faith negotiation. If negotiation fails, disputes shall be resolved by binding arbitration in Toronto, Ontario, under the rules of the ADR Institute of Canada, except that either party may seek injunctive relief in a court of competent jurisdiction.</p>
           </Section>
 
-          <Section title="14. General">
+          <Section title="15. General">
             <p><strong>Entire Agreement.</strong> These Terms, together with our Privacy Policy, constitute the entire agreement between you and TaxLift regarding the Platform.</p>
             <p><strong>Severability.</strong> If any provision of these Terms is found unenforceable, the remaining provisions will continue in full force.</p>
             <p><strong>Waiver.</strong> Failure to enforce any provision of these Terms does not constitute a waiver of that provision.</p>
             <p><strong>Assignment.</strong> You may not assign your rights under these Terms without TaxLift's prior written consent. TaxLift may assign its rights in connection with a merger, acquisition, or sale of assets.</p>
           </Section>
 
-          <Section title="15. Contact">
+          <Section title="16. Contact">
             <p>Questions about these Terms? Contact us at:</p>
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mt-2">
               <p className="font-semibold text-gray-900">{COMPANY}</p>
