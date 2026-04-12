@@ -401,7 +401,7 @@ export default function SettingsPage() {
                     className="flex items-center gap-2 px-4 py-2 border border-gray-300 hover:bg-gray-50 disabled:opacity-50 text-gray-700 text-sm font-medium rounded-xl transition-colors"
                   >
                     {upgrading ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
-                    Start with Starter ($299/mo)
+                    Start with Starter (3% of credit)
                   </button>
                 )}
               </div>

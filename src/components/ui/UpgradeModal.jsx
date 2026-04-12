@@ -28,7 +28,7 @@ const PLAN_FEATURES = {
 }
 
 const PLAN_LABELS  = { starter: 'Starter', plus: 'Plus' }
-const PLAN_PRICES  = { starter: '$99/mo',  plus: '$249/mo' }
+const PLAN_PRICES  = { starter: '3% of credit', plus: '5% of credit' }
 
 export default function UpgradeModal({ open, onClose, feature = 'This feature', plan = 'starter' }) {
   const navigate   = useNavigate()

@@ -1273,11 +1273,11 @@ export default function MarketingPage() {
           <div className="text-center mb-14">
             <p className="text-indigo-600 text-sm font-semibold uppercase tracking-widest mb-2">Pricing</p>
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
-              Flat fee. No contingency. You keep the full refund.
+              3% of your SR&amp;ED credit — not 15–25% like consultants.
             </h2>
             <p className="mt-3 text-gray-500 max-w-xl mx-auto">
-              Annual plans from $249/mo · semi-annual (6-month minimum) from $299/mo. First-time filer? Pay once per claim — no subscription required.
-              All plans include a 14-day free trial and a complete CPA-ready T661 package.
+              Starter is 3% · Plus (SR&amp;ED + Grants) is 5% · Enterprise is custom.
+              All based on your scan estimate. 14-day free trial and a complete CPA-ready T661 package included.
             </p>
           </div>
 

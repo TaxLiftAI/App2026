@@ -764,10 +764,10 @@ export default function EstimatorPage() {
   })), [yearsMissed, fyYear, sred.totalCredit, sred.totalRefund])
   const totalCatchup = catchupYears.reduce((s, y) => s + y.credit, 0)
 
-  // ROI: TaxLift fee vs traditional consultant
+  // ROI: TaxLift fee vs traditional consultant (performance pricing: 3% Starter / 5% Plus)
   const taxliftPlan        = combinedTotal > 50_000 ? 'plus' : 'starter'
-  const taxliftMonthlyFee  = taxliftPlan === 'plus' ? 599 : 299
-  const taxliftAnnualFee   = taxliftMonthlyFee * 12
+  const taxliftRate        = taxliftPlan === 'plus' ? 0.05 : 0.03
+  const taxliftAnnualFee   = Math.round(sred.totalCredit * taxliftRate)
   const traditionalFee     = Math.round(sred.totalCredit * 0.20)   // typical 20% contingency
   const netWithTaxlift     = combinedTotal - taxliftAnnualFee
   const netTraditional     = sred.totalCredit - traditionalFee
@@ -1319,10 +1319,10 @@ export default function EstimatorPage() {
                       <span className="text-[9px] bg-indigo-600 text-white rounded px-1.5 py-0.5 font-medium">Recommended</span>
                     </div>
                     <p className="text-2xl font-bold text-indigo-700 tabular-nums">{fmtK(netWithTaxlift)}</p>
-                    <p className="text-[10px] text-indigo-600 mt-0.5">net of {fmt(taxliftAnnualFee)}/yr platform fee</p>
+                    <p className="text-[10px] text-indigo-600 mt-0.5">net of {fmt(taxliftAnnualFee)} TaxLift fee</p>
                     <div className="mt-3 space-y-1 text-[10px] text-indigo-700">
                       <div className="flex justify-between"><span>SR&ED + grants</span><span className="tabular-nums font-medium">+ {fmtK(combinedTotal)}</span></div>
-                      <div className="flex justify-between"><span>TaxLift fee ({taxliftPlan === 'plus' ? '$599' : '$299'}/mo)</span><span className="tabular-nums">− {fmt(taxliftAnnualFee)}</span></div>
+                      <div className="flex justify-between"><span>TaxLift fee ({taxliftPlan === 'plus' ? '5%' : '3%'} of credit)</span><span className="tabular-nums">− {fmt(taxliftAnnualFee)}</span></div>
                       <div className="flex justify-between border-t border-indigo-200 pt-1 font-bold"><span>Net benefit</span><span className="tabular-nums">{fmtK(netWithTaxlift)}</span></div>
                     </div>
                   </div>

@@ -13,8 +13,8 @@ import { leads } from '../lib/api'
 
 const PLAN_OPTIONS = [
   { value: '',           label: 'Not sure yet' },
-  { value: 'starter',   label: 'Starter — $299/mo' },
-  { value: 'plus',      label: 'Plus — $599/mo (SR&ED + Grants)' },
+  { value: 'starter',   label: 'Starter — 3% of SR&ED credit' },
+  { value: 'plus',      label: 'Plus — 5% of SR&ED credit (SR&ED + Grants)' },
   { value: 'enterprise', label: 'Enterprise — Custom' },
 ]
 

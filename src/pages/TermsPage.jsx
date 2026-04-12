@@ -72,12 +72,11 @@ export default function TermsPage() {
             <p>We reserve the right to suspend or terminate accounts that violate these Terms or are used for fraudulent purposes.</p>
           </Section>
 
-          <Section title="3. Subscriptions and Payment">
-            <p><strong>Subscription Plans.</strong> TaxLift offers annual, semi-annual, and monthly subscription plans, as well as pay-per-claim packages. Current pricing is displayed at {WEBSITE}/pricing and is subject to change with 30 days' notice to existing subscribers.</p>
-            <p><strong>Billing.</strong> Subscription fees are billed in advance for the chosen billing period. All amounts are in Canadian Dollars (CAD) unless otherwise stated. Payments are processed by Stripe. By providing payment information, you authorize TaxLift to charge your payment method on a recurring basis.</p>
-            <p><strong>Cancellation.</strong> You may cancel your subscription at any time through your account settings. Cancellation takes effect at the end of the current billing period. No refunds are issued for partial billing periods, except where required by applicable law.</p>
-            <p><strong>Annual and Semi-Annual Plans.</strong> Annual plans commit you to 12 months of service. Semi-annual plans commit you to 6 months of service. Early cancellation of a committed plan does not entitle you to a refund of the remaining commitment unless TaxLift materially breaches these Terms.</p>
-            <p><strong>Free Trial.</strong> Where a free trial is offered, your payment method will be charged automatically at the end of the trial period unless you cancel before the trial ends.</p>
+          <Section title="3. Fees and Payment">
+            <p><strong>Performance-Based Pricing.</strong> TaxLift charges a fee calculated as a percentage of your estimated SR&amp;ED credit as determined by the TaxLift scan: 3% for the Starter plan and 5% for the Plus plan. Pay-per-claim packages are also available. Current pricing is displayed at {WEBSITE}/pricing and is subject to change with 30 days' notice to existing customers.</p>
+            <p><strong>Billing.</strong> Fees are charged when your CPA-ready package is complete and you are ready to file. All amounts are in Canadian Dollars (CAD) unless otherwise stated. Payments are processed by Stripe. By providing payment information, you authorize TaxLift to charge your payment method for the applicable fee.</p>
+            <p><strong>Estimate vs. Actual Assessment.</strong> The fee is based on TaxLift's scan estimate of your SR&amp;ED credit, which may differ from the final CRA Notice of Assessment. If your actual CRA assessment is more than 30% below the scan estimate used to calculate your fee, TaxLift will issue a partial refund for the excess amount charged above 3% (Starter) or 5% (Plus) of the actual assessed amount.</p>
+            <p><strong>Cancellation and Refunds.</strong> Outside of the estimate true-up policy above, fees paid for completed packages are non-refundable. Free trial periods, where offered, end automatically — your payment method will be charged at the end of the trial unless you cancel before it ends.</p>
           </Section>
 
           <Section title="4. Acceptable Use">

@@ -98,7 +98,7 @@ const STEPS = [
   {
     n: '05', icon: DollarSign, color: 'text-amber-600', bg: 'bg-amber-50',
     title: 'File & earn commission',
-    body: 'You file the T661 with CRA. Commission is paid by EFT on the same cycle as your client\'s TaxLift subscription — annual or semi-annual — so you\'re not waiting 12–18 months for CRA to process.',
+    body: 'You file the T661 with CRA. Commission is paid by EFT when your client\'s TaxLift fee is collected — at package completion, before CRA processes the claim — so you\'re not waiting 12–18 months for CRA to process.',
   },
 ]
 
@@ -132,7 +132,7 @@ const FAQS = [
   },
   {
     q: 'When and how are commissions paid?',
-    a: 'Commissions are paid by EFT on the same cycle as your client\'s TaxLift subscription — annual or semi-annual — so you are not waiting 12–18 months for CRA to process. Commission is calculated at 1.5% of the estimated credit at the time of client payment. If CRA issues the NOA at a materially different amount (>20% variance), a true-up is applied on the next payment date. There is no cap and no expiry on earned commissions.',
+    a: 'Commissions are paid by EFT when your client\'s TaxLift fee is collected — at package completion, before CRA processes the claim. Commission is 1.5% of the estimated credit (Starter clients) or 2% (Plus clients) at the time of client payment. If the CRA NOA varies by more than 30% from the scan estimate, a true-up is applied. There is no cap and no expiry on earned commissions.',
   },
   {
     q: 'Can I white-label TaxLift for my clients?',
@@ -516,10 +516,10 @@ export default function PartnersPage() {
             </div>
             <div className="bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-2.5 inline-flex items-center gap-2">
               <DollarSign size={15} className="text-indigo-600" />
-              <span className="text-sm font-bold text-indigo-700">Your 1.5% share: $6,232 / year</span>
+              <span className="text-sm font-bold text-indigo-700">Your 1.5–2% share: $6,232 per client</span>
             </div>
             <p className="text-[11px] text-gray-400 mt-3">
-              Paid on client billing cycle (annual or semi-annual). True-up applied if CRA NOA varies by &gt;20%.
+              Paid at package completion (before CRA processes). True-up applied if CRA NOA varies by &gt;30%.
             </p>
           </div>
         </div>
