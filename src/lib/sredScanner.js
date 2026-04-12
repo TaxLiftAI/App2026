@@ -35,11 +35,13 @@ export const SRED_KEYWORDS = [
   'prototype', 'proof of concept', 'poc', 'spike',
   'uncertain', 'uncertainty', 'unknown', 'undefined behavior', 'unpredictable',
   'feasibility', 'feasible', 'evaluate', 'evaluating',
+  'non-deterministic', 'nondeterministic', 'flaky', 'intermittent failure',
 
   // Research language
   'research', 'r&d', 'novel', 'innovative', 'new approach',
   'breakthrough', 'first-of-its-kind', 'state of the art',
   'literature review', 'peer-reviewed', 'academic',
+  'systematic investigation', 'technical uncertainty',
 
   // ML / AI (high-value, frequently qualifying)
   'machine learning', 'ml model', 'neural network', 'deep learning',
@@ -48,27 +50,40 @@ export const SRED_KEYWORDS = [
   'nlp', 'natural language', 'computer vision', 'object detection',
   'embedding', 'vector', 'inference', 'quantization',
   'hyperparameter', 'gradient', 'backprop',
+  'classifier', 'classification', 'signal detection',
+  'false positive', 'false negative', 'precision', 'recall',
+  'feature engineering', 'tokenizer', 'tokenization', 'semantic',
+  'accuracy threshold', 'model accuracy', 'training accuracy',
 
   // Algorithm & optimization
   'algorithm', 'heuristic', 'optimization', 'optimise', 'optimize',
   'approximation', 'complexity', 'convergence', 'search space',
   'genetic algorithm', 'simulated annealing', 'monte carlo',
+  'pattern matching', 'scoring model', 'weighted scoring',
 
   // Performance research
   'latency', 'throughput', 'bottleneck', 'profiling',
   'benchmark', 'benchmarking', 'measure performance',
   'reduce latency', 'improve throughput', 'cold start',
+  'memory leak', 'memory pressure', 'cpu bound', 'hot path',
+  'cache miss', 'cache invalidation',
 
   // Distributed systems & infrastructure research
   'distributed system', 'consensus', 'fault tolerance', 'availability',
   'replication', 'sharding', 'partitioning', 'coordination',
   'concurrent', 'parallelism', 'race condition', 'deadlock',
+  'thread safety', 'thread safe', 'reentrancy',
   'eventual consistency', 'cap theorem', 'raft', 'paxos',
 
   // Security & cryptography research
   'encryption', 'cryptography', 'zero-knowledge', 'zkp',
   'homomorphic', 'differential privacy', 'secure computation',
   'vulnerability', 'exploit', 'threat model',
+  'timing attack', 'timing oracle', 'side channel', 'side-channel',
+  'csrf', 'xss', 'sql injection', 'injection attack',
+  'authentication bypass', 'privilege escalation',
+  'token rotation', 'refresh token', 'session fixation',
+  'security hardening', 'attack surface', 'security research',
 
   // Compiler & runtime research
   'compiler', 'parser', 'codegen', 'bytecode', 'jit',
@@ -79,6 +94,7 @@ export const SRED_KEYWORDS = [
   'root cause', 'root cause analysis', 'intermittent', 'reproduce bug',
   'debug unknown', 'undefined', 'unexpected behavior',
   'workaround', 'edge case', 'failure mode',
+  'regression', 'regression analysis', 'introduced regression',
 ]
 
 // ── File-path patterns that strongly suggest R&D work ─────────────────────────
@@ -91,6 +107,10 @@ const SRED_PATH_PATTERNS = [
   /compiler/i, /codegen/i, /parser/i, /jit\b/i, /llvm/i,
   /distributed/i, /consensus/i, /raft\b/i, /paxos/i,
   /neural/i, /nlp\b/i, /embed/i, /vector/i, /transform/i,
+  // Additional patterns for common R&D project structures
+  /scanner/i, /classifier/i, /detector/i, /heuristic/i,
+  /security/i, /auth/i, /token/i, /oauth/i,
+  /pipeline/i, /scraper/i, /parser/i, /extractor/i,
 ]
 
 // ── SR&ED activity themes ──────────────────────────────────────────────────────
@@ -134,9 +154,23 @@ const THEMES = [
                'exploratory', 'feasibility', 'evaluate', 'hypothesis'],
   },
   {
+    name:     'Security & Authentication R&D',
+    keywords: ['timing attack', 'timing oracle', 'side channel', 'csrf', 'xss',
+               'sql injection', 'vulnerability', 'exploit', 'threat model',
+               'token rotation', 'refresh token', 'session', 'authentication',
+               'security hardening', 'attack surface', 'cryptography', 'encryption'],
+  },
+  {
+    name:     'NLP / Signal Detection Research',
+    keywords: ['nlp', 'classifier', 'classification', 'signal detection', 'pattern matching',
+               'tokenizer', 'tokenization', 'semantic', 'false positive', 'false negative',
+               'scoring model', 'weighted scoring', 'natural language', 'heuristic'],
+  },
+  {
     name:     'Technical Uncertainty Resolution',
     keywords: ['uncertain', 'unknown', 'undefined', 'intermittent', 'root cause',
-               'reproduce', 'workaround', 'edge case', 'failure mode'],
+               'reproduce', 'workaround', 'edge case', 'failure mode',
+               'non-deterministic', 'flaky', 'regression', 'unexpected'],
   },
 ]
 
@@ -154,7 +188,10 @@ function scoreMessage(msg) {
     if (lower.includes(kw)) {
       // High-signal terms worth 2 pts
       const highSignal = ['experiment', 'hypothesis', 'r&d', 'proof of concept',
-        'poc', 'research', 'prototype', 'spike', 'uncertain', 'investigate'].includes(kw)
+        'poc', 'research', 'prototype', 'spike', 'uncertain', 'investigate',
+        'timing attack', 'timing oracle', 'side channel', 'side-channel',
+        'non-deterministic', 'systematic investigation', 'technical uncertainty',
+        'false positive', 'false negative', 'root cause analysis'].includes(kw)
       pts += highSignal ? 2 : 1
       if (pts >= 3) return 3  // cap
     }
