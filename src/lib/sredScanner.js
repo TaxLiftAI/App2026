@@ -283,14 +283,19 @@ function detectTheme(text) {
 // ── Credit estimation helpers ──────────────────────────────────────────────────
 // Proxies only — actual T661 calculations use the proxy method with real salaries.
 
-/** Rough estimate: 2h eligible R&D per qualifying commit (conservative for CRA) */
+/**
+ * Hours per qualifying commit.
+ * A qualifying commit represents the *output* of an investigation — the
+ * underlying R&D work (hypothesis → experiment → observation) typically
+ * spans 8–24 hours. We use 8h as a conservative floor.
+ */
 function estimateHoursFromCommits(count) {
-  return count * 2
+  return count * 8
 }
 
-/** Rough estimate: 12 eligible hours of R&D per qualifying Jira ticket */
+/** 20 eligible hours per qualifying Jira ticket (tickets represent larger work items) */
 function estimateHoursFromIssues(count) {
-  return count * 12
+  return count * 20
 }
 
 /**
@@ -301,6 +306,47 @@ function estimateHoursFromIssues(count) {
  */
 function estimateCredit(hours) {
   return Math.round(hours * 150 * 0.35)
+}
+
+/**
+ * Year-projection multiplier.
+ * The GitHub API returns the 200 most recent commits, which may only cover
+ * a fraction of the fiscal year. If the scanned window is < 335 days,
+ * project qualifying activity forward to 12 months.
+ * Capped at 3× to stay conservative (some repos have uneven commit cadence).
+ *
+ * @param {Array} allCommits  Full commit list passed to the scanner
+ * @returns {number}          Multiplier in range [1, 3]
+ */
+function yearProjectionMultiplier(allCommits) {
+  const dates = allCommits
+    .map(c => new Date(c.commit?.author?.date ?? c.date ?? ''))
+    .filter(d => !isNaN(d))
+    .sort((a, b) => a - b)
+  if (dates.length < 2) return 1
+  const spanDays = (dates[dates.length - 1] - dates[0]) / 86_400_000
+  if (spanDays >= 335) return 1   // already a full year — no projection needed
+  if (spanDays < 7)   return 1   // too short to project reliably
+  return Math.min(3, 365 / spanDays)
+}
+
+/**
+ * Contributor multiplier.
+ * Count unique commit authors as a team-size proxy. Each additional
+ * contributor adds 0.4× (conservative — not all developers work on R&D
+ * full-time). Capped at 3× to prevent inflation on large OSS repos.
+ *
+ * @param {Array} allCommits  Full commit list
+ * @returns {number}          Multiplier in range [1, 3]
+ */
+function contributorMultiplier(allCommits) {
+  const authors = new Set(
+    allCommits.map(c =>
+      c.commit?.author?.email ?? c.commit?.author?.name ?? c.author?.login ?? ''
+    ).filter(Boolean)
+  )
+  const n = Math.max(1, authors.size)
+  return Math.min(3, 1 + (n - 1) * 0.4)
 }
 
 /** Risk score 1–10 (lower = better). Based on explicitness of SR&ED language. */
@@ -361,6 +407,13 @@ export function scanCommits(commits, repoName) {
 
   if (qualifying.length === 0) return null
 
+  // ── Scale factor: year projection × contributor multiplier ────────────────
+  // Converts observed qualifying commits → estimated annual eligible hours
+  // for the full team, accounting for incomplete scan windows.
+  const yearMult   = yearProjectionMultiplier(commits)
+  const contribMult = contributorMultiplier(commits)
+  const scaleFactor = yearMult * contribMult
+
   // Group by theme using commit messages
   const groups = {}
   for (const item of qualifying) {
@@ -370,9 +423,10 @@ export function scanCommits(commits, repoName) {
   }
 
   return Object.entries(groups).map(([theme, items], i) => {
-    const hours  = estimateHoursFromCommits(items.length)
-    const credit = estimateCredit(hours)
-    const risk   = estimateRisk(items.map(it => it.message))
+    const baseHours = estimateHoursFromCommits(items.length)
+    const hours     = Math.round(baseHours * scaleFactor)
+    const credit    = estimateCredit(hours)
+    const risk      = estimateRisk(items.map(it => it.message))
 
     // Top 8 items by score for display, sorted highest-score first
     const topItems = [...items].sort((a, b) => b.score - a.score).slice(0, 8)
@@ -392,6 +446,7 @@ export function scanCommits(commits, repoName) {
       _signals:             topItems.map(it => it.message),
       _commits:             topItems.map(it => ({ sha: it.sha, message: it.message, score: it.score, files: it.files })),
       _commitCount:         items.length,
+      _scaleFactor:         Math.round(scaleFactor * 10) / 10,  // for display/debug
       _totalScore:          items.reduce((s, it) => s + it.score, 0),
     }
   })
