@@ -10,13 +10,14 @@
  *   ?plan=plus         — pre-highlights a specific plan
  *   ?track=claim       — pre-selects the claim-based track
  */
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { usePageMeta } from '../hooks/usePageMeta'
 import {
   ShieldCheck, Check, ArrowRight, ArrowLeft, Loader2, Sparkles,
   ChevronDown, ChevronUp, Zap, Star, Clock, Lock, ExternalLink,
   TrendingUp, Calendar, FileText, RefreshCw, AlertCircle, BadgeCheck,
+  Github, DollarSign,
 } from 'lucide-react'
 import PricingCard from '../components/PricingCard'
 import { PLANS, CLAIM_PLANS, redirectToCheckout, getPlanForBilling } from '../lib/stripe'
@@ -226,6 +227,128 @@ function ClaimCard({ plan, onCta, ctaLoading = false }) {
   )
 }
 
+/**
+ * PricingGate — shown when no scan results exist in session.
+ * Requires either completing the free scan OR entering an estimate manually.
+ * Unlocks by calling onUnlock(estimateCad).
+ */
+function PricingGate({ onUnlock }) {
+  const navigate = useNavigate()
+  const [mode,       setMode]       = useState(null)         // null | 'estimate'
+  const [rawVal,     setRawVal]     = useState('')
+  const [err,        setErr]        = useState('')
+
+  function handleManual(e) {
+    e.preventDefault()
+    const n = Number(rawVal.replace(/[^0-9]/g, ''))
+    if (!n || n < 10000) { setErr('Please enter a credit estimate of at least $10,000.'); return }
+    if (n > 10_000_000)  { setErr('Please enter a realistic estimate (under $10M).'); return }
+    onUnlock(n)
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center px-4 py-16">
+      <div className="max-w-lg w-full">
+
+        {/* Logo */}
+        <div className="flex items-center justify-center gap-2 mb-10">
+          <div className="w-9 h-9 bg-indigo-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
+            <Zap size={16} className="text-white" />
+          </div>
+          <span className="text-white font-bold text-lg tracking-tight">TaxLift</span>
+        </div>
+
+        {/* Locked card */}
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-8 text-center backdrop-blur-sm">
+          <div className="w-14 h-14 bg-indigo-600/20 border border-indigo-500/30 rounded-2xl flex items-center justify-center mx-auto mb-5">
+            <Lock size={22} className="text-indigo-400" />
+          </div>
+
+          <h1 className="text-2xl font-bold text-white mb-2">
+            Your pricing is personalised
+          </h1>
+          <p className="text-slate-400 text-sm leading-relaxed mb-8 max-w-sm mx-auto">
+            TaxLift charges a percentage of <em>your</em> SR&amp;ED credit — so pricing
+            is tied to your estimate. Run a free scan or enter your estimate to see
+            your exact numbers.
+          </p>
+
+          {mode === null && (
+            <div className="space-y-3">
+              {/* Primary: run the scan */}
+              <button
+                onClick={() => navigate('/scan')}
+                className="w-full flex items-center justify-center gap-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3.5 rounded-xl transition-colors shadow-lg shadow-indigo-900/40"
+              >
+                <Github size={16} />
+                Run my free GitHub scan
+                <ArrowRight size={14} className="ml-auto opacity-60" />
+              </button>
+              <p className="text-slate-500 text-xs">Takes 60 seconds · no credit card</p>
+
+              {/* Secondary: enter estimate manually */}
+              <button
+                onClick={() => setMode('estimate')}
+                className="w-full flex items-center justify-center gap-2 text-slate-400 hover:text-white text-sm py-2.5 rounded-xl border border-white/10 hover:border-white/20 transition-colors mt-2"
+              >
+                <DollarSign size={14} />
+                I already have a credit estimate
+              </button>
+            </div>
+          )}
+
+          {mode === 'estimate' && (
+            <form onSubmit={handleManual} className="text-left space-y-3">
+              <label className="block text-slate-300 text-sm font-medium mb-1">
+                Your estimated SR&amp;ED credit (CAD)
+              </label>
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-semibold">$</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="e.g. 150,000"
+                  value={rawVal}
+                  onChange={e => { setRawVal(e.target.value); setErr('') }}
+                  className="w-full bg-white/10 border border-white/20 text-white placeholder-slate-500 rounded-xl pl-8 pr-4 py-3 text-sm focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+                  autoFocus
+                />
+              </div>
+              {err && <p className="text-red-400 text-xs">{err}</p>}
+              <button
+                type="submit"
+                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-colors text-sm"
+              >
+                See my pricing →
+              </button>
+              <button
+                type="button"
+                onClick={() => { setMode(null); setErr('') }}
+                className="w-full text-slate-500 hover:text-slate-300 text-xs py-1 transition-colors"
+              >
+                ← Back
+              </button>
+            </form>
+          )}
+        </div>
+
+        {/* Trust marks */}
+        <div className="flex justify-center flex-wrap gap-4 mt-6">
+          {[
+            { icon: ShieldCheck, label: 'CRA compliant' },
+            { icon: Lock,        label: '3–5% vs 15–25% consultant' },
+            { icon: Star,        label: 'CPA-ready package' },
+          ].map(({ icon: Icon, label }) => (
+            <div key={label} className="flex items-center gap-1.5 text-slate-500 text-xs">
+              <Icon size={12} className="text-indigo-500" />{label}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function PricingPage() {
   usePageMeta({
     title:       'Pricing — TaxLift SR&ED Tax Credit Platform',
@@ -244,18 +367,39 @@ export default function PricingPage() {
   const [waitlistSource,  setWaitlistSource]  = useState('pricing')
   const [estimate,        setEstimate]        = useState(null)
   const [clusterCount,    setClusterCount]    = useState(null)
+  const [gateCleared,     setGateCleared]     = useState(false)
 
+  // Auto-unlock: ?estimate= param or existing scan in session
   useEffect(() => {
     const paramEstimate = searchParams.get('estimate')
-    if (paramEstimate && !isNaN(Number(paramEstimate))) { setEstimate(Number(paramEstimate)); return }
+    if (paramEstimate && !isNaN(Number(paramEstimate))) {
+      setEstimate(Number(paramEstimate))
+      setGateCleared(true)
+      return
+    }
     try {
       const raw = sessionStorage.getItem('taxlift_scan_results')
       if (raw) {
         const scan = JSON.parse(raw)
-        if (scan?.estimated_credit) { setEstimate(scan.estimated_credit); setClusterCount(scan.clusters?.length ?? null) }
+        if (scan?.estimated_credit) {
+          setEstimate(scan.estimated_credit)
+          setClusterCount(scan.clusters?.length ?? null)
+          setGateCleared(true)
+        }
       }
     } catch { /* ignore */ }
   }, [searchParams])
+
+  // Manual unlock from gate (user entered estimate without scanning)
+  function handleGateUnlock(estimateCad) {
+    setEstimate(estimateCad)
+    setGateCleared(true)
+  }
+
+  // Show gate if no scan results and no ?estimate param and gate not manually cleared
+  if (!gateCleared) {
+    return <PricingGate onUnlock={handleGateUnlock} />
+  }
 
   const creditLow     = estimate ? Math.round(estimate * 0.65) : null
   const creditHigh    = estimate ? Math.round(estimate * 1.35) : null
