@@ -19,9 +19,16 @@ import { loadStripe } from '@stripe/stripe-js'
 import { billing } from './api'
 
 // ── Performance pricing rates (not shown publicly — CPA split is internal) ────
-export const PERFORMANCE_RATE = 0.03   // 3% of estimated SR&ED credit
-export const CPA_RATE         = 0.015  // 1.5% → CPA partner commission (internal)
-export const NET_RATE         = 0.015  // 1.5% → TaxLift net (internal)
+export const PERFORMANCE_RATE      = 0.03   // 3% — Starter plan
+export const PERFORMANCE_RATE_PLUS = 0.05   // 5% — Plus plan (includes Grants module)
+
+// Starter internal split (3% total):
+export const CPA_RATE     = 0.015  // 1.5% → CPA partner commission
+export const NET_RATE     = 0.015  // 1.5% → TaxLift net
+
+// Plus internal split (5% total):
+export const CPA_RATE_PLUS = 0.02  // 2.0% → CPA partner commission (higher to incentivise Plus upsell)
+export const NET_RATE_PLUS = 0.03  // 3.0% → TaxLift net
 
 // ── Stripe instance (singleton promise) ───────────────────────────────────────
 let stripePromise = null
@@ -73,10 +80,10 @@ export const PLANS = {
     id:   'plus',
     name: 'Plus',
 
-    // ── Performance pricing: 3% of estimated SR&ED credit ────────────────────
-    price:       '3%',
+    // ── Performance pricing: 5% of estimated SR&ED credit ────────────────────
+    price:       '5%',
     period:      'of your SR&ED credit',
-    priceDetail: 'e.g. $150K credit → $4,500 fee + grants module',
+    priceDetail: 'e.g. $150K credit → $7,500 fee · includes Grants module',
     priceId:     import.meta.env.VITE_STRIPE_PRICE_PLUS ?? null,
 
     // Legacy flat-rate price IDs kept for reference (no longer displayed):
@@ -178,8 +185,11 @@ export function getPlanForBilling(plan, _billingPeriod) {
 }
 
 // ── Calculate the fee for a given credit estimate ─────────────────────────────
-export function calcFee(creditEstimate) {
-  return Math.round(creditEstimate * PERFORMANCE_RATE)
+// Fee is based on the conservative scan estimate (not actual CRA assessment).
+// If actual CRA assessment comes in >30% below estimate, partial refund policy applies.
+export function calcFee(creditEstimate, planId = 'starter') {
+  const rate = planId === 'plus' ? PERFORMANCE_RATE_PLUS : PERFORMANCE_RATE
+  return Math.round(creditEstimate * rate)
 }
 
 // ── Redirect to Stripe Checkout ────────────────────────────────────────────────

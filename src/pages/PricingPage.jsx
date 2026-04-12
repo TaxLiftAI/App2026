@@ -31,12 +31,12 @@ function fmtK(n) {
 
 const FAQS = [
   {
-    q: "How does the 3% fee work?",
-    a: "TaxLift charges 3% of your estimated SR&ED credit — calculated from your free scan. On a $150K credit estimate that is a $4,500 fee. Compare that to a traditional SR&ED consultant who typically charges 15–25% contingency ($22,500–$37,500 on the same claim). You only pay after your package is complete and you are ready to file. Payment is processed securely via Stripe.",
+    q: "How does the fee work — and what if my actual CRA assessment is lower than the estimate?",
+    a: "Starter is 3% of your scan estimate; Plus is 5%. The fee is charged when your CPA-ready package is complete and you are ready to file — before CRA processes your claim. Our scan estimate is intentionally conservative (we use a low hourly rate and a per-commit proxy that understates most real claims), so actual CRA assessments typically meet or exceed the estimate. That said, if your actual CRA assessment comes in more than 30% below the scan estimate, we will issue a partial refund for the difference. No one should pay more than they recover.",
   },
   {
-    q: "What is the difference between Starter and Plus?",
-    a: "Both plans are priced at 3% of your SR&ED credit. Starter covers full SR&ED automation — AI narratives, GitHub/Jira integration, CPA handoff package, and audit vault. Plus adds the Grants module, which automatically matches you against 9 Canadian innovation funding programs (NRC-IRAP, OITC, NGen, and provincial programs), potentially unlocking $4M+ in additional non-dilutive funding.",
+    q: "What is the difference between Starter (3%) and Plus (5%)?",
+    a: "Starter covers full SR&ED automation — AI T661 narratives, GitHub and Jira integration, CPA handoff package, audit vault, and 3 years of evidence retention. Plus adds the Grants module: automatic matching against 9 Canadian innovation funding programs including NRC-IRAP, OITC, NGen, and provincial programs, plus a gap-fill interview and AI section drafting. On a $150K SR&ED credit, Starter costs $4,500 and Plus costs $7,500 — the extra $3,000 gives you access to grant programs that can return $500K–$4M+ in non-dilutive funding.",
   },
   {
     q: 'How is TaxLift different from hiring an SR&ED consultant?',
@@ -93,10 +93,12 @@ const TRUST_MARKS = [
 function RoiCalculator({ defaultCredit = 150000 }) {
   const [credit, setCredit] = useState(defaultCredit)
   const c = Math.max(50000, Math.min(credit, 2000000))
-  const consultantFee = Math.round(c * 0.20)
-  const taxliftFee    = Math.round(c * 0.03)
-  const savings       = Math.max(0, consultantFee - taxliftFee)
-  const roi           = taxliftFee > 0 ? Math.round((savings / taxliftFee) * 100) : 0
+  const consultantFee    = Math.round(c * 0.20)
+  const taxliftFeeStarter = Math.round(c * 0.03)
+  const taxliftFeePlus    = Math.round(c * 0.05)
+  const taxliftFee        = taxliftFeeStarter
+  const savings           = Math.max(0, consultantFee - taxliftFeeStarter)
+  const roi               = taxliftFeeStarter > 0 ? Math.round((savings / taxliftFeeStarter) * 100) : 0
   const pct           = ((c - 50000) / (2000000 - 50000)) * 100
 
   return (
@@ -124,7 +126,7 @@ function RoiCalculator({ defaultCredit = 150000 }) {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             { label: 'SR&ED consultant',        sub: '~20% contingency',      value: fmtK(consultantFee), note: 'taken from your refund', bad: true },
-            { label: 'TaxLift fee',             sub: '3% of credit',          value: fmtK(taxliftFee),    note: 'you keep the rest',      bad: false },
+            { label: 'TaxLift fee',             sub: '3–5% of credit',        value: fmtK(taxliftFeeStarter) + '–' + fmtK(taxliftFeePlus), note: 'Starter vs Plus', bad: false },
             { label: 'Pay-per-Claim',           sub: 'No subscription',       value: '$1,997',            note: 'one fiscal year',        bad: false },
             { label: 'You save vs. consultant', sub: roi + 'x ROI on TaxLift', value: fmtK(savings),      note: 'back in your pocket', highlight: true },
           ].map(({ label, sub, value, note, bad, highlight }) => (
@@ -257,11 +259,13 @@ export default function PricingPage() {
 
   const creditLow     = estimate ? Math.round(estimate * 0.65) : null
   const creditHigh    = estimate ? Math.round(estimate * 1.35) : null
-  const taxliftFee    = estimate ? Math.round(estimate * 0.03) : null
+  const taxliftFeeLow  = estimate ? Math.round(estimate * 0.03) : null   // Starter (3%)
+  const taxliftFeeHigh = estimate ? Math.round(estimate * 0.05) : null   // Plus (5%)
+  const taxliftFee     = taxliftFeeLow  // used in comparison vs consultant (Starter baseline)
   const consultantLow  = estimate ? Math.round(estimate * 0.15) : null
   const consultantHigh = estimate ? Math.round(estimate * 0.25) : null
-  const savingsLow     = consultantLow  && taxliftFee ? Math.max(0, consultantLow  - taxliftFee) : null
-  const savingsHigh    = consultantHigh && taxliftFee ? Math.max(0, consultantHigh - taxliftFee) : null
+  const savingsLow     = consultantLow  && taxliftFeeHigh ? Math.max(0, consultantLow  - taxliftFeeHigh) : null
+  const savingsHigh    = consultantHigh && taxliftFeeLow  ? Math.max(0, consultantHigh - taxliftFeeLow)  : null
   const highlightedPlan = searchParams.get('plan') || null
 
   const annualPlans = Object.values(PLANS).map(p => {
@@ -325,7 +329,7 @@ export default function PricingPage() {
                 <div className="bg-white/10 border border-white/20 rounded-xl px-4 py-3 space-y-2.5">
                   <p className="text-indigo-200 text-xs font-semibold uppercase tracking-wider">vs. SR&amp;ED consultant</p>
                   <div className="flex items-center justify-between gap-4"><span className="text-indigo-300 text-xs">Consultant (15–25%)</span><span className="text-white/70 font-mono text-xs line-through">{fmtK(consultantLow)}–{fmtK(consultantHigh)}</span></div>
-                  <div className="flex items-center justify-between gap-4"><span className="text-indigo-300 text-xs">TaxLift (3% fee)</span><span className="text-white font-mono text-xs font-semibold">{fmtK(taxliftFee)}</span></div>
+                  <div className="flex items-center justify-between gap-4"><span className="text-indigo-300 text-xs">TaxLift (3–5% fee)</span><span className="text-white font-mono text-xs font-semibold">{fmtK(taxliftFeeLow)}–{fmtK(taxliftFeeHigh)}</span></div>
                   <div className="border-t border-white/20 pt-2 flex items-center justify-between">
                     <span className="text-xs font-bold text-emerald-300">You save</span>
                     <span className="text-emerald-300 font-bold font-mono text-sm">{fmtK(savingsLow)}–{fmtK(savingsHigh)}</span>
@@ -380,8 +384,8 @@ export default function PricingPage() {
         {track === 'annual' ? (
           <div className="text-center mb-8">
             <p className="text-sm text-gray-500 max-w-xl mx-auto">
-              All plans are priced at <strong className="text-gray-700">3% of your estimated SR&amp;ED credit</strong> — calculated from your free scan. Starter covers full SR&amp;ED automation; Plus adds the Grants module.
-              {estimate ? <>{' '}Your estimate: <strong className="text-indigo-600">{fmtK(taxliftFee)}</strong> on a {fmtK(estimate)} credit.</> : null}
+              Starter is <strong className="text-gray-700">3%</strong> of your estimated SR&amp;ED credit. Plus is <strong className="text-gray-700">5%</strong> and adds the Grants module — unlocking up to $4M+ in additional Canadian funding.
+              {estimate ? <>{' '}Your fee range: <strong className="text-indigo-600">{fmtK(taxliftFeeLow)}–{fmtK(taxliftFeeHigh)}</strong> on a {fmtK(estimate)} credit estimate.</> : null}
             </p>
           </div>
         ) : (
