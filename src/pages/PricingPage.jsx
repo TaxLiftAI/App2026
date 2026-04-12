@@ -31,16 +31,16 @@ function fmtK(n) {
 
 const FAQS = [
   {
-    q: "What are my commitment options?",
-    a: "Annual (12 months, best value at $249/mo) and Semi-annual (6-month minimum at $299/mo) are our standard tiers. A 6-month commitment covers one full SR&ED filing cycle plus the CRA processing window — enough time to get real value before you decide to continue. Month-to-month is also available at $499/mo (Starter) or $899/mo (Plus) for teams that need flexibility, but subscribers who file once and cancel lose year-round audit vault coverage, mid-year tracking, and the head start on next year's claim.",
+    q: "How does the 3% fee work?",
+    a: "TaxLift charges 3% of your estimated SR&ED credit — calculated from your free scan. On a $150K credit estimate that is a $4,500 fee. Compare that to a traditional SR&ED consultant who typically charges 15–25% contingency ($22,500–$37,500 on the same claim). You only pay after your package is complete and you are ready to file. Payment is processed securely via Stripe.",
   },
   {
-    q: "What is the difference between Option A (Annual) and Option B (Pay-per-Claim)?",
-    a: "Annual Plans are for companies that want year-round SR&ED hygiene — continuous commit tracking, audit vault updates, and mid-year activity monitoring so next year's claim practically writes itself. Pay-per-Claim is for first-time filers or companies with sporadic R&D who want to pay once, prepare a T661 package, and come back next year. Both produce the same CPA-ready output.",
+    q: "What is the difference between Starter and Plus?",
+    a: "Both plans are priced at 3% of your SR&ED credit. Starter covers full SR&ED automation — AI narratives, GitHub/Jira integration, CPA handoff package, and audit vault. Plus adds the Grants module, which automatically matches you against 9 Canadian innovation funding programs (NRC-IRAP, OITC, NGen, and provincial programs), potentially unlocking $4M+ in additional non-dilutive funding.",
   },
   {
     q: 'How is TaxLift different from hiring an SR&ED consultant?',
-    a: "Traditional SR&ED consultants charge 15-25% of your refund as a contingency fee. On a $200K claim that is $30-50K gone before you see a dollar. TaxLift is a flat fee — annual plans start at $2,988/yr and the Claim Package is $1,997 one-time. You keep the rest.",
+    a: "Traditional SR&ED consultants charge 15–25% of your refund as a contingency fee. On a $200K claim that is $30–50K taken from your refund before you see a dollar. TaxLift charges 3% — roughly 5–8× less — and you get a CPA-ready package generated in hours, not weeks. Your CPA stays in the loop; they just skip the heavy documentation grind.",
   },
   {
     q: 'Do I still need a CPA?',
@@ -83,20 +83,20 @@ function FaqItem({ q, a }) {
 }
 
 const TRUST_MARKS = [
-  { label: 'CRA Compliant',              icon: ShieldCheck },
-  { label: '14-day free trial',          icon: Clock       },
-  { label: 'No contingency fee',         icon: Lock        },
-  { label: 'CPA-ready package',          icon: Star        },
-  { label: '6-month minimum commitment', icon: BadgeCheck  },
+  { label: 'CRA Compliant',         icon: ShieldCheck },
+  { label: '14-day free trial',     icon: Clock       },
+  { label: '3% vs. 15–25% consult', icon: Lock        },
+  { label: 'CPA-ready package',     icon: Star        },
+  { label: 'Pay on results',        icon: BadgeCheck  },
 ]
 
 function RoiCalculator({ defaultCredit = 150000 }) {
   const [credit, setCredit] = useState(defaultCredit)
   const c = Math.max(50000, Math.min(credit, 2000000))
   const consultantFee = Math.round(c * 0.20)
-  const annualStarter = 2988
-  const savings       = Math.max(0, consultantFee - annualStarter)
-  const roi           = Math.round((savings / annualStarter) * 100)
+  const taxliftFee    = Math.round(c * 0.03)
+  const savings       = Math.max(0, consultantFee - taxliftFee)
+  const roi           = taxliftFee > 0 ? Math.round((savings / taxliftFee) * 100) : 0
   const pct           = ((c - 50000) / (2000000 - 50000)) * 100
 
   return (
@@ -123,10 +123,10 @@ function RoiCalculator({ defaultCredit = 150000 }) {
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: 'SR&ED consultant',       sub: '~20% contingency', value: fmtK(consultantFee), note: 'taken from your refund',  bad: true },
-            { label: 'TaxLift Starter',        sub: 'Annual plan',      value: '$2,988/yr',          note: 'flat — you keep the rest', bad: false },
-            { label: 'Pay-per-Claim',          sub: 'No subscription',  value: '$1,997',             note: 'one fiscal year',          bad: false },
-            { label: 'You save vs. consultant',sub: roi + 'x ROI on TaxLift', value: fmtK(savings), note: 'back in your pocket', highlight: true },
+            { label: 'SR&ED consultant',        sub: '~20% contingency',      value: fmtK(consultantFee), note: 'taken from your refund', bad: true },
+            { label: 'TaxLift fee',             sub: '3% of credit',          value: fmtK(taxliftFee),    note: 'you keep the rest',      bad: false },
+            { label: 'Pay-per-Claim',           sub: 'No subscription',       value: '$1,997',            note: 'one fiscal year',        bad: false },
+            { label: 'You save vs. consultant', sub: roi + 'x ROI on TaxLift', value: fmtK(savings),      note: 'back in your pocket', highlight: true },
           ].map(({ label, sub, value, note, bad, highlight }) => (
             <div key={label} className={'rounded-xl p-4 text-center ' + (highlight ? 'bg-indigo-600 border border-indigo-400' : bad ? 'bg-slate-800 border border-red-900/40' : 'bg-slate-800 border border-slate-700')}>
               <p className={'text-xs font-semibold mb-0.5 ' + (highlight ? 'text-indigo-200' : 'text-slate-400')}>{label}</p>
@@ -136,7 +136,7 @@ function RoiCalculator({ defaultCredit = 150000 }) {
             </div>
           ))}
         </div>
-        <p className="text-indigo-500 text-[11px] text-center mt-4">Consultant fee estimated at 20% contingency midpoint. Actual rates vary 15-25%.</p>
+        <p className="text-indigo-500 text-[11px] text-center mt-4">Consultant fee estimated at 20% contingency midpoint. Actual rates vary 15–25%.</p>
       </div>
     </div>
   )
@@ -227,7 +227,7 @@ function ClaimCard({ plan, onCta, ctaLoading = false }) {
 export default function PricingPage() {
   usePageMeta({
     title:       'Pricing — TaxLift SR&ED Tax Credit Platform',
-    description: 'Two ways to pay: annual subscription or pay-per-claim. No contingency fee — you keep the full SR&ED refund. 14-day free trial on all plans.',
+    description: 'TaxLift charges 3% of your SR&ED credit — not 15–25% like consultants. CPA-ready T661 package from your GitHub and Jira data. 14-day free trial.',
     path:        '/pricing',
     breadcrumb:  [{ name: 'Home', path: '/' }, { name: 'Pricing', path: '/pricing' }],
   })
@@ -236,7 +236,6 @@ export default function PricingPage() {
   const [searchParams] = useSearchParams()
 
   const [track,           setTrack]           = useState(searchParams.get('track') === 'claim' ? 'claim' : 'annual')
-  const [billing,         setBilling]         = useState('annual')
   const [checkoutLoading, setCheckoutLoading] = useState(null)
   const [waitlistOpen,    setWaitlistOpen]    = useState(false)
   const [waitlistPlan,    setWaitlistPlan]    = useState('')
@@ -258,15 +257,15 @@ export default function PricingPage() {
 
   const creditLow     = estimate ? Math.round(estimate * 0.65) : null
   const creditHigh    = estimate ? Math.round(estimate * 1.35) : null
-  const STARTER_ANNUAL = 2988
+  const taxliftFee    = estimate ? Math.round(estimate * 0.03) : null
   const consultantLow  = estimate ? Math.round(estimate * 0.15) : null
   const consultantHigh = estimate ? Math.round(estimate * 0.25) : null
-  const savingsLow     = consultantLow  ? Math.max(0, consultantLow  - STARTER_ANNUAL) : null
-  const savingsHigh    = consultantHigh ? Math.max(0, consultantHigh - STARTER_ANNUAL) : null
+  const savingsLow     = consultantLow  && taxliftFee ? Math.max(0, consultantLow  - taxliftFee) : null
+  const savingsHigh    = consultantHigh && taxliftFee ? Math.max(0, consultantHigh - taxliftFee) : null
   const highlightedPlan = searchParams.get('plan') || null
 
   const annualPlans = Object.values(PLANS).map(p => {
-    const resolved = getPlanForBilling(p, billing)
+    const resolved = getPlanForBilling(p, 'annual')
     return {
       ...resolved,
       highlighted: highlightedPlan ? p.id === highlightedPlan : p.highlighted,
@@ -278,7 +277,7 @@ export default function PricingPage() {
       setWaitlistPlan('enterprise'); setWaitlistSource('pricing_enterprise'); setWaitlistOpen(true); return
     }
     setCheckoutLoading(planId)
-    const result = await redirectToCheckout(planId, billing)
+    const result = await redirectToCheckout(planId)
     setCheckoutLoading(null)
     if (!result.ok) { setWaitlistPlan(planId); setWaitlistSource('pricing_checkout_fallback'); setWaitlistOpen(true) }
   }
@@ -325,8 +324,8 @@ export default function PricingPage() {
               <div className="flex-shrink-0 min-w-[210px]">
                 <div className="bg-white/10 border border-white/20 rounded-xl px-4 py-3 space-y-2.5">
                   <p className="text-indigo-200 text-xs font-semibold uppercase tracking-wider">vs. SR&amp;ED consultant</p>
-                  <div className="flex items-center justify-between gap-4"><span className="text-indigo-300 text-xs">Consultant (15-25%)</span><span className="text-white/70 font-mono text-xs line-through">{fmtK(consultantLow)}–{fmtK(consultantHigh)}</span></div>
-                  <div className="flex items-center justify-between gap-4"><span className="text-indigo-300 text-xs">TaxLift annual plan</span><span className="text-white font-mono text-xs font-semibold">{fmtK(STARTER_ANNUAL)}/yr</span></div>
+                  <div className="flex items-center justify-between gap-4"><span className="text-indigo-300 text-xs">Consultant (15–25%)</span><span className="text-white/70 font-mono text-xs line-through">{fmtK(consultantLow)}–{fmtK(consultantHigh)}</span></div>
+                  <div className="flex items-center justify-between gap-4"><span className="text-indigo-300 text-xs">TaxLift (3% fee)</span><span className="text-white font-mono text-xs font-semibold">{fmtK(taxliftFee)}</span></div>
                   <div className="border-t border-white/20 pt-2 flex items-center justify-between">
                     <span className="text-xs font-bold text-emerald-300">You save</span>
                     <span className="text-emerald-300 font-bold font-mono text-sm">{fmtK(savingsLow)}–{fmtK(savingsHigh)}</span>
@@ -341,10 +340,10 @@ export default function PricingPage() {
         <div className="text-center mb-10">
           <p className="text-indigo-600 text-sm font-semibold uppercase tracking-widest mb-2">Pricing</p>
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">
-            {creditLow ? 'Claim your ' + fmtK(creditHigh) + ' — pay a flat fee' : 'SR&ED automation — flat fee, no contingency'}
+            {creditLow ? 'Claim your ' + fmtK(creditHigh) + ' — pay just 3%' : 'SR&ED automation — 3% of your credit, not 15–25%'}
           </h1>
           <p className="text-gray-500 max-w-xl mx-auto text-sm sm:text-base leading-relaxed">
-            No 15–25% cut from your refund. Choose annual subscription or pay once per claim. All plans include a 14-day free trial and a complete CPA-ready T661 package from your GitHub and Jira data.
+            Consultants charge 15–25% contingency. TaxLift charges 3% of your estimated SR&amp;ED credit — a CPA-ready T661 package from your GitHub and Jira data, for a fraction of the cost. 14-day free trial included.
           </p>
         </div>
 
@@ -364,50 +363,25 @@ export default function PricingPage() {
               className={'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ' + (track === 'annual' ? 'bg-indigo-600 text-white shadow' : 'text-gray-500 hover:text-gray-700')}
             >
               <TrendingUp size={14} />
-              Option A — Annual Plans
-              {track === 'annual' && <span className="text-[10px] bg-white/20 rounded-full px-2 py-0.5 font-medium">CPA-introduced</span>}
+              Feature Plans (3% of credit)
+              {track === 'annual' && <span className="text-[10px] bg-white/20 rounded-full px-2 py-0.5 font-medium">Starter · Plus · Enterprise</span>}
             </button>
             <button
               onClick={() => setTrack('claim')}
               className={'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ' + (track === 'claim' ? 'bg-indigo-600 text-white shadow' : 'text-gray-500 hover:text-gray-700')}
             >
               <FileText size={14} />
-              Option B — Pay per Claim
-              {track === 'claim' && <span className="text-[10px] bg-white/20 rounded-full px-2 py-0.5 font-medium">Self-serve SMBs</span>}
+              Pay per Claim
+              {track === 'claim' && <span className="text-[10px] bg-white/20 rounded-full px-2 py-0.5 font-medium">First-time filers</span>}
             </button>
           </div>
         </div>
 
         {track === 'annual' ? (
           <div className="text-center mb-8">
-            <p className="text-sm text-gray-500 max-w-xl mx-auto mb-5">
-              Both tiers include year-round audit vault, mid-year tracking, and auto-start on next year's claim. Pick the commitment that fits your planning horizon.
-            </p>
-            {/* Billing segment selector */}
-            <div className="inline-flex bg-white border border-gray-200 rounded-2xl p-1.5 shadow-sm gap-1 mb-3">
-              <button
-                onClick={() => setBilling('annual')}
-                className={'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ' + (billing === 'annual' ? 'bg-indigo-600 text-white shadow' : 'text-gray-500 hover:text-gray-700')}
-              >
-                Annual
-                {billing === 'annual'
-                  ? <span className="text-[10px] bg-white/20 rounded-full px-2 py-0.5 font-medium">Best value · Save 50%</span>
-                  : <span className="text-[10px] text-gray-400">$249/mo · $2,988/yr</span>}
-              </button>
-              <button
-                onClick={() => setBilling('semiannual')}
-                className={'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ' + (billing === 'semiannual' ? 'bg-indigo-600 text-white shadow' : 'text-gray-500 hover:text-gray-700')}
-              >
-                Semi-annual
-                {billing === 'semiannual'
-                  ? <span className="text-[10px] bg-white/20 rounded-full px-2 py-0.5 font-medium">6-month minimum</span>
-                  : <span className="text-[10px] text-gray-400">$299/mo · 6-mo min</span>}
-              </button>
-            </div>
-            <p className="text-xs text-gray-400">
-              Need no commitment?{' '}
-              <span className="text-gray-500 font-medium">Month-to-month available at $499/mo (Starter) or $899/mo (Plus).</span>{' '}
-              <a href="mailto:hello@taxlift.ai?subject=Month-to-month%20inquiry" className="text-indigo-500 hover:underline">Email us →</a>
+            <p className="text-sm text-gray-500 max-w-xl mx-auto">
+              All plans are priced at <strong className="text-gray-700">3% of your estimated SR&amp;ED credit</strong> — calculated from your free scan. Starter covers full SR&amp;ED automation; Plus adds the Grants module.
+              {estimate ? <>{' '}Your estimate: <strong className="text-indigo-600">{fmtK(taxliftFee)}</strong> on a {fmtK(estimate)} credit.</> : null}
             </p>
           </div>
         ) : (
@@ -431,15 +405,9 @@ export default function PricingPage() {
         )}
 
         <div className="text-center mb-12 space-y-2">
-          <p className="text-xs text-gray-400">Prices in CAD · 14-day free trial on all plans · SR&amp;ED credit recovery typically returns 80–200× the platform cost</p>
-          {track === 'annual' && billing === 'semiannual' && (
-            <p className="text-xs text-amber-600">
-              Save an extra 17% by switching to annual billing — and get a full 12-month audit vault from day one.{' '}
-              <button onClick={() => setBilling('annual')} className="underline font-medium">Switch to annual →</button>
-            </p>
-          )}
+          <p className="text-xs text-gray-400">Prices in CAD · 3% of estimated SR&amp;ED credit · 14-day free trial on all plans · payment processed via Stripe</p>
           {track === 'claim' && (
-            <p className="text-xs text-gray-400">Want year-round coverage?{' '}<button onClick={() => setTrack('annual')} className="text-indigo-500 hover:underline">See annual plans →</button></p>
+            <p className="text-xs text-gray-400">Want year-round coverage?{' '}<button onClick={() => setTrack('annual')} className="text-indigo-500 hover:underline">See feature plans →</button></p>
           )}
         </div>
 

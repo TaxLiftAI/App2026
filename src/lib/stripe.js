@@ -1,20 +1,27 @@
 /**
  * stripe.js — client-side Stripe initialisation + plan config
  *
- * Two pricing tracks:
- *   PLANS       — Option A: Subscription (Annual · Semi-annual · Monthly fallback)
- *   CLAIM_PLANS — Option B: Pay-per-claim (self-serve SMBs, first-time filers)
+ * Pricing model (performance-based):
+ *   PERFORMANCE_RATE — 3% of the customer's estimated SR&ED credit
+ *   CPA_RATE         — 1.5% of credit allocated to CPA partner (internal only)
+ *   NET_RATE         — 1.5% retained by TaxLift (internal only)
  *
- * Commitment ladder (solves the "file once, cancel" problem):
- *   Annual     12 mo  →  $249/mo Starter  ($2,988/yr)   — best value
- *   Semi-annual 6 mo  →  $299/mo Starter  ($1,794/6mo)  — covers full filing cycle
- *   Monthly     none  →  $499/mo Starter               — penalty tier, shown on request
+ * Two product tracks:
+ *   PLANS       — Feature tiers (Starter / Plus / Enterprise), all at 3% of credit
+ *   CLAIM_PLANS — Pay-per-claim (self-serve SMBs, first-time filers)
+ *
+ * Stripe billing: variable one-time invoice per customer, amount = credit_estimate × 0.03
  *
  * Usage:
- *   import { PLANS, CLAIM_PLANS, redirectToCheckout } from '../lib/stripe'
+ *   import { PLANS, CLAIM_PLANS, PERFORMANCE_RATE, redirectToCheckout } from '../lib/stripe'
  */
 import { loadStripe } from '@stripe/stripe-js'
 import { billing } from './api'
+
+// ── Performance pricing rates (not shown publicly — CPA split is internal) ────
+export const PERFORMANCE_RATE = 0.03   // 3% of estimated SR&ED credit
+export const CPA_RATE         = 0.015  // 1.5% → CPA partner commission (internal)
+export const NET_RATE         = 0.015  // 1.5% → TaxLift net (internal)
 
 // ── Stripe instance (singleton promise) ───────────────────────────────────────
 let stripePromise = null
@@ -35,24 +42,17 @@ export const PLANS = {
     id:   'starter',
     name: 'Starter',
 
-    // ── Annual (primary) ──────────────────────────────────────────────────────
-    price:            '$249',
-    priceAnnualTotal: '$2,988',
-    period:           '/mo · billed annually',
-    priceId:          import.meta.env.VITE_STRIPE_PRICE_STARTER ?? null,
+    // ── Performance pricing: 3% of estimated SR&ED credit ────────────────────
+    price:         '3%',
+    period:        'of your SR&ED credit',
+    priceDetail:   'e.g. $150K credit → $4,500 fee',
+    priceId:       import.meta.env.VITE_STRIPE_PRICE_STARTER ?? null,
 
-    // ── Semi-annual (6-month minimum commitment) ──────────────────────────────
-    priceSemiAnnual:       '$299',
-    priceSemiAnnualTotal:  '$1,794',
-    periodSemiAnnual:      '/mo · 6-month minimum',
-    priceIdSemiAnnual:     import.meta.env.VITE_STRIPE_PRICE_STARTER_SEMI ?? null,
+    // Legacy flat-rate price IDs kept for reference (no longer displayed):
+    priceIdSemiAnnual: import.meta.env.VITE_STRIPE_PRICE_STARTER_SEMI    ?? null,
+    priceIdMonthly:    import.meta.env.VITE_STRIPE_PRICE_STARTER_MONTHLY ?? null,
 
-    // ── Monthly (penalty / no-commitment tier — not shown by default) ─────────
-    priceMonthly:     '$499',
-    periodMonthly:    '/mo · no commitment',
-    priceIdMonthly:   import.meta.env.VITE_STRIPE_PRICE_STARTER_MONTHLY ?? null,
-
-    description:      'SR&ED automation for Canadian tech companies making their first claim.',
+    description:   'SR&ED automation for Canadian tech companies making their first claim.',
     features: [
       'Unlimited SR&ED clusters',
       'AI narrative generation',
@@ -73,21 +73,17 @@ export const PLANS = {
     id:   'plus',
     name: 'Plus',
 
-    price:            '$499',
-    priceAnnualTotal: '$5,988',
-    period:           '/mo · billed annually',
-    priceId:          import.meta.env.VITE_STRIPE_PRICE_PLUS ?? null,
+    // ── Performance pricing: 3% of estimated SR&ED credit ────────────────────
+    price:       '3%',
+    period:      'of your SR&ED credit',
+    priceDetail: 'e.g. $150K credit → $4,500 fee + grants module',
+    priceId:     import.meta.env.VITE_STRIPE_PRICE_PLUS ?? null,
 
-    priceSemiAnnual:       '$599',
-    priceSemiAnnualTotal:  '$3,594',
-    periodSemiAnnual:      '/mo · 6-month minimum',
-    priceIdSemiAnnual:     import.meta.env.VITE_STRIPE_PRICE_PLUS_SEMI ?? null,
+    // Legacy flat-rate price IDs kept for reference (no longer displayed):
+    priceIdSemiAnnual: import.meta.env.VITE_STRIPE_PRICE_PLUS_SEMI    ?? null,
+    priceIdMonthly:    import.meta.env.VITE_STRIPE_PRICE_PLUS_MONTHLY ?? null,
 
-    priceMonthly:     '$899',
-    periodMonthly:    '/mo · no commitment',
-    priceIdMonthly:   import.meta.env.VITE_STRIPE_PRICE_PLUS_MONTHLY ?? null,
-
-    description:      'SR&ED + Grants module — unlock up to $4M+ in additional Canadian innovation funding.',
+    description:   'SR&ED + Grants module — unlock up to $4M+ in additional Canadian innovation funding.',
     features: [
       'Everything in Starter',
       '✦ Grants module — 9 programs matched automatically',
@@ -108,19 +104,10 @@ export const PLANS = {
     id:   'enterprise',
     name: 'Enterprise',
 
-    price:            'Custom',
-    priceAnnualTotal: null,
-    period:           '',
-    priceId:          null,
-
-    priceSemiAnnual:      'Custom',
-    priceSemiAnnualTotal: null,
-    periodSemiAnnual:     '',
-    priceIdSemiAnnual:    null,
-
-    priceMonthly:   'Custom',
-    periodMonthly:  '',
-    priceIdMonthly: null,
+    price:       'Custom',
+    period:      '',
+    priceDetail: null,
+    priceId:     null,
 
     description: 'Everything in Plus — white-label, API access, and a dedicated CPA partner.',
     features: [
@@ -185,24 +172,14 @@ export const CLAIM_PLANS = {
   },
 }
 
-// ── Resolve price display for a given billing period ──────────────────────────
-// billingPeriod: 'annual' | 'semiannual' | 'monthly'
-export function getPlanForBilling(plan, billingPeriod) {
-  if (billingPeriod === 'semiannual') {
-    return {
-      ...plan,
-      price:  plan.priceSemiAnnual  ?? plan.price,
-      period: plan.periodSemiAnnual ?? plan.period,
-    }
-  }
-  if (billingPeriod === 'monthly') {
-    return {
-      ...plan,
-      price:  plan.priceMonthly  ?? plan.price,
-      period: plan.periodMonthly ?? plan.period,
-    }
-  }
-  return plan  // annual (default)
+// ── Resolve plan display (billing period no longer changes price — kept for compat) ──
+export function getPlanForBilling(plan, _billingPeriod) {
+  return plan  // performance pricing: price is always 3% of credit
+}
+
+// ── Calculate the fee for a given credit estimate ─────────────────────────────
+export function calcFee(creditEstimate) {
+  return Math.round(creditEstimate * PERFORMANCE_RATE)
 }
 
 // ── Redirect to Stripe Checkout ────────────────────────────────────────────────

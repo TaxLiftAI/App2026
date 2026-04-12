@@ -10,7 +10,7 @@
 import { Check, Loader2 } from 'lucide-react'
 
 export default function PricingCard({ plan, onCta, ctaLoading = false, compact = false }) {
-  const { name, price, period, description, features, cta, highlighted } = plan
+  const { name, price, period, priceDetail, description, features, cta, highlighted } = plan
 
   return (
     <div
@@ -50,6 +50,11 @@ export default function PricingCard({ plan, onCta, ctaLoading = false, compact =
           <span className={`ml-1 text-sm font-medium ${highlighted ? 'text-indigo-200' : 'text-slate-500'}`}>
             {period}
           </span>
+        )}
+        {priceDetail && (
+          <p className={`mt-1 text-xs ${highlighted ? 'text-indigo-300' : 'text-slate-400'}`}>
+            {priceDetail}
+          </p>
         )}
       </div>
 
