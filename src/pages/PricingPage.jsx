@@ -380,9 +380,9 @@ function LeadCaptureGate({ onUnlock }) {
         {/* Trust marks */}
         <div className="flex justify-center flex-wrap gap-4 mt-6">
           {[
-            { icon: ShieldCheck, label: 'CRA compliant'              },
-            { icon: Lock,        label: '3–5% vs 15–25% consultant'  },
-            { icon: Star,        label: 'CPA-ready package'          },
+            { icon: ShieldCheck, label: 'CRA compliant'          },
+            { icon: Lock,        label: 'Fraction of consultant cost' },
+            { icon: Star,        label: 'CPA-ready package'      },
           ].map(({ icon: Icon, label }) => (
             <div key={label} className="flex items-center gap-1.5 text-slate-500 text-xs">
               <Icon size={12} className="text-indigo-500" />{label}
