@@ -45,6 +45,7 @@ const AdminFunnelPage    = lazy(() => import('./pages/AdminFunnelPage'))
 // CPA portal
 const CPAPortalPage          = lazy(() => import('./pages/CPAPortalPage'))
 const ReferralDashboardPage  = lazy(() => import('./pages/ReferralDashboardPage'))
+const CpaPackageReportPage   = lazy(() => import('./pages/CpaPackageReportPage'))
 
 // Dev / config
 const RateCardPage         = lazy(() => import('./pages/RateCardPage'))
@@ -236,6 +237,12 @@ function AppRoutes() {
       <Route path="/cpa-portal/referrals" element={
         <ProtectedRoute action="viewCPAPortal">
           <Layout><ReferralDashboardPage /></Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/cpa-portal/report/:clientId" element={
+        <ProtectedRoute action="viewCPAPortal">
+          <Layout><CpaPackageReportPage /></Layout>
         </ProtectedRoute>
       } />
 

@@ -185,13 +185,22 @@ function ClientCard({ client, onView, onShare, onDismissNote }) {
         </div>
         <div className="flex items-center gap-2">
           {client.status === 'ready_to_file' && (
-            <button
-              onClick={() => onShare(client)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg transition-colors"
-              title="Generate a secure shareable link to send to your CPA"
-            >
-              <Share2 size={11} /> Share Link
-            </button>
+            <>
+              <Link
+                to={`/cpa-portal/report/${client.id}`}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded-lg transition-colors"
+                title="View the full T661 SR&ED package"
+              >
+                <FileText size={11} /> View Report
+              </Link>
+              <button
+                onClick={() => onShare(client)}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 hover:bg-gray-50 text-gray-600 text-xs font-medium rounded-lg transition-colors"
+                title="Generate a secure shareable link"
+              >
+                <Share2 size={11} />
+              </button>
+            </>
           )}
           <button
             onClick={() => onView(client)}
@@ -272,6 +281,7 @@ function ClientRow({ client, onView, isLast }) {
 
 // ─── Client detail drawer (replaces /clusters navigation for CPA role) ──────────
 function ClientDetailDrawer({ client, onClose }) {
+  const navigate = useNavigate()
   if (!client) return null
 
   const days          = daysUntil(client.filing_deadline)
@@ -420,8 +430,11 @@ function ClientDetailDrawer({ client, onClose }) {
         {/* Footer actions */}
         <div className="px-6 py-4 border-t border-gray-100 space-y-2">
           {isReady ? (
-            <button className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors">
-              <FileText size={15} /> Download CPA Package
+            <button
+              onClick={() => { onClose(); navigate(`/cpa-portal/report/${client.id}`) }}
+              className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors"
+            >
+              <FileText size={15} /> View T661 Package →
             </button>
           ) : (
             <button disabled className="w-full flex items-center justify-center gap-2 bg-gray-100 text-gray-400 text-sm font-medium py-2.5 rounded-xl cursor-not-allowed">
