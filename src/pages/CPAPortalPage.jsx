@@ -270,19 +270,173 @@ function ClientRow({ client, onView, isLast }) {
   )
 }
 
-// ─── Context toast when switching client ──────────────────────────────────────
-function SwitchToast({ client, onClose }) {
+// ─── Client detail drawer (replaces /clusters navigation for CPA role) ──────────
+function ClientDetailDrawer({ client, onClose }) {
+  if (!client) return null
+
+  const days          = daysUntil(client.filing_deadline)
+  const deadlineClr   = deadlineColor(days)
+  const statusInfo    = STATUS_META[client.status] ?? STATUS_META.onboarded
+  const rejectedCount = (client.clusters_total ?? 0)
+    - (client.clusters_approved ?? 0)
+    - (client.clusters_pending_review ?? 0)
+  const isReady = client.status === 'ready_to_file'
+
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-gray-900 text-white text-sm px-4 py-3 rounded-xl shadow-lg max-w-sm">
-      <Building2 size={14} className="text-indigo-400 flex-shrink-0" />
-      <div className="flex-1">
-        <p className="font-medium text-white">Switched to {client.company_name}</p>
-        <p className="text-xs text-gray-400 mt-0.5">Showing {client.company_name}'s clusters and data</p>
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/30 z-40 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      {/* Drawer */}
+      <div className="fixed top-0 right-0 h-full w-full max-w-md bg-white z-50 shadow-2xl flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4 px-6 py-5 border-b border-gray-100">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center flex-shrink-0">
+              <Building2 size={18} className="text-indigo-500" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-base font-bold text-gray-900 truncate">{client.company_name}</h2>
+              <p className="text-xs text-gray-500 mt-0.5">{client.industry}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${statusInfo.bg} ${statusInfo.text}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${statusInfo.dot}`} />
+              {statusInfo.label}
+            </span>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors p-1">
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+
+          {/* Deadline alert */}
+          {days <= 60 && (
+            <div className={`flex items-start gap-2.5 rounded-xl px-3.5 py-3 border ${
+              days <= 30
+                ? 'bg-red-50 border-red-200'
+                : 'bg-amber-50 border-amber-200'
+            }`}>
+              <AlertTriangle size={14} className={`flex-shrink-0 mt-0.5 ${days <= 30 ? 'text-red-500' : 'text-amber-500'}`} />
+              <p className={`text-xs font-semibold ${days <= 30 ? 'text-red-800' : 'text-amber-800'}`}>
+                T661 filing deadline {days > 0 ? `in ${days} days` : 'has passed'} —{' '}
+                {new Date(client.filing_deadline).toLocaleDateString('en-CA', { month: 'long', day: 'numeric', year: 'numeric' })}
+              </p>
+            </div>
+          )}
+
+          {/* Key metrics */}
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { label: 'Est. Credit', value: client.estimated_credit_cad ? formatCurrency(client.estimated_credit_cad) : 'TBD', icon: DollarSign, color: 'text-green-600 bg-green-50' },
+              { label: 'Filing Deadline', value: new Date(client.filing_deadline).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' }), icon: Calendar, color: deadlineClr === 'text-red-600' ? 'text-red-600 bg-red-50' : deadlineClr === 'text-amber-600' ? 'text-amber-600 bg-amber-50' : 'text-gray-600 bg-gray-50' },
+              { label: 'FY End', value: client.fiscal_year_end, icon: FileText, color: 'text-indigo-600 bg-indigo-50' },
+              { label: 'Documents', value: client.documents_count + ' files', icon: Layers, color: 'text-blue-600 bg-blue-50' },
+            ].map(({ label, value, icon: Icon, color }) => (
+              <div key={label} className="bg-gray-50 rounded-xl p-3 flex items-center gap-3">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${color}`}>
+                  <Icon size={15} />
+                </div>
+                <div>
+                  <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">{label}</p>
+                  <p className="text-sm font-bold text-gray-900">{value}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Cluster breakdown */}
+          <div className="bg-white border border-gray-200 rounded-xl p-4">
+            <p className="text-xs font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
+              <GitMerge size={13} className="text-indigo-400" /> SR&ED Cluster Breakdown
+            </p>
+            <div className="space-y-2.5">
+              {[
+                { label: 'Approved', count: client.clusters_approved,      color: 'bg-green-500', textColor: 'text-green-700', bg: 'bg-green-50' },
+                { label: 'Pending review', count: client.clusters_pending_review, color: 'bg-amber-400', textColor: 'text-amber-700', bg: 'bg-amber-50' },
+                { label: 'In progress / other', count: Math.max(0, rejectedCount), color: 'bg-gray-300',  textColor: 'text-gray-600',  bg: 'bg-gray-50'  },
+              ].map(({ label, count, color, textColor, bg }) => (
+                <div key={label} className="flex items-center gap-3">
+                  <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${color}`} />
+                  <span className="text-xs text-gray-600 flex-1">{label}</span>
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${bg} ${textColor}`}>{count}</span>
+                </div>
+              ))}
+              <div className="border-t border-gray-100 pt-2 mt-1 flex items-center justify-between">
+                <span className="text-xs text-gray-500 font-medium">Total clusters</span>
+                <span className="text-xs font-bold text-gray-900">{client.clusters_total}</span>
+              </div>
+            </div>
+            {/* Readiness bar */}
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[11px] text-gray-500">Readiness score</span>
+                <span className={`text-[11px] font-bold ${readinessColor(client.avg_readiness_score)}`}>{client.avg_readiness_score}%</span>
+              </div>
+              <div className="w-full bg-gray-100 rounded-full h-1.5">
+                <div
+                  className={`h-1.5 rounded-full transition-all ${
+                    client.avg_readiness_score >= 80 ? 'bg-green-500' :
+                    client.avg_readiness_score >= 50 ? 'bg-amber-400' : 'bg-red-400'
+                  }`}
+                  style={{ width: `${client.avg_readiness_score}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Primary contact */}
+          <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-2">
+            <p className="text-xs font-semibold text-gray-700 mb-1">Primary Contact</p>
+            <div className="flex items-center gap-2 text-xs text-gray-600">
+              <Users size={12} className="text-gray-400 flex-shrink-0" />
+              <span>{client.primary_contact}</span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-gray-600">
+              <Mail size={12} className="text-gray-400 flex-shrink-0" />
+              <a href={`mailto:${client.primary_contact_email}`} className="text-indigo-600 hover:underline truncate">
+                {client.primary_contact_email}
+              </a>
+            </div>
+          </div>
+
+          {/* Notes */}
+          {client.notes && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+              <p className="text-xs font-semibold text-amber-800 mb-1 flex items-center gap-1.5">
+                <AlertTriangle size={12} /> CPA Notes
+              </p>
+              <p className="text-xs text-amber-700 leading-relaxed">{client.notes}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer actions */}
+        <div className="px-6 py-4 border-t border-gray-100 space-y-2">
+          {isReady ? (
+            <button className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors">
+              <FileText size={15} /> Download CPA Package
+            </button>
+          ) : (
+            <button disabled className="w-full flex items-center justify-center gap-2 bg-gray-100 text-gray-400 text-sm font-medium py-2.5 rounded-xl cursor-not-allowed">
+              <FileText size={15} /> CPA Package not yet ready
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="w-full text-sm text-gray-500 hover:text-gray-700 font-medium py-2 transition-colors"
+          >
+            Close
+          </button>
+        </div>
       </div>
-      <button onClick={onClose} className="text-gray-400 hover:text-white ml-1 flex-shrink-0">
-        <X size={13} />
-      </button>
-    </div>
+    </>
   )
 }
 
@@ -398,10 +552,12 @@ export default function CPAPortalPage() {
     return list
   }, [filter, sortBy, fyClientList])
 
+  // "View client" opens the detail drawer — CPAs stay in their portal.
+  // Previously navigated to /clusters which is an admin route CPAs cannot access.
+  const [drawerClient, setDrawerClient] = useState(null)
+
   function handleViewClient(client) {
-    setActiveClient(client)
-    setTimeout(() => setActiveClient(null), 3500)
-    navigate('/clusters')
+    setDrawerClient(client)
   }
 
   const atRiskCount = stats.atRisk
@@ -697,6 +853,9 @@ export default function CPAPortalPage() {
 
       {/* ── Switch context toast ── */}
       {activeClient && <SwitchToast client={activeClient} onClose={() => setActiveClient(null)} />}
+
+      {/* ── Client detail drawer ── */}
+      <ClientDetailDrawer client={drawerClient} onClose={() => setDrawerClient(null)} />
 
       {/* ── Share with CPA modal ── */}
       <ShareWithCpaModal
