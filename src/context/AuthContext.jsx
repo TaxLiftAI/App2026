@@ -8,9 +8,9 @@
  *  2. Demo mode   — select a mock persona; no network required.
  *                   Falls back automatically when the API is unreachable.
  */
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import { USERS } from '../data/mockData'
-import { auth as authApi, ApiError } from '../lib/api'
+import { auth as authApi, ApiError, setApiDemoMode } from '../lib/api'
 
 const AuthContext = createContext(null)
 
@@ -73,6 +73,11 @@ export function AuthProvider({ children }) {
   const [authLoading, setAuthLoading]   = useState(true)   // true during initial session restore
   const [authError,   setAuthError]     = useState(null)
 
+  // Ref so the unauthorized event handler always sees the live isDemoMode value
+  // without needing to re-register the listener on every change.
+  const isDemoModeRef = useRef(false)
+  useEffect(() => { isDemoModeRef.current = isDemoMode }, [isDemoMode])
+
   // ── Restore session on mount ────────────────────────────────────────────────────────────────
   // The browser sends the httpOnly taxlift_access cookie automatically.
   // If it's valid, /me succeeds and we restore state. If expired, api.js auto-refreshes via
@@ -105,8 +110,12 @@ export function AuthProvider({ children }) {
 
   // ── Global unauthorized event — fired by api.js when both tokens expire ───────
   // Clears local state so the UI drops to the login page.
+  // Guard: in demo mode api.js short-circuits all requests, but an in-flight
+  // authApi.me() initiated at mount (before demo was selected) can still fire
+  // this event.  We must NOT wipe the demo session in that case.
   useEffect(() => {
     function handleUnauthorized() {
+      if (isDemoModeRef.current) return   // never log out a demo session
       setCurrentUser(null)
       setIsDemoMode(false)
     }
@@ -160,6 +169,10 @@ export function AuthProvider({ children }) {
   const loginDemo = useCallback((userId) => {
     const raw = USERS.find(u => u.id === userId)
     if (raw) {
+      // Flip the api.js flag BEFORE state updates so that by the time React
+      // re-renders and dashboard hooks fire their first requests, _isDemoMode
+      // is already true and every request short-circuits to ApiError(0).
+      setApiDemoMode(true)
       // Shape the mock user so all UI components get the same fields they expect
       // from a real backend user (name, subscription_tier, onboarding_completed, etc.)
       setCurrentUser({
@@ -178,6 +191,7 @@ export function AuthProvider({ children }) {
   // Calls the server to clear httpOnly cookies and invalidate the refresh token in the DB.
   // Then clears local state regardless of server response (best-effort cookie invalidation).
   const logout = useCallback(async () => {
+    setApiDemoMode(false)   // restore normal API behaviour before any server call
     if (!isDemoMode) {
       try { await authApi.logout() } catch { /* ignore — cookies expire naturally */ }
     }
@@ -196,6 +210,7 @@ export function AuthProvider({ children }) {
 
   // ── CPA demo login (Blocker 1 fix) ───────────────────────────────────────────
   const loginCpaDemo = useCallback(() => {
+    setApiDemoMode(true)   // flip before state update — same reason as loginDemo above
     setCurrentUser(CPA_DEMO_PERSONA)
     setIsDemoMode(true)
     setAuthError(null)

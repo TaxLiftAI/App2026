@@ -42,6 +42,14 @@ export const token = {
   clear: () => {},
 }
 
+// ── Demo mode flag ────────────────────────────────────────────────────────────
+// Set synchronously by AuthContext before loginDemo/loginCpaDemo commits state.
+// When true, every request() call short-circuits to ApiError(0) so the existing
+// mock-data fallbacks in useApiData and useMutation fire for ALL calls — both
+// reads and writes — giving a fully functional demo with no real network traffic.
+let _isDemoMode = false
+export function setApiDemoMode(val) { _isDemoMode = Boolean(val) }
+
 // ── Refresh state ─────────────────────────────────────────────────────────────
 let _refreshing = false
 let _refreshQueue = []
@@ -71,6 +79,9 @@ async function tryRefresh() {
 
 // ── Core fetch wrapper ────────────────────────────────────────────────────────
 async function request(method, path, { body, params, isForm = false, _isRetry = false } = {}) {
+  // In demo mode skip all network traffic — the caller's mock-data fallback handles it.
+  if (_isDemoMode) throw new ApiError(0, 'Demo mode — using local mock data')
+
   const url = new URL(`${BASE_URL}${path}`, window.location.origin)
   if (params) {
     Object.entries(params).forEach(([k, v]) => {
