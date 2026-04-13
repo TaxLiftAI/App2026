@@ -76,26 +76,52 @@ export function riskBarColor(score) {
 }
 
 // ─── Route helpers ────────────────────────────────────────────────────────────
+// Role hierarchy:
+//   Developer  — end-user dev at a client company; owns their own clusters/integrations
+//   Reviewer   — internal TaxLift SR&ED reviewer; full cluster/narrative access
+//   Auditor    — read-only auditor; can view but not edit
+//   Support    — customer support; limited read access
+//   Admin      — full platform access
+//   CPA        — partner accountant; redirected to CPA portal, not main app
 export const ROLE_CAN = {
-  viewClusters: ['Reviewer', 'Admin', 'Auditor', 'Support'],
-  editClusters: ['Reviewer', 'Admin'],
-  viewNarratives: ['Reviewer', 'Admin', 'Auditor'],
-  editNarratives: ['Reviewer', 'Admin'],
-  viewReports: ['Reviewer', 'Admin', 'Auditor'],
-  viewUsers: ['Admin'],
-  viewAuditLog: ['Admin', 'Auditor', 'Support'],
-  viewIntegrations: ['Admin'],
-  viewRateCard:     ['Admin'],
-  viewDevPortal:    ['Developer', 'Admin', 'Reviewer'],
-  viewHeuristics:   ['Admin'],
-  editHeuristics:   ['Admin'],
-  viewAnalytics:      ['Admin', 'Reviewer', 'Auditor'],
-  viewActivity:       ['Admin', 'Auditor'],
-  viewAuditReadiness: ['Admin', 'Reviewer', 'Auditor'],
-  viewNotifications:  ['Admin', 'Reviewer', 'Auditor', 'Developer', 'Support'],
-  viewVault:          ['Admin', 'Reviewer', 'Auditor'],
-  uploadVault:        ['Admin', 'Reviewer'],
-  viewCPAPortal:      ['Admin', 'Auditor', 'CPA'],
+  // Clusters — Developers must see/edit their own work; sidebar shows this link for them
+  viewClusters:   ['Developer', 'Reviewer', 'Admin', 'Auditor', 'Support'],
+  editClusters:   ['Developer', 'Reviewer', 'Admin'],
+
+  // Narratives — Developers need to review T661 narrative drafts for their clusters
+  viewNarratives: ['Developer', 'Reviewer', 'Admin', 'Auditor'],
+  editNarratives: ['Developer', 'Reviewer', 'Admin'],
+
+  // Reports — Developers need to see their own credit pipeline and financial reports
+  viewReports:    ['Developer', 'Reviewer', 'Admin', 'Auditor'],
+
+  // Integrations — Developers connect their own GitHub/Jira/Azure DevOps
+  viewIntegrations: ['Developer', 'Admin', 'Reviewer'],
+
+  // Audit readiness — Developers can check their own claim readiness
+  viewAuditReadiness: ['Developer', 'Admin', 'Reviewer', 'Auditor'],
+
+  // Document Vault — Developers can view supporting docs for their company
+  viewVault:    ['Developer', 'Admin', 'Reviewer', 'Auditor'],
+  uploadVault:  ['Developer', 'Admin', 'Reviewer'],
+
+  // Developer portal — their personal activity view
+  viewDevPortal: ['Developer', 'Admin', 'Reviewer'],
+
+  // Notifications — all authenticated users
+  viewNotifications: ['Admin', 'Reviewer', 'Auditor', 'Developer', 'Support'],
+
+  // Admin-only — internal tooling, not for end-user developers
+  viewUsers:     ['Admin'],
+  viewAuditLog:  ['Admin', 'Auditor', 'Support'],
+  viewRateCard:  ['Admin'],
+  viewHeuristics: ['Admin'],
+  editHeuristics: ['Admin'],
+  viewAnalytics:  ['Admin', 'Reviewer', 'Auditor'],
+  viewActivity:   ['Admin', 'Auditor'],
+
+  // CPA portal — partner accountants only
+  viewCPAPortal: ['Admin', 'Auditor', 'CPA'],
 }
 
 export function canDo(action, role) {

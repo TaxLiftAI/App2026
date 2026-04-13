@@ -1,8 +1,60 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, Component } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Layout from './components/layout/Layout'
 import { canDo } from './lib/utils'
+
+// ── Chunk-load error boundary ─────────────────────────────────────────────────
+// When Railway redeploys, Vite emits new content-hashed JS chunks. Any user
+// still viewing the old index.html will try to fetch stale chunk URLs that
+// no longer exist (404). The Suspense fallback swallows this silently and the
+// user sees a blank page or "Something went wrong".
+// This boundary detects chunk-load failures specifically and reloads the page
+// once, which fetches the fresh index.html and resolves the hash mismatch.
+class ChunkErrorBoundary extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false }
+  }
+  static getDerivedStateFromError(err) {
+    const isChunkError = (
+      err?.message?.includes('Failed to fetch dynamically imported module') ||
+      err?.message?.includes('Importing a module script failed') ||
+      err?.name === 'ChunkLoadError'
+    )
+    return { hasError: true, isChunkError }
+  }
+  componentDidCatch(err) {
+    const isChunkError = (
+      err?.message?.includes('Failed to fetch dynamically imported module') ||
+      err?.message?.includes('Importing a module script failed') ||
+      err?.name === 'ChunkLoadError'
+    )
+    if (isChunkError && !sessionStorage.getItem('_chunk_reloaded')) {
+      sessionStorage.setItem('_chunk_reloaded', '1')
+      window.location.reload()
+    }
+  }
+  render() {
+    if (this.state.hasError && !this.state.isChunkError) {
+      return (
+        <div className="flex items-center justify-center min-h-screen bg-slate-50">
+          <div className="text-center space-y-2">
+            <p className="text-gray-700 font-medium">Something went wrong</p>
+            <p className="text-sm text-gray-400">Try refreshing the page.</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-3 text-xs font-medium text-indigo-600 underline"
+            >
+              Refresh now
+            </button>
+          </div>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 // ── Lazy-loaded pages (each becomes its own JS chunk) ─────────────────────────
 // Vite splits these at the dynamic import boundary, so users only download
@@ -365,8 +417,10 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppRoutes />
-    </AuthProvider>
+    <ChunkErrorBoundary>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </ChunkErrorBoundary>
   )
 }
