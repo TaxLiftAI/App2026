@@ -336,16 +336,31 @@ function ClaimProgressCard({ clusters, integrations, navigate }) {
   )
 }
 
-function StatCard({ label, value, sub, icon: Icon, iconColor = 'text-indigo-600', iconBg = 'bg-indigo-50' }) {
+function StatCard({ label, value, sub, icon: Icon, iconColor = 'text-indigo-600', iconBg = 'bg-indigo-50', outOf, progress }) {
+  // progress bar: shown when outOf is provided (e.g. approved / total)
+  const pct = outOf > 0 ? Math.round((Number(value) / outOf) * 100) : null
   return (
     <Card>
       <div className="flex items-start justify-between">
-        <div>
+        <div className="flex-1 min-w-0">
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
+          <div className="flex items-baseline gap-1.5 mt-1">
+            <p className="text-2xl font-bold text-gray-900">{value}</p>
+            {outOf != null && (
+              <p className="text-sm font-medium text-gray-400">/ {outOf}</p>
+            )}
+          </div>
           {sub && <p className="text-xs text-gray-500 mt-1">{sub}</p>}
+          {pct != null && (
+            <div className="mt-2 h-1 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-green-500 rounded-full transition-all duration-500"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+          )}
         </div>
-        <div className={`p-2.5 rounded-xl ${iconBg}`}>
+        <div className={`p-2.5 rounded-xl flex-shrink-0 ${iconBg}`}>
           <Icon size={18} className={iconColor} />
         </div>
       </div>
@@ -635,13 +650,37 @@ export default function DashboardPage() {
         currentUser={currentUser}
       />
 
-      {/* Demo mode banner */}
-      {usingMock && (
-        <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700">
-          <FlaskConical size={13} />
-          <span>Using demo data — connect a data source to see your real R&D clusters.</span>
+      {/* ── Priority notification strip ───────────────────────────────────────
+          Show at most ONE banner at a time, in priority order:
+          1. Demo mode (blocks real data entirely — most important)
+          2. Clusters needing review (actionable for real users)
+          The integration-degraded banner lives in Layout.jsx and shows
+          separately in the fixed top bar — no need to duplicate it here.    */}
+      {usingMock ? (
+        <div className="flex items-center gap-3 px-4 py-2.5 bg-indigo-50 border border-indigo-200 rounded-xl text-xs">
+          <FlaskConical size={13} className="text-indigo-500 flex-shrink-0" />
+          <span className="text-indigo-700 flex-1">
+            Showing demo data — <strong>connect a data source</strong> to see your real R&amp;D clusters and SR&amp;ED credit estimate.
+          </span>
+          <button
+            onClick={() => navigate('/integrations')}
+            className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 whitespace-nowrap underline"
+          >
+            Connect now →
+          </button>
         </div>
-      )}
+      ) : (stale.length > 0 || needsReview.length > 0) && !isEmptyState ? (
+        <div className="flex items-center gap-3 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs">
+          <AlertTriangle size={13} className="text-amber-500 flex-shrink-0" />
+          <span className="text-amber-800 flex-1">
+            <strong>{needsReview.length} cluster{needsReview.length !== 1 ? 's' : ''}</strong> awaiting narrative review
+            {stale.length > 0 && <> · <strong>{stale.length}</strong> with stale context flags</>}
+          </span>
+          <button onClick={() => navigate('/clusters?status=Drafted')} className="text-xs font-semibold text-amber-700 hover:text-amber-900 whitespace-nowrap underline">
+            Review now →
+          </button>
+        </div>
+      ) : null}
 
       {/* Filing deadline countdown — real users with data only */}
       {!usingMock && !isEmptyState && currentUser?._fromApi && (
@@ -657,33 +696,42 @@ export default function DashboardPage() {
         />
       )}
 
-      {/* Page header */}
+      {/* Page header — greeting only; "Dashboard" label is already in the sidebar */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-xs text-gray-400 mt-0.5">Welcome back, {currentUser?.name?.split(' ')[0] ?? 'there'}</p>
+          <h1 className="text-lg font-bold text-gray-900">
+            Welcome back, {currentUser?.name?.split(' ')[0] ?? 'there'}
+          </h1>
+          <p className="text-xs text-gray-400 mt-0.5">
+            {usingMock ? 'Demo mode · FY 2024 SR&ED pipeline' : `FY ${new Date().getFullYear()} SR&ED pipeline`}
+          </p>
         </div>
-        {/* Only show secondary actions once user has data */}
-        {!isEmptyState && (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => navigate('/quick-connect')}
-              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
-            >
-              <Zap size={13} /> Quick Connect
-            </button>
-            <button
-              onClick={() => setInviteOpen(true)}
-              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
-            >
-              <Mail size={13} /> Invite accountant
-            </button>
-            <ShareButton
-              clusters={clusters}
-              companyName={currentUser?.firm_name ?? currentUser?.company_name ?? 'Your Company'}
-            />
-          </div>
-        )}
+
+        <div className="flex items-center gap-2">
+          {/* Quick Connect: always visible — primary action to activate the platform */}
+          <button
+            onClick={() => navigate('/quick-connect')}
+            className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+          >
+            <Zap size={13} /> Quick Connect
+          </button>
+
+          {/* Secondary actions: only meaningful once the user has real data */}
+          {!usingMock && !isEmptyState && (
+            <>
+              <button
+                onClick={() => setInviteOpen(true)}
+                className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
+              >
+                <Mail size={13} /> Invite accountant
+              </button>
+              <ShareButton
+                clusters={clusters}
+                companyName={currentUser?.firm_name ?? currentUser?.company_name ?? 'Your Company'}
+              />
+            </>
+          )}
+        </div>
       </div>
 
       {/* 3-step onboarding card — hides itself once all steps are done */}
@@ -703,20 +751,6 @@ export default function DashboardPage() {
           User has clusters — show the full analytics view.                  */}
       {!isEmptyState && (
         <>
-          {/* Review alerts */}
-          {(stale.length > 0 || needsReview.length > 0) && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-3">
-              <AlertTriangle size={16} className="text-amber-500 flex-shrink-0" />
-              <p className="text-sm text-amber-800">
-                <strong>{needsReview.length} cluster{needsReview.length !== 1 ? 's' : ''}</strong> awaiting narrative review
-                {stale.length > 0 && <> · <strong>{stale.length}</strong> with stale context flags</>}
-              </p>
-              <button onClick={() => navigate('/clusters?status=Drafted')} className="ml-auto text-xs font-medium text-amber-700 hover:text-amber-900 underline whitespace-nowrap">
-                Review now →
-              </button>
-            </div>
-          )}
-
           {/* Stat cards */}
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
             <StatCard
@@ -728,7 +762,8 @@ export default function DashboardPage() {
             <StatCard
               label="Approved"
               value={stats.approved}
-              sub="clusters fully processed"
+              outOf={stats.total}
+              sub={stats.approved === stats.total && stats.total > 0 ? 'all clusters approved 🎉' : 'clusters fully processed'}
               icon={CheckCircle2}
               iconColor="text-green-600"
               iconBg="bg-green-50"
