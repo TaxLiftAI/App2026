@@ -546,6 +546,13 @@ function EmptyDashboardCTA({ navigate, pendingScan }) {
 export default function DashboardPage() {
   const navigate = useNavigate()
   const { currentUser } = useAuth()
+
+  // CPAs have their own portal — the client dashboard has no meaning for them.
+  // Redirect immediately so direct URL access (/dashboard) also goes to the right place.
+  useEffect(() => {
+    if (currentUser?.role === 'CPA') navigate('/cpa-portal', { replace: true })
+  }, [currentUser, navigate])
+
   const { data: clusters, usingMock } = useClusters()
   const { data: integrations } = useIntegrations()
   const trend = getCreditTrend()

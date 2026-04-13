@@ -4,14 +4,14 @@
  * CPA firm's referral hub. Turns the CPA firm from a passive document recipient
  * into an active pipeline source with a financial incentive to refer clients.
  *
- * Commission model (tiered — Blocker 5 fix):
- *   TaxLift charges 8% of credit recovered.
- *   CPA commission tier based on trailing-12-month converted referrals:
- *     Tier 1 (1–2 / yr):  1.5% of credit  (~18.75% of TaxLift fee)
- *     Tier 2 (3–5 / yr):  2.0% of credit  (~25% of TaxLift fee)
- *     Tier 3 (6+ / yr):   2.5% of credit  (~31.25% of TaxLift fee)
- *   + $500 first-client bonus on first successful referral.
- *   e.g. client claims $200K at Tier 2 → CPA earns $4,000.
+ * Fee model (flat referral fees — CPA Canada Rule 205 compliant):
+ *   Paid at T661 package delivery, not contingent on CRA assessment.
+ *   Credit ≤ $75K   → $750
+ *   Credit ≤ $150K  → $1,500
+ *   Credit ≤ $300K  → $3,000
+ *   Credit ≤ $600K  → $5,500
+ *   Credit > $600K  → $9,000
+ *   Plus plan adds  → $750
  */
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate }                  from 'react-router-dom'
@@ -23,22 +23,39 @@ import {
   CalendarCheck, Download,
 } from 'lucide-react'
 import { useAuth }              from '../context/AuthContext'
-import { referrals as referralsApi } from '../lib/api'
+import { referrals as referralsApi, ApiError } from '../lib/api'
 import { formatCurrency }       from '../lib/utils'
 
-// ── Tiered commission rates ───────────────────────────────────────────────────
-const COMMISSION_TIERS = [
-  { min: 0,  max: 2, rate: 0.015, label: 'Tier 1', desc: '1–2 referrals/yr' },
-  { min: 3,  max: 5, rate: 0.020, label: 'Tier 2', desc: '3–5 referrals/yr' },
-  { min: 6,  max: Infinity, rate: 0.025, label: 'Tier 3', desc: '6+ referrals/yr' },
+// ── Flat referral fee schedule (CPA Canada Rule 205 compliant) ───────────────
+// Paid at T661 package delivery — not contingent on CRA assessment.
+const FEE_TIERS = [
+  { maxCredit: 75_000,   fee: 750,   label: 'Up to $75K credit'   },
+  { maxCredit: 150_000,  fee: 1_500, label: 'Up to $150K credit'  },
+  { maxCredit: 300_000,  fee: 3_000, label: 'Up to $300K credit'  },
+  { maxCredit: 600_000,  fee: 5_500, label: 'Up to $600K credit'  },
+  { maxCredit: Infinity, fee: 9_000, label: 'Over $600K credit'   },
 ]
-const FIRST_CLIENT_BONUS = 500  // CAD
-function getTierForCount(convertedCount) {
-  return COMMISSION_TIERS.find(t => convertedCount >= t.min && convertedCount <= t.max)
-    ?? COMMISSION_TIERS[0]
+const PLUS_BONUS = 750
+function getFeeForCredit(creditAmount) {
+  return FEE_TIERS.find(t => creditAmount <= t.maxCredit) ?? FEE_TIERS.at(-1)
 }
-// Legacy alias used by existing commission-calculation code in this file
-const REFERRAL_RATE = 0.015   // default Tier 1 rate (replaces old 0.8%)
+
+// ── Mock data used when the API is unavailable (demo mode) ───────────────────
+const MOCK_REFERRALS = [
+  { id: 'ref-001', company_name: 'Zenith Biotech Ltd.',  industry: 'Life Sciences',    fiscal_year: 'FY2025', referral_status: 'package_ready', commission_status: 'confirmed', estimated_credit_cad: 248_000, commission_cad: 3_000, date_referred: '2025-09-12', ref_code: 'HWL-001' },
+  { id: 'ref-002', company_name: 'Pulse Commerce Inc.',  industry: 'E-Commerce Tech',  fiscal_year: 'FY2025', referral_status: 'filed',         commission_status: 'paid',      estimated_credit_cad: 142_000, commission_cad: 1_500, date_referred: '2025-07-03', ref_code: 'HWL-002' },
+  { id: 'ref-003', company_name: 'Atlas Network',        industry: 'Network Infra',    fiscal_year: 'FY2024', referral_status: 'filed',         commission_status: 'paid',      estimated_credit_cad:  58_000, commission_cad:   750, date_referred: '2025-03-21', ref_code: 'HWL-003' },
+  { id: 'ref-004', company_name: 'Vertex Labs',          industry: 'SaaS / AI Tools',  fiscal_year: 'FY2025', referral_status: 'in_review',     commission_status: 'pending',   estimated_credit_cad: 190_000, commission_cad:     0, date_referred: '2026-02-08', ref_code: 'HWL-004' },
+]
+const MOCK_STATS = {
+  totalReferred:         4,
+  totalPipelineCredit:   638_000,
+  totalCommissionEarned: 2_250,   // ref-002 + ref-003 paid
+  pendingPayout:         3_000,   // ref-001 confirmed
+  pendingCount:   1, pendingCredit:   190_000,
+  confirmedCount: 1, confirmedCredit: 248_000,
+  paidCount:      2, paidCredit:      200_000,
+}
 
 // ── Token helper (mirrors server decode: Buffer.from(token,'base64').toString()) ──
 function buildReferralToken(userId, firmName) {
@@ -52,7 +69,7 @@ export function CpaPortalTabs({ active }) {
     <div className="flex items-center gap-1">
       {[
         { id: 'clients',   label: 'Clients',         path: '/cpa-portal' },
-        { id: 'referrals', label: 'Referrals',        path: '/cpa-portal/referrals', badge: 'Earn commission' },
+        { id: 'referrals', label: 'Referrals & Fees',  path: '/cpa-portal/referrals', badge: 'Flat fee' },
         { id: 'payouts',   label: 'Payout History',   path: '/cpa-portal/referrals#payouts' },
       ].map(tab => (
         <button
@@ -89,43 +106,30 @@ export function CpaPortalTabs({ active }) {
 // In production this would come from referralsApi.payouts()
 const MOCK_PAYOUTS = [
   {
-    id:           'PAY-2026-003',
-    paid_date:    '2026-03-14',
-    amount_cad:   4_000,
-    clients:      ['Zenith Biotech Ltd.'],
-    eft_ref:      'EFT-TXL-20260314-003',
-    fiscal_year:  'FY2025',
-    tier:         'Tier 2',
-    rate:         '2.0%',
-    credit_base:  200_000,
-    status:       'paid',
-    note:         null,
-  },
-  {
     id:           'PAY-2026-002',
     paid_date:    '2026-01-22',
-    amount_cad:   2_130,
+    amount_cad:   1_500,
     clients:      ['Pulse Commerce Inc.'],
     eft_ref:      'EFT-TXL-20260122-002',
     fiscal_year:  'FY2025',
-    tier:         'Tier 1',
-    rate:         '1.5%',
+    tier:         '≤ $150K credit',
+    rate:         'Flat $1,500',
     credit_base:  142_000,
     status:       'paid',
     note:         null,
   },
   {
     id:           'PAY-2025-001',
-    paid_date:    '2025-11-03',
-    amount_cad:   500,
-    clients:      ['Atlas Network (first-client bonus)'],
-    eft_ref:      'EFT-TXL-20251103-001',
+    paid_date:    '2025-10-08',
+    amount_cad:   750,
+    clients:      ['Atlas Network'],
+    eft_ref:      'EFT-TXL-20251008-001',
     fiscal_year:  'FY2024',
-    tier:         '—',
-    rate:         'Bonus',
-    credit_base:  null,
+    tier:         '≤ $75K credit',
+    rate:         'Flat $750',
+    credit_base:  58_000,
     status:       'paid',
-    note:         'First-client onboarding bonus',
+    note:         null,
   },
 ]
 
@@ -244,9 +248,9 @@ function PayoutHistory({ currentUser }) {
         <div>
           <p className="text-xs font-semibold text-gray-700 mb-0.5">How payments work</p>
           <p className="text-xs text-gray-500 leading-relaxed">
-            Commissions are calculated on the credit amount confirmed by CRA, paid by EFT (direct deposit) within 30 days
-            of T661 filing confirmation. To update your banking details or receive a payment summary letter,
-            email <a href="mailto:partners@taxlift.ai?subject=EFT%20payment%20details" className="text-indigo-600 hover:underline">hello@taxlift.ai</a>.
+            Flat referral fees are paid at T661 package delivery — not contingent on CRA processing.
+            Payment is by EFT (direct deposit) within 30 days of delivery. To update your banking details or
+            request a payment summary, email <a href="mailto:partners@taxlift.ai?subject=EFT%20payment%20details" className="text-indigo-600 hover:underline">hello@taxlift.ai</a>.
           </p>
         </div>
       </div>
@@ -345,8 +349,8 @@ function ReferClientModal({ open, onClose, intakeUrl, firmName, partnerName }) {
         <div className="flex items-start gap-2.5 bg-green-50 border border-green-200 rounded-xl px-3.5 py-3">
           <Gift size={14} className="text-green-600 flex-shrink-0 mt-0.5" />
           <p className="text-xs text-green-800">
-            You earn <strong>1.5%–2.5% of credits recovered</strong> (tiered) for every client who signs up.
-            On a $200K claim at Tier 2, that's <strong>$4,000</strong>. Plus a $500 first-client bonus.
+            You earn a <strong>flat referral fee</strong> for every client who files — from $750 to $9,000 depending on credit size.
+            On a $200K claim that's <strong>$3,000</strong>, paid when the T661 package is delivered to you.
           </p>
         </div>
 
@@ -622,7 +626,13 @@ export default function ReferralDashboardPage() {
         setStats(statsRes)
         setReferrals(listRes.referrals ?? [])
       } catch (err) {
-        setError(err?.message ?? 'Failed to load referral data')
+        if (err instanceof ApiError && err.status === 0) {
+          // Demo mode or backend unreachable — silently use synthetic data
+          setStats(MOCK_STATS)
+          setReferrals(MOCK_REFERRALS)
+        } else {
+          setError(err?.message ?? 'Failed to load referral data')
+        }
       } finally {
         setLoading(false)
       }
@@ -686,10 +696,10 @@ export default function ReferralDashboardPage() {
             <Sparkles size={22} className="text-yellow-300" />
           </div>
           <div>
-            <p className="text-white font-bold text-base">Earn 1.5%–2.5% of every credit you refer</p>
+            <p className="text-white font-bold text-base">Earn a flat referral fee for every SR&ED client you refer</p>
             <p className="text-indigo-200 text-sm mt-1 max-w-lg">
-              Tiered commission: 1.5% (1–2 referrals/yr) → 2.0% (3–5) → 2.5% (6+).
-              On a $200K claim at Tier 2, that's <strong className="text-white">$4,000</strong> + a $500 first-client bonus.
+              From $750 to $9,000 per claim depending on credit size. No percentages — a fixed flat fee
+              paid when the T661 package is ready, not contingent on CRA.
             </p>
           </div>
         </div>
@@ -721,7 +731,7 @@ export default function ReferralDashboardPage() {
           </div>
           <div className="flex items-center gap-1.5 text-[11px] text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
             <BarChart3 size={11} className="text-gray-400" />
-            Tier 1: 1.5% · Tier 2: 2.0% · Tier 3: 2.5%
+            $750 · $1,500 · $3,000 · $5,500 · $9,000 flat fee by credit size
           </div>
         </div>
         <CommissionTracker referrals={referrals} stats={stats} />
@@ -754,7 +764,7 @@ export default function ReferralDashboardPage() {
             { step: '1', title: 'Share your link',    body: 'Send your co-branded intake link to any client you think qualifies for SR&ED.' },
             { step: '2', title: 'They sign up',       body: 'TaxLift guides them through onboarding and connects their GitHub or Jira.' },
             { step: '3', title: 'Package prepared',   body: 'TaxLift prepares the T661 and cluster documentation. You receive it for review.' },
-            { step: '4', title: 'You file, you earn', body: 'Once you file the T661, TaxLift pays your tiered commission (1.5%–2.5%) by EFT within 30 days.' },
+            { step: '4', title: 'Package delivered, fee paid', body: 'When the CRA-ready T661 package is delivered to your firm, TaxLift pays your flat referral fee by EFT within 30 days — no waiting for CRA.' },
           ].map(item => (
             <div key={item.step} className="flex gap-3">
               <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-600 text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -768,9 +778,9 @@ export default function ReferralDashboardPage() {
           ))}
         </div>
         <p className="text-[11px] text-gray-400 mt-4 border-t border-slate-200 pt-3">
-          Commission is calculated on credits recovered and confirmed by CRA. TaxLift's success fee is 8% of credits recovered.
-          Your referral commission is tiered: 1.5% (Tier 1, 1–2 referrals/yr), 2.0% (Tier 2, 3–5), or 2.5% (Tier 3, 6+).
-          First-client bonus: $500. Commissions paid by EFT within 30 days of T661 filing confirmation. No cap, no expiry.
+          Referral fees are flat — not a percentage of credit — so there is no independence concern under CPA Canada Rule 205.
+          Fee schedule: ≤$75K → $750 · ≤$150K → $1,500 · ≤$300K → $3,000 · ≤$600K → $5,500 · &gt;$600K → $9,000 (Plus plan adds $750).
+          Fees are paid at T661 package delivery, not contingent on CRA assessment. Paid by EFT within 30 days.
         </p>
       </div>
 

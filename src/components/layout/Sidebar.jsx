@@ -9,7 +9,7 @@ import {
 import { useAuth } from '../../context/AuthContext'
 import { canDo } from '../../lib/utils'
 
-// ── Core nav — always visible, drives the primary user journey ─────────────────
+// ── Core nav — client / internal users ────────────────────────────────────────
 const CORE_NAV = [
   { to: '/dashboard',    label: 'Dashboard',    icon: LayoutDashboard, action: null },
   { to: '/integrations', label: 'Integrations', icon: Plug,            action: 'viewIntegrations' },
@@ -34,6 +34,14 @@ const MORE_NAV = [
   { to: '/activity',      label: 'Activity Log',    icon: Activity,          action: 'viewActivity'       },
   { to: '/audit-log',     label: 'Audit Log',       icon: ScrollText,        action: 'viewAuditLog'       },
   { to: '/quiz',          label: 'Eligibility Quiz', icon: HelpCircle,       action: null                 },
+]
+
+// ── CPA nav — focused on portfolio management, no client-facing noise ──────────
+// CPAs are redirected away from /dashboard, so Dashboard is intentionally absent.
+const CPA_CORE_NAV = [
+  { to: '/cpa-portal',           label: 'Client Portfolio', icon: Building2,      action: 'viewCPAPortal' },
+  { to: '/cpa-portal/referrals', label: 'Referrals & Fees', icon: DollarSign,     action: 'viewCPAPortal' },
+  { to: '/settings',             label: 'Settings',         icon: Settings,        action: null            },
 ]
 
 function NavItem({ to, label, icon: Icon, badge }) {
@@ -63,13 +71,22 @@ export default function Sidebar() {
   const { currentUser, logout } = useAuth()
   const [moreOpen, setMoreOpen] = useState(false)
 
+  const isCPA = currentUser?.role === 'CPA'
   const allowed = (action) => action === null || (currentUser && canDo(action, currentUser.role))
 
-  const coreItems = CORE_NAV.filter(item => allowed(item.action))
-  // Deduplicate more nav (analytics appears twice) and filter by permission
-  const moreItems = MORE_NAV
-    .filter((item, idx, arr) => arr.findIndex(i => i.to === item.to) === idx)
-    .filter(item => allowed(item.action))
+  // CPA users get a focused nav with no More section.
+  // Everyone else gets the standard core + collapsible More.
+  const coreItems = isCPA
+    ? CPA_CORE_NAV
+    : CORE_NAV.filter(item => allowed(item.action))
+
+  // Deduplicate more nav (analytics appears twice) and filter by permission.
+  // Hidden entirely for CPAs — all their tools are already in core.
+  const moreItems = isCPA
+    ? []
+    : MORE_NAV
+        .filter((item, idx, arr) => arr.findIndex(i => i.to === item.to) === idx)
+        .filter(item => allowed(item.action))
 
   return (
     <aside className="w-60 h-screen bg-slate-900 flex flex-col fixed left-0 top-0 z-40">
