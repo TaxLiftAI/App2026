@@ -13,6 +13,7 @@ import { StatusBadge, IntegrationBadge } from '../components/ui/Badge'
 import RiskScore from '../components/ui/RiskScore'
 import Card, { CardHeader } from '../components/ui/Card'
 import GettingStartedCard from '../components/dashboard/GettingStartedCard'
+import AuditReadinessScore from '../components/dashboard/AuditReadinessScore'
 import { ShareButton, encodeShareToken } from './ShareableSummaryPage'
 import { cpa as cpaApi } from '../lib/api'
 
@@ -834,8 +835,11 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          {/* Claim progress */}
-          <ClaimProgressCard clusters={clusters} integrations={integrations} navigate={navigate} />
+          {/* Claim progress + Audit readiness (side by side) */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <ClaimProgressCard clusters={clusters} integrations={integrations} navigate={navigate} />
+            <AuditReadinessScore clusters={clusters} integrations={integrations} currentUser={currentUser} />
+          </div>
 
           {/* Recent clusters table */}
           <Card padding={false}>

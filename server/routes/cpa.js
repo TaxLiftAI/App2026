@@ -311,9 +311,9 @@ router.post('/partner-signup', async (req, res) => {
       <h3 style="margin:0 0 12px;font-size:16px;font-weight:700;color:#1e293b;">How it works</h3>
       <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
         ${[
-          ['Share your link', 'Send the link to clients filing SR&ED. They get a free scan with your branding.'],
-          ['Client subscribes', 'When they sign up on TaxLift, you earn 15% of their subscription — ongoing.'],
-          ['Monthly payouts', 'Commissions are paid monthly via e-Transfer or wire. No cap, no expiry.'],
+          ['Share your link', 'Send the link to clients filing SR&ED. They get a free scan with your referral code attached.'],
+          ['Client gets their T661 package', 'TaxLift scans their GitHub/Jira, generates narratives, and delivers a CPA-ready T661 package — you review and file as normal.'],
+          ['You earn a flat referral fee', 'Fees range from $750 to $9,000 per client based on their SR&ED credit size. Paid within 14 days of T661 package delivery — no % contingency, no Rule 205 concerns.'],
         ].map(([title, body]) => `
           <tr>
             <td style="padding:8px 0;vertical-align:top;border-bottom:1px solid #f1f5f9;">
