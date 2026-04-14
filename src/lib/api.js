@@ -138,6 +138,13 @@ const post = (path, opts) => request('POST',   path, opts)
 const put  = (path, opts) => request('PUT',    path, opts)
 const del  = (path, opts) => request('DELETE', path, opts)
 
+// ── Generic escape hatch for one-off GET calls in page components ─────────────
+// Usage: const data = await apiFetch('/api/v1/webhooks/build-runs?limit=10')
+// Usage: const data = await apiFetch('/api/v1/webhooks/ci-token', { method: 'POST' })
+export async function apiFetch(path, { method = 'GET', body } = {}) {
+  return request(method, path, body ? { body } : {})
+}
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
 export const auth = {
   login:    (email, password) => post('/api/v1/auth/login',    { body: { email, password } }),
