@@ -1,0 +1,49 @@
+# ── Railway service configuration — TaxLift API ────────────────────────────────
+#
+# Railway reads this file from the service root directory.
+# If your Railway service is pointed at the /server subdirectory of the repo,
+# place this file at server/railway.toml.
+# If pointed at the repo root, Railway uses the Dockerfile path below.
+#
+# Dashboard cross-check (Railway → your service → Settings):
+#   Root Directory  : /server
+#   Dockerfile Path : Dockerfile
+#   Start Command   : (leave blank — CMD in Dockerfile handles it)
+
+[build]
+builder            = "dockerfile"
+dockerfilePath     = "Dockerfile"
+
+# ── Deploy settings ────────────────────────────────────────────────────────────
+[deploy]
+# Health check — Railway polls this until it returns 200 before marking
+# the deploy healthy. We fixed the JWT_SECRET guard to run BEFORE listen()
+# so if the secret is missing the process exits cleanly and Railway restarts
+# with a clear log line instead of a silent post-bind crash.
+healthcheckPath    = "/healthz"
+healthcheckTimeout = 120        # seconds — allows better-sqlite3 WAL init time
+
+# Restart on crash (not on deliberate process.exit(1) from JWT guard).
+restartPolicyType  = "on_failure"
+restartPolicyMaxRetries = 3
+
+# Single replica for hobby tier (scale up here for production).
+numReplicas        = 1
+
+# ── Required environment variables ─────────────────────────────────────────────
+# Set these in Railway dashboard → your service → Variables:
+#
+#   JWT_SECRET          = <random 64-char hex>   # openssl rand -hex 32
+#   NODE_ENV            = production
+#   PORT                = 3001                    # Railway sets this automatically
+#   FRONTEND_URL        = https://taxlift.ai
+#   GITHUB_CLIENT_ID    = (from github.com/settings/applications)
+#   GITHUB_CLIENT_SECRET= (from github.com/settings/applications)
+#   ATLASSIAN_CLIENT_ID = (from developer.atlassian.com)
+#   ATLASSIAN_CLIENT_SECRET = (from developer.atlassian.com)
+#   STRIPE_SECRET_KEY   = sk_live_...
+#   STRIPE_WEBHOOK_SECRET = whsec_...
+#   SENTRY_DSN          = (optional — from sentry.io)
+#
+# Generate JWT_SECRET:
+#   openssl rand -hex 32

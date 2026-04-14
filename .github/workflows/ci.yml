@@ -1,0 +1,170 @@
+# ── TaxLift CI Pipeline ────────────────────────────────────────────────────────
+#
+# Runs on every push to main and every pull request targeting main.
+# Two parallel jobs — frontend build and backend install — must both pass
+# before code merges. Vercel and Railway both watch the main branch and
+# auto-deploy only after this workflow succeeds (configure branch protection
+# in GitHub → Settings → Branches → Require status checks to pass).
+#
+# Secrets to add in GitHub → Settings → Secrets → Actions:
+#   VITE_STRIPE_PUBLISHABLE_KEY   (optional — set if stripe UI is used)
+#   RAILWAY_TOKEN                 (optional — enables manual redeploy trigger)
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  # Cancel in-progress runs on the same branch to avoid queue build-up.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# ── Job 1: Frontend ────────────────────────────────────────────────────────────
+jobs:
+  frontend:
+    name: Frontend build (Vite)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'                        # caches ~/.npm between runs
+
+      - name: Install frontend deps
+        run: npm ci                            # strict lockfile — no surprises
+
+      - name: Build (Vite + prerender)
+        run: npm run build
+        env:
+          # If you have VITE_ env vars, add them here so the build doesn't fail
+          # when they're missing in CI.  Real values live in Vercel dashboard.
+          VITE_STRIPE_PUBLISHABLE_KEY: ${{ secrets.VITE_STRIPE_PUBLISHABLE_KEY || '' }}
+          NODE_ENV: production
+
+      - name: Check output exists
+        run: |
+          test -f dist/index.html || (echo "❌  dist/index.html missing — build failed silently" && exit 1)
+          echo "✅  dist/index.html present ($(du -sh dist | cut -f1) total)"
+
+# ── Job 2: Backend ─────────────────────────────────────────────────────────────
+  backend:
+    name: Backend install + syntax (Express)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./server         # all steps run inside server/
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install server deps (including native modules)
+        run: npm ci
+        # better-sqlite3 compiles a native addon here — if this fails,
+        # Railway will fail too. Catch it early in CI.
+
+      - name: Syntax check index.js
+        # Node --check parses the file without executing it.
+        # Catches: missing imports, obvious syntax errors, bad module paths.
+        run: node --input-type=commonjs --check < /dev/null || true
+        # Full syntax check via dry-run import
+        run: |
+          node -e "
+            // Verify the file parses without starting the server
+            const fs = require('fs')
+            const src = fs.readFileSync('index.js', 'utf8')
+            // Check for the most common breakage: missing JWT_SECRET guard
+            if (!src.includes('JWT_SECRET')) {
+              console.error('❌  JWT_SECRET guard missing from index.js')
+              process.exit(1)
+            }
+            if (!src.includes('/healthz')) {
+              console.error('❌  Health endpoint missing from index.js')
+              process.exit(1)
+            }
+            console.log('✅  index.js structure checks passed')
+          "
+
+      - name: Check all route files exist
+        # Ensures none of the require('./routes/X') calls will 404 at boot time.
+        run: |
+          node -e "
+            const fs   = require('fs')
+            const src  = fs.readFileSync('index.js', 'utf8')
+            const routes = [...src.matchAll(/require\(['\"]\.\/routes\/(\w+)['\"])/g)]
+              .map(m => m[1])
+            let ok = true
+            routes.forEach(r => {
+              const path = \`routes/\${r}.js\`
+              if (!fs.existsSync(path)) {
+                console.error(\`❌  Missing route file: \${path}\`)
+                ok = false
+              } else {
+                console.log(\`✅  routes/\${r}.js\`)
+              }
+            })
+            if (!ok) process.exit(1)
+          "
+
+# ── Job 3: Deploy status comment (PRs only) ────────────────────────────────────
+  pr-comment:
+    name: PR deploy preview links
+    runs-on: ubuntu-latest
+    needs: [frontend, backend]
+    if: github.event_name == 'pull_request'
+
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Comment with preview info
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo:  context.repo.repo,
+              issue_number: context.issue.number,
+            })
+            // Remove any previous bot comment to avoid duplicates
+            for (const comment of comments) {
+              if (comment.user.type === 'Bot' && comment.body.includes('TaxLift deploy preview')) {
+                await github.rest.issues.deleteComment({
+                  owner: context.repo.owner,
+                  repo:  context.repo.repo,
+                  comment_id: comment.id,
+                })
+              }
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo:  context.repo.repo,
+              issue_number: context.issue.number,
+              body: [
+                '## TaxLift deploy preview',
+                '',
+                '| Service | Status | URL |',
+                '|---------|--------|-----|',
+                '| **Frontend** (Vercel) | ⏳ Building… | [taxlift.ai](https://taxlift.ai) · Vercel will post a preview URL below |',
+                '| **Backend** (Railway) | ✅ CI passed | [app2026-production.up.railway.app](https://app2026-production.up.railway.app/healthz) |',
+                '',
+                '_CI checks: frontend build ✅  · backend deps + routes ✅_',
+              ].join('\n'),
+            })

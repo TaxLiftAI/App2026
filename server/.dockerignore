@@ -1,6 +1,12 @@
 node_modules
 *.db
 *.db-journal
+*.db-wal
+*.db-shm
 data/
 .env
 .env.*
+.git
+.gitignore
+*.md
+railway.toml
