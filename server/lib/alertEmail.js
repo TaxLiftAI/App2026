@@ -16,14 +16,33 @@
  */
 
 const nodemailer = require('nodemailer')
+const https      = require('https')
 
-const EMAIL_FROM = process.env.EMAIL_FROM || 'hello@taxlift.ai'
-const ALERT_TO   = process.env.ALERT_TO   || 'hello@taxlift.ai'
-const SMTP_HOST  = process.env.SMTP_HOST
-const SMTP_PORT  = parseInt(process.env.SMTP_PORT || '587', 10)
-const SMTP_USER  = process.env.SMTP_USER
-const SMTP_PASS  = process.env.SMTP_PASS
-const APP_URL    = (process.env.FRONTEND_URL || 'https://taxlift.ai').replace(/\/$/, '')
+const EMAIL_FROM      = process.env.EMAIL_FROM      || 'hello@taxlift.ai'
+const ALERT_TO        = process.env.ALERT_TO        || 'hello@taxlift.ai'
+const SMTP_HOST       = process.env.SMTP_HOST
+const SMTP_PORT       = parseInt(process.env.SMTP_PORT || '587', 10)
+const SMTP_USER       = process.env.SMTP_USER
+const SMTP_PASS       = process.env.SMTP_PASS
+const APP_URL         = (process.env.FRONTEND_URL || 'https://taxlift.ai').replace(/\/$/, '')
+const SLACK_WEBHOOK   = process.env.SLACK_ALERT_WEBHOOK_URL   // optional Slack incoming webhook
+const HIGH_VALUE_THRESHOLD = Number(process.env.HIGH_VALUE_THRESHOLD || 25_000)  // default $25K
+
+// ── Slack helper ──────────────────────────────────────────────────────────────
+function postSlack(text) {
+  if (!SLACK_WEBHOOK) return Promise.resolve()
+  return new Promise(resolve => {
+    const body = JSON.stringify({ text })
+    const url  = new URL(SLACK_WEBHOOK)
+    const req  = https.request({
+      hostname: url.hostname, path: url.pathname + url.search,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+    }, () => resolve())
+    req.on('error', err => { console.warn('[alert/slack] failed:', err.message); resolve() })
+    req.write(body); req.end()
+  })
+}
 
 let _transport = null
 
@@ -157,14 +176,16 @@ async function alertNewRegistration({ email, fullName = '', firmName = '', plan 
 
   const text = `New TaxLift signup: ${email}${fullName ? ` (${fullName})` : ''}${firmName ? ` at ${firmName}` : ''}\nPlan: ${plan}\nTime: ${new Date().toISOString()}`
 
-  await sendAlert({ subject, html, text })
+  await Promise.all([
+    sendAlert({ subject, html, text }),
+    postSlack(`🚀 *New signup* — ${email}${firmName ? ` · ${firmName}` : ''}  |  plan: ${plan}\n🔗 ${APP_URL}/admin/sales`),
+  ])
 }
 
 // ── Alert: high-value scan completed ──────────────────────────────────────────
 // Called when a scan completes with an estimate above the threshold.
 async function alertHighValueScan({ email, estimatedCredit, clusterCount, repoCount }) {
-  const THRESHOLD = 50_000   // only alert for scans estimating $50K+
-  if (!estimatedCredit || Number(estimatedCredit) < THRESHOLD) return
+  if (!estimatedCredit || Number(estimatedCredit) < HIGH_VALUE_THRESHOLD) return
 
   const creditStr = `$${Number(estimatedCredit).toLocaleString('en-CA')} CAD`
   const subject   = `💰 High-value scan: ${creditStr} estimate for ${email || 'anonymous user'}`
@@ -214,7 +235,10 @@ async function alertHighValueScan({ email, estimatedCredit, clusterCount, repoCo
 
   const text = `High-value scan: ${creditStr} estimate\nEmail: ${email || 'not provided'}\nClusters: ${clusterCount}\nRepos: ${repoCount}\nTime: ${new Date().toISOString()}`
 
-  await sendAlert({ subject, html, text })
+  await Promise.all([
+    sendAlert({ subject, html, text }),
+    postSlack(`💰 *High-value scan* — ${creditStr} SR&ED estimate\n📧 ${email || '_no email_'}  |  ${clusterCount ?? '?'} clusters  |  ${repoCount ?? '?'} repos\n🔗 ${APP_URL}/admin/sales`),
+  ])
 }
 
 module.exports = { alertNewLead, alertNewRegistration, alertHighValueScan }

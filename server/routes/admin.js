@@ -222,4 +222,80 @@ router.post('/drip/trigger', requireAuth, requireAdmin, (req, res) => {
   res.json({ success: true, message: `Email step ${step} triggered for ${email}` })
 })
 
+// ── GET /api/admin/sales — sales CRM: registered users with plan + activity ───
+router.get('/sales', requireAuth, requireAdmin, (req, res) => {
+  try {
+    // All registered users with their cluster counts + last activity
+    const users = db.prepare(`
+      SELECT
+        u.id,
+        u.email,
+        u.full_name,
+        u.firm_name,
+        u.subscription_tier,
+        u.subscribed_at,
+        u.created_at,
+        u.onboarding_completed,
+        cp.employee_count,
+        cp.industry_domain,
+        cp.province,
+        (SELECT COUNT(*) FROM clusters cl JOIN clients c ON cl.client_id = c.id
+         WHERE c.tenant_id = u.id AND cl.status NOT IN ('Archived','Rejected')) AS cluster_count,
+        (SELECT COUNT(*) FROM clusters cl JOIN clients c ON cl.client_id = c.id
+         WHERE c.tenant_id = u.id AND cl.status = 'Approved') AS approved_count,
+        (SELECT MAX(cl.updated_at) FROM clusters cl JOIN clients c ON cl.client_id = c.id
+         WHERE c.tenant_id = u.id) AS last_cluster_activity,
+        (SELECT estimated_credit FROM free_scans WHERE email = u.email
+         ORDER BY created_at DESC LIMIT 1) AS scan_credit_estimate
+      FROM users u
+      LEFT JOIN company_profiles cp ON cp.user_id = u.id
+      ORDER BY u.created_at DESC
+      LIMIT 500
+    `).all()
+
+    // Estimate credit from company profile if no scan exists
+    const RD_PCTS = { software: 0.40, ai_ml: 0.45, biotech: 0.50, cleantech: 0.40,
+                      fintech: 0.35, medtech: 0.40, other: 0.20 }
+
+    const rows = users.map(u => {
+      const rdPct     = RD_PCTS[u.industry_domain] ?? 0.25
+      const profEstimate = u.employee_count
+        ? Math.round(u.employee_count * 105_000 * rdPct * 0.35)
+        : null
+      const creditEstimate = u.scan_credit_estimate ?? profEstimate
+
+      // Score: high credit + free plan + clusters created = hot lead
+      let score = 0
+      if (creditEstimate > 100_000) score += 40
+      else if (creditEstimate > 50_000) score += 25
+      else if (creditEstimate > 25_000) score += 10
+      if (u.cluster_count > 0) score += 20
+      if (u.approved_count > 0) score += 15
+      if (u.onboarding_completed) score += 10
+      if (u.subscription_tier === 'free') score += 5   // upgrade opportunity
+
+      return {
+        ...u,
+        credit_estimate: creditEstimate,
+        lead_score: score,
+        is_paid: u.subscription_tier !== 'free',
+        days_since_signup: u.created_at
+          ? Math.floor((Date.now() - new Date(u.created_at).getTime()) / 86400000)
+          : null,
+      }
+    })
+
+    // Sort hot leads first
+    rows.sort((a, b) => {
+      if (a.is_paid !== b.is_paid) return a.is_paid ? 1 : -1   // free first
+      return b.lead_score - a.lead_score
+    })
+
+    res.json({ users: rows, total: rows.length })
+  } catch (err) {
+    console.error('[admin/sales] query error:', err.message)
+    res.status(500).json({ message: 'Failed to fetch sales data' })
+  }
+})
+
 module.exports = router

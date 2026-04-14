@@ -1,8 +1,9 @@
-import { lazy, Suspense, Component } from 'react'
+import { lazy, Suspense, Component, useState, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Layout from './components/layout/Layout'
 import { canDo } from './lib/utils'
+import UpgradeModal from './components/ui/UpgradeModal'
 
 // ── Chunk-load error boundary ─────────────────────────────────────────────────
 // When Railway redeploys, Vite emits new content-hashed JS chunks. Any user
@@ -94,6 +95,7 @@ const JiraSprintPage     = lazy(() => import('./pages/JiraSprintPage'))
 // Admin
 const AdminLeadsPage     = lazy(() => import('./pages/AdminLeadsPage'))
 const AdminFunnelPage    = lazy(() => import('./pages/AdminFunnelPage'))
+const AdminSalesPage     = lazy(() => import('./pages/AdminSalesPage'))
 
 // CPA portal
 const CPAPortalPage          = lazy(() => import('./pages/CPAPortalPage'))
@@ -168,10 +170,40 @@ function ProtectedRoute({ children, action }) {
   return children
 }
 
+// ── Global upgrade wall — listens for 402 taxlift:upgrade-required events ─────
+function GlobalUpgradeWall() {
+  const [upgradeState, setUpgradeState] = useState(null)   // { feature, plan }
+
+  useEffect(() => {
+    function onUpgradeRequired(e) {
+      const detail = e.detail ?? {}
+      const plan   = detail.required_plan ?? 'starter'
+      const feature = detail.error === 'cluster_quota_exceeded'
+        ? `Cluster limit reached (${detail.limit ?? ''} on your ${detail.current_plan ?? 'free'} plan)`
+        : detail.message ?? 'This feature'
+      setUpgradeState({ feature, plan })
+    }
+    window.addEventListener('taxlift:upgrade-required', onUpgradeRequired)
+    return () => window.removeEventListener('taxlift:upgrade-required', onUpgradeRequired)
+  }, [])
+
+  if (!upgradeState) return null
+  return (
+    <UpgradeModal
+      open
+      onClose={() => setUpgradeState(null)}
+      feature={upgradeState.feature}
+      plan={upgradeState.plan}
+    />
+  )
+}
+
 function AppRoutes() {
   const { currentUser } = useAuth()
 
   return (
+    <>
+    <GlobalUpgradeWall />
     <Suspense fallback={<PageSpinner />}>
     <Routes>
       <Route path="/login" element={currentUser ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
@@ -411,9 +443,16 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
 
+      <Route path="/admin/sales" element={
+        <ProtectedRoute action="viewUsers">
+          <Layout><AdminSalesPage /></Layout>
+        </ProtectedRoute>
+      } />
+
       <Route path="*" element={currentUser ? <Navigate to="/dashboard" replace /> : <Navigate to="/" replace />} />
     </Routes>
     </Suspense>
+    </>
   )
 }
 

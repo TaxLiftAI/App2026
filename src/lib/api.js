@@ -105,6 +105,14 @@ async function request(method, path, { body, params, isForm = false, _isRetry = 
   }
 
   // ── Refresh flow on 401 ───────────────────────────────────────────────────
+  // Plan limit hit — broadcast so any mounted UpgradeModal can respond
+  if (res.status === 402) {
+    const ct402  = res.headers.get('content-type') ?? ''
+    const body402 = ct402.includes('application/json') ? await res.json() : {}
+    window.dispatchEvent(new CustomEvent('taxlift:upgrade-required', { detail: body402 }))
+    throw new ApiError(402, body402?.message ?? 'Plan upgrade required', body402)
+  }
+
   if (res.status === 401 && !_isRetry && path !== '/api/v1/auth/refresh') {
     try {
       await tryRefresh()

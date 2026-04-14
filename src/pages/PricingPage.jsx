@@ -91,55 +91,221 @@ const TRUST_MARKS = [
   { label: 'Pay on results',        icon: BadgeCheck  },
 ]
 
-function RoiCalculator({ defaultCredit = 150000 }) {
-  const [credit, setCredit] = useState(defaultCredit)
-  const c = Math.max(50000, Math.min(credit, 2000000))
-  const consultantFee    = Math.round(c * 0.20)
-  const taxliftFeeStarter = Math.round(c * 0.03)
-  const taxliftFeePlus    = Math.round(c * 0.05)
-  const taxliftFee        = taxliftFeeStarter
-  const savings           = Math.max(0, consultantFee - taxliftFeeStarter)
-  const roi               = taxliftFeeStarter > 0 ? Math.round((savings / taxliftFeeStarter) * 100) : 0
-  const pct           = ((c - 50000) / (2000000 - 50000)) * 100
+// SR&ED credit multipliers by industry (% of payroll that qualifies as R&D × 35% ITC rate)
+const INDUSTRY_RATES = {
+  software:  { label: 'Software / SaaS',       rdPct: 0.40 },
+  ai_ml:     { label: 'AI / Machine Learning',  rdPct: 0.45 },
+  biotech:   { label: 'Biotech / Life Sciences', rdPct: 0.50 },
+  cleantech: { label: 'Cleantech / Energy',      rdPct: 0.40 },
+  fintech:   { label: 'Fintech',                 rdPct: 0.35 },
+  medtech:   { label: 'Medtech / Health IT',     rdPct: 0.40 },
+  other:     { label: 'Other / Hardware',        rdPct: 0.25 },
+}
+
+function RoiCalculator({ defaultCredit = 0 }) {
+  const navigate = useNavigate()
+
+  // Mode: 'credit' = I know my estimate | 'employees' = estimate for me
+  const [mode,      setMode]      = useState(defaultCredit > 0 ? 'credit' : 'employees')
+  const [credit,    setCredit]    = useState(defaultCredit > 0 ? defaultCredit : 150000)
+  const [employees, setEmployees] = useState(10)
+  const [industry,  setIndustry]  = useState('software')
+  const [years,     setYears]     = useState(1)   // 1 | 3
+
+  // Derived credit value
+  const empEstimate = Math.round(employees * 105_000 * INDUSTRY_RATES[industry].rdPct * 0.35)
+  const c = Math.max(10000, Math.min(
+    mode === 'credit' ? credit : empEstimate,
+    5_000_000
+  ))
+
+  const consultantFee     = Math.round(c * 0.20)
+  const taxliftStarter    = Math.round(c * 0.03)
+  const taxliftPlus       = Math.round(c * 0.05)
+  const savings1yr        = Math.max(0, consultantFee - taxliftStarter)
+  const roi               = taxliftStarter > 0 ? Math.round((savings1yr / taxliftStarter) * 100) : 0
+
+  // Multi-year: consultant fee stays proportional; TaxLift = fee + $299/yr subscription
+  const starterSubYr  = 299 * 12
+  const savings3yr    = Math.max(0, consultantFee * years - (taxliftStarter * years + starterSubYr * Math.max(0, years - 1)))
+
+  const sliderPct = mode === 'credit'
+    ? ((credit - 50000) / (2000000 - 50000)) * 100
+    : ((employees - 1) / (200 - 1)) * 100
 
   return (
     <div className="bg-gradient-to-br from-slate-900 to-indigo-950 rounded-2xl p-8 mb-16 text-white">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-3xl mx-auto">
+
+        {/* Header */}
         <p className="text-indigo-300 text-xs font-semibold uppercase tracking-widest mb-1 text-center">ROI Calculator</p>
-        <h2 className="text-2xl font-bold mb-1 text-center">How much does TaxLift save you?</h2>
-        <p className="text-indigo-300 text-sm text-center mb-8">Drag to set your estimated SR&amp;ED credit</p>
-        <div className="mb-8">
-          <div className="flex justify-between items-baseline mb-3">
-            <span className="text-indigo-300 text-sm">My estimated SR&amp;ED credit</span>
-            <span className="text-3xl font-extrabold tabular-nums">{fmtK(c)}</span>
-          </div>
-          <input
-            type="range" min={50000} max={2000000} step={10000}
-            value={credit}
-            onChange={e => setCredit(Number(e.target.value))}
-            className="w-full h-2 rounded-full appearance-none cursor-pointer"
-            style={{ background: 'linear-gradient(to right, #818cf8 0%, #818cf8 ' + pct + '%, #334155 ' + pct + '%, #334155 100%)', accentColor: '#818cf8' }}
-          />
-          <div className="flex justify-between text-xs text-indigo-500 mt-1">
-            <span>$50K</span><span>$500K</span><span>$1M</span><span>$2M</span>
+        <h2 className="text-2xl font-bold mb-1 text-center">How much could TaxLift save you?</h2>
+        <p className="text-indigo-300 text-sm text-center mb-6">Personalize your estimate — then see year-over-year savings</p>
+
+        {/* Mode toggle */}
+        <div className="flex justify-center mb-7">
+          <div className="flex gap-1 bg-slate-800 rounded-xl p-1">
+            {[
+              { key: 'employees', label: 'Estimate for me' },
+              { key: 'credit',    label: 'I know my estimate' },
+            ].map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setMode(key)}
+                className={`px-4 py-2 rounded-lg text-xs font-semibold transition-colors ${
+                  mode === key ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+
+        {/* Inputs */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+
+          {/* Left: primary slider */}
+          <div>
+            {mode === 'credit' ? (
+              <>
+                <div className="flex justify-between items-baseline mb-2">
+                  <span className="text-indigo-300 text-xs">Estimated SR&amp;ED credit (CAD)</span>
+                  <span className="text-2xl font-extrabold tabular-nums">{fmtK(c)}</span>
+                </div>
+                <input
+                  type="range" min={50000} max={2000000} step={10000}
+                  value={credit}
+                  onChange={e => setCredit(Number(e.target.value))}
+                  className="w-full h-2 rounded-full appearance-none cursor-pointer"
+                  style={{ background: `linear-gradient(to right, #818cf8 0%, #818cf8 ${sliderPct}%, #334155 ${sliderPct}%, #334155 100%)`, accentColor: '#818cf8' }}
+                />
+                <div className="flex justify-between text-[10px] text-indigo-500 mt-1">
+                  <span>$50K</span><span>$500K</span><span>$1M</span><span>$2M</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex justify-between items-baseline mb-2">
+                  <span className="text-indigo-300 text-xs">R&amp;D employees / contractors</span>
+                  <span className="text-2xl font-extrabold tabular-nums">{employees}</span>
+                </div>
+                <input
+                  type="range" min={1} max={200} step={1}
+                  value={employees}
+                  onChange={e => setEmployees(Number(e.target.value))}
+                  className="w-full h-2 rounded-full appearance-none cursor-pointer"
+                  style={{ background: `linear-gradient(to right, #818cf8 0%, #818cf8 ${sliderPct}%, #334155 ${sliderPct}%, #334155 100%)`, accentColor: '#818cf8' }}
+                />
+                <div className="flex justify-between text-[10px] text-indigo-500 mt-1">
+                  <span>1</span><span>50</span><span>100</span><span>200+</span>
+                </div>
+                <p className="text-indigo-400 text-[10px] mt-2">Based on $105K avg salary × {Math.round(INDUSTRY_RATES[industry].rdPct * 100)}% R&amp;D × 35% ITC → <strong className="text-indigo-200">{fmtK(c)} estimated credit</strong></p>
+              </>
+            )}
+          </div>
+
+          {/* Right: industry + years */}
+          <div className="space-y-4">
+            <div>
+              <label className="text-indigo-300 text-xs block mb-1.5">Industry</label>
+              <select
+                value={industry}
+                onChange={e => setIndustry(e.target.value)}
+                className="w-full bg-slate-800 border border-slate-700 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                {Object.entries(INDUSTRY_RATES).map(([key, { label }]) => (
+                  <option key={key} value={key}>{label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-indigo-300 text-xs block mb-1.5">Projection horizon</label>
+              <div className="flex gap-2">
+                {[
+                  { v: 1, label: '1 year' },
+                  { v: 3, label: '3 years' },
+                ].map(({ v, label }) => (
+                  <button
+                    key={v}
+                    onClick={() => setYears(v)}
+                    className={`flex-1 py-2 rounded-lg text-xs font-semibold border transition-colors ${
+                      years === v
+                        ? 'bg-indigo-600 border-indigo-500 text-white'
+                        : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Results grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           {[
-            { label: 'SR&ED consultant',        sub: '~20% contingency',      value: fmtK(consultantFee), note: 'taken from your refund', bad: true },
-            { label: 'TaxLift fee',             sub: '3–5% of credit',        value: fmtK(taxliftFeeStarter) + '–' + fmtK(taxliftFeePlus), note: 'Starter vs Plus', bad: false },
-            { label: 'Pay-per-Claim',           sub: 'No subscription',       value: '$1,997',            note: 'one fiscal year',        bad: false },
-            { label: 'You save vs. consultant', sub: roi + 'x ROI on TaxLift', value: fmtK(savings),      note: 'back in your pocket', highlight: true },
+            {
+              label: 'SR&ED consultant',
+              sub:   `~20% × ${years > 1 ? years + ' yrs' : 'yr'}`,
+              value: fmtK(consultantFee * years),
+              note:  'taken from your refund',
+              bad:   true,
+            },
+            {
+              label: 'TaxLift Starter',
+              sub:   `3% + ${years > 1 ? '$299/yr sub' : 'subscription'}`,
+              value: fmtK(taxliftStarter * years + (years > 1 ? starterSubYr * (years - 1) : 0)),
+              note:  `vs consultant over ${years} yr${years > 1 ? 's' : ''}`,
+              bad:   false,
+            },
+            {
+              label: 'TaxLift Plus',
+              sub:   `5% (incl. grants)`,
+              value: fmtK(taxliftPlus * years),
+              note:  'incl. grant matching',
+              bad:   false,
+            },
+            {
+              label: years > 1 ? `${years}-yr savings` : 'You save',
+              sub:   `${roi}× ROI on TaxLift`,
+              value: fmtK(years > 1 ? savings3yr : savings1yr),
+              note:  'back in your pocket',
+              highlight: true,
+            },
           ].map(({ label, sub, value, note, bad, highlight }) => (
-            <div key={label} className={'rounded-xl p-4 text-center ' + (highlight ? 'bg-indigo-600 border border-indigo-400' : bad ? 'bg-slate-800 border border-red-900/40' : 'bg-slate-800 border border-slate-700')}>
-              <p className={'text-xs font-semibold mb-0.5 ' + (highlight ? 'text-indigo-200' : 'text-slate-400')}>{label}</p>
-              <p className={'text-[10px] mb-2 ' + (highlight ? 'text-indigo-300' : 'text-slate-500')}>{sub}</p>
-              <p className={'text-lg font-bold mb-1 ' + (bad ? 'text-red-400' : highlight ? 'text-white' : 'text-emerald-400')}>{value}</p>
-              <p className={'text-[10px] ' + (highlight ? 'text-indigo-300' : 'text-slate-500')}>{note}</p>
+            <div key={label} className={`rounded-xl p-4 text-center ${
+              highlight ? 'bg-indigo-600 border border-indigo-400'
+              : bad     ? 'bg-slate-800 border border-red-900/50'
+                        : 'bg-slate-800 border border-slate-700'
+            }`}>
+              <p className={`text-xs font-semibold mb-0.5 ${highlight ? 'text-indigo-200' : 'text-slate-400'}`}>{label}</p>
+              <p className={`text-[10px] mb-2 ${highlight ? 'text-indigo-300' : 'text-slate-500'}`}>{sub}</p>
+              <p className={`text-lg font-bold mb-1 ${bad ? 'text-red-400' : highlight ? 'text-white' : 'text-emerald-400'}`}>{value}</p>
+              <p className={`text-[10px] ${highlight ? 'text-indigo-300' : 'text-slate-500'}`}>{note}</p>
             </div>
           ))}
         </div>
-        <p className="text-indigo-500 text-[11px] text-center mt-4">Consultant fee estimated at 20% contingency midpoint. Actual rates vary 15–25%.</p>
+
+        {/* CTA */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-800/60 border border-slate-700 rounded-xl px-5 py-4">
+          <div>
+            <p className="text-sm font-semibold text-white">Get your real number in 5 minutes</p>
+            <p className="text-xs text-indigo-300 mt-0.5">Connect GitHub → TaxLift scans your commits and gives you a verified credit estimate.</p>
+          </div>
+          <button
+            onClick={() => navigate('/scan')}
+            className="flex items-center gap-2 bg-indigo-500 hover:bg-indigo-400 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors whitespace-nowrap flex-shrink-0"
+          >
+            <Github size={14} /> Run free scan <ArrowRight size={14} />
+          </button>
+        </div>
+
+        <p className="text-indigo-600 text-[10px] text-center mt-3">
+          Estimates use $105K avg R&amp;D salary and CRA's 35% ITC rate. Consultant fee at 20% midpoint (range: 15–25%). Actual results vary.
+        </p>
       </div>
     </div>
   )

@@ -4,7 +4,7 @@ import {
   LayoutDashboard, GitMerge, FileText, BarChart3,
   Users, ScrollText, Plug, LogOut, ShieldCheck, DollarSign,
   UserCircle2, SlidersHorizontal, TrendingUp, Activity, ShieldAlert, Vault, HelpCircle, Settings, Keyboard, Building2,
-  Award, Trello, ChevronDown, ChevronUp,
+  Award, Trello, ChevronDown, ChevronUp, Target,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { canDo } from '../../lib/utils'
@@ -25,6 +25,7 @@ const MORE_NAV = [
   { to: '/audit-readiness', label: 'Audit Readiness', icon: ShieldAlert,     action: 'viewAuditReadiness' },
   { to: '/analytics',     label: 'Analytics',       icon: TrendingUp,        action: 'viewAnalytics'      },
   { to: '/users',         label: 'Users',           icon: Users,             action: 'viewUsers'          },
+  { to: '/admin/sales',  label: 'Sales CRM',       icon: Target,            action: 'viewUsers'          },
   { to: '/cpa-portal',    label: 'CPA Portal',      icon: Building2,         action: 'viewCPAPortal'      },
   { to: '/jira-sprint',   label: 'Sprint Report',   icon: Trello,            action: null,                badge: 'New' },
   { to: '/rate-card',     label: 'Rate Card',       icon: DollarSign,        action: 'viewRateCard'       },
