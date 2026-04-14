@@ -132,12 +132,16 @@ function scoreSREDEligibility({ branch, status, durationSeconds, testFailed }) {
 // ── Pattern A — GitHub workflow_run webhook ───────────────────────────────────
 
 router.post('/github', (req, res) => {
-  // GitHub sends the raw body for HMAC verification; we need it as a Buffer.
-  // express.json() has already parsed req.body, but we can re-serialize for
-  // signature check — or better: use raw body stash if available (see index.js).
-  // For simplicity, re-serialize the already-parsed body:
-  const rawBody   = Buffer.from(JSON.stringify(req.body))
+  // index.js mounts express.raw() for this path so req.rawBody is the original
+  // bytes exactly as GitHub signed them. Never re-serialize req.body — JSON
+  // serialisation changes whitespace/key order and breaks the HMAC.
+  const rawBody   = req.rawBody   // Buffer set by stripeBodyStash in index.js
   const sigHeader = req.headers['x-hub-signature-256']
+
+  if (!rawBody) {
+    console.error('[webhooks/github] rawBody missing — check index.js middleware order')
+    return res.status(500).json({ error: 'Raw body not captured' })
+  }
   const event     = req.headers['x-github-event']
 
   if (!verifyGitHubSignature(rawBody, sigHeader)) {
@@ -149,8 +153,14 @@ router.post('/github', (req, res) => {
     return res.status(200).json({ ok: true, skipped: true, reason: `event=${event} ignored` })
   }
 
-  const payload = req.body
-  const run     = payload.workflow_run
+  // express.raw() gives us a Buffer in req.body — parse it now that HMAC is verified
+  let payload
+  try {
+    payload = JSON.parse(rawBody.toString('utf8'))
+  } catch {
+    return res.status(400).json({ error: 'Invalid JSON payload' })
+  }
+  const run = payload.workflow_run
 
   if (!run) {
     return res.status(400).json({ error: 'Missing workflow_run in payload' })

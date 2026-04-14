@@ -116,6 +116,10 @@ function stripeBodyStash(req, res, next) {
 app.use('/api/billing/webhook',    stripeRawBody, stripeBodyStash)  // legacy alias
 app.use('/api/v1/billing/webhook', stripeRawBody, stripeBodyStash)  // new path
 
+// GitHub webhook — raw body BEFORE express.json() so HMAC-SHA256 matches exactly.
+// GitHub signs the original raw bytes; re-serialising req.body changes whitespace/order.
+app.use('/api/v1/webhooks/github', stripeRawBody, stripeBodyStash)
+
 // ── Routes — all under /api/v1/ ───────────────────────────────────────────────
 const V = '/api/v1'
 
