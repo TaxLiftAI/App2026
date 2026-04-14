@@ -9,8 +9,10 @@ const router = require('express').Router()
 const { v4: uuid } = require('../utils/uuid')
 const db = require('../db')
 const { requireAuth } = require('../middleware/auth')
+const { requireClusterQuota, injectPlanInfo } = require('../middleware/planLimits')
 
 router.use(requireAuth)
+router.use(injectPlanInfo)   // attaches req.plan for handlers to read
 
 // Field-alias helper: maps DB column names to the shape the frontend normCluster() expects
 function shapeCluster(cl) {
@@ -75,7 +77,7 @@ router.get('/:id', (req, res) => {
 })
 
 // -- POST /api/clusters -------------------------------------------------------
-router.post('/', (req, res) => {
+router.post('/', requireClusterQuota, (req, res) => {
   const { client_id, name, theme = '', hours = 0, credit_cad = 0, narrative = '' } = req.body ?? {}
 
   if (!client_id || !name?.trim()) {

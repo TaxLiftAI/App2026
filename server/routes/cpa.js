@@ -236,4 +236,131 @@ router.post('/send-handoff', requireAuth, async (req, res) => {
   }
 })
 
+// ── POST /api/cpa/partner-signup ──────────────────────────────────────────────
+// Public — no auth required. CPA submits partnership interest.
+// Creates a referral record and sends welcome email.
+
+router.post('/partner-signup', async (req, res) => {
+  const {
+    full_name,
+    email,
+    firm_name,
+    province   = 'ON',
+    phone      = '',
+    client_count = '',
+  } = req.body ?? {}
+
+  if (!full_name?.trim() || !email?.trim() || !firm_name?.trim()) {
+    return res.status(400).json({ message: 'full_name, email, and firm_name are required' })
+  }
+
+  // Generate unique referral code: first 3 letters of firm + 6 hex chars
+  const firmSlug = firm_name.replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase()
+  const hex      = require('crypto').randomBytes(3).toString('hex').toUpperCase()
+  const refCode  = `CPA-${firmSlug}${hex}`
+
+  const db     = require('../db')
+  const makeId = require('../utils/uuid').makeId || (() => require('crypto').randomUUID())
+  const now    = new Date().toISOString()
+
+  // Store in cpa_partners table (create if needed)
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS cpa_partners (
+        id           TEXT PRIMARY KEY,
+        full_name    TEXT NOT NULL,
+        email        TEXT UNIQUE NOT NULL,
+        firm_name    TEXT NOT NULL,
+        province     TEXT NOT NULL DEFAULT 'ON',
+        phone        TEXT NOT NULL DEFAULT '',
+        client_count TEXT NOT NULL DEFAULT '',
+        referral_code TEXT UNIQUE NOT NULL,
+        status       TEXT NOT NULL DEFAULT 'pending',
+        created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `)
+
+    db.prepare(`
+      INSERT OR IGNORE INTO cpa_partners
+        (id, full_name, email, firm_name, province, phone, client_count, referral_code, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(require('crypto').randomUUID(), full_name, email, firm_name, province, phone, client_count, refCode, now)
+  } catch (err) {
+    console.error('[cpa/partner-signup] DB error:', err.message)
+    return res.status(500).json({ message: 'Failed to save application' })
+  }
+
+  // Send welcome email to CPA
+  const transport = getTransporter()
+  const referralUrl = `${FRONTEND_URL}/scan?ref=${refCode}`
+  const partnerUrl  = `${FRONTEND_URL}/cpa/partner-signup/confirmed?ref=${refCode}`
+
+  if (transport) {
+    const welcomeHtml = emailLayout(`
+      <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">
+        Welcome to the TaxLift Partner Program, ${escHtml(full_name.split(' ')[0])}!
+      </h2>
+      <p style="margin:0 0 20px;font-size:15px;color:#334155;line-height:1.7;">
+        Your CPA partner application has been received. Here's your unique referral link to share with clients:
+      </p>
+      <div style="background:#f5f3ff;border:1px solid #e0e7ff;border-radius:10px;padding:20px 24px;margin:0 0 24px;">
+        <p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:0.5px;">Your Referral Link</p>
+        <a href="${referralUrl}" style="font-size:15px;font-weight:600;color:#4f46e5;word-break:break-all;">${referralUrl}</a>
+        <p style="margin:8px 0 0;font-size:12px;color:#64748b;">Referral code: <strong>${refCode}</strong></p>
+      </div>
+      <h3 style="margin:0 0 12px;font-size:16px;font-weight:700;color:#1e293b;">How it works</h3>
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+        ${[
+          ['Share your link', 'Send the link to clients filing SR&ED. They get a free scan with your branding.'],
+          ['Client subscribes', 'When they sign up on TaxLift, you earn 15% of their subscription — ongoing.'],
+          ['Monthly payouts', 'Commissions are paid monthly via e-Transfer or wire. No cap, no expiry.'],
+        ].map(([title, body]) => `
+          <tr>
+            <td style="padding:8px 0;vertical-align:top;border-bottom:1px solid #f1f5f9;">
+              <p style="margin:0;font-size:14px;font-weight:600;color:#1e293b;">✓ ${title}</p>
+              <p style="margin:2px 0 0;font-size:13px;color:#64748b;">${body}</p>
+            </td>
+          </tr>
+        `).join('')}
+      </table>
+      <p style="margin:0 0 20px;font-size:14px;color:#334155;line-height:1.7;">
+        Our team will review your application within 1 business day and send your partner welcome kit.
+        In the meantime, feel free to share your link with interested clients.
+      </p>
+      <a href="${partnerUrl}" style="display:inline-block;padding:14px 28px;background:#6366f1;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;border-radius:8px;">
+        View your partner dashboard →
+      </a>
+    `)
+
+    try {
+      await transport.sendMail({
+        from:    `"TaxLift" <${EMAIL_FROM}>`,
+        to:      `"${full_name}" <${email}>`,
+        subject: `Welcome to TaxLift Partner Program — your referral link is ready`,
+        html:    welcomeHtml,
+      })
+    } catch (emailErr) {
+      console.warn('[cpa/partner-signup] Welcome email failed:', emailErr.message)
+      // Don't fail the signup if email fails
+    }
+
+    // Notify internal team
+    try {
+      await transport.sendMail({
+        from:    `"TaxLift Bot" <${EMAIL_FROM}>`,
+        to:      EMAIL_FROM,
+        subject: `🤝 New CPA Partner: ${full_name} — ${firm_name} (${province})`,
+        text:    `Name: ${full_name}\nEmail: ${email}\nFirm: ${firm_name}\nProvince: ${province}\nPhone: ${phone}\nClient count: ${client_count}\nRef code: ${refCode}`,
+      })
+    } catch { /* ignore internal notification failures */ }
+  }
+
+  res.json({ ok: true, referral_code: refCode, referral_url: referralUrl })
+})
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
 module.exports = router

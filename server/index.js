@@ -85,8 +85,10 @@ function rawBodyStash(req, _res, next) {
 // Stripe (existing)
 app.use('/api/billing/webhook',    webhookRawBody, rawBodyStash)
 app.use('/api/v1/billing/webhook', webhookRawBody, rawBodyStash)
-// GitHub
+// GitHub — HMAC-SHA256 over raw bytes
 app.use('/api/v1/webhooks/github', webhookRawBody, rawBodyStash)
+// Jira — secret token in Authorization header; raw body for future HMAC support
+app.use('/api/v1/webhooks/jira',   webhookRawBody, rawBodyStash)
 
 // Parse JSON and urlencoded bodies (for OAuth2 form POST compat)
 // Explicit 100 kb body limit prevents memory exhaustion from oversized payloads
@@ -128,6 +130,9 @@ app.use(`${V}/auth`, authLimiter, botGuard, require('./routes/auth'))
 // OAuth — same bot guard, normal rate limit
 app.use(`${V}/oauth`, botGuard, require('./routes/oauth'))
 
+// ── Plan enforcement middleware ───────────────────────────────────────────────
+const { requireExportAccess } = require('./middleware/planLimits')
+
 // Billing — standard (Stripe webhook raw-body middleware already registered above)
 app.use(`${V}/billing`, require('./routes/billing'))
 
@@ -138,15 +143,22 @@ app.use(`${V}/leads`, leadsLimiter, require('./routes/leads'))
 app.use(`${V}/clients`, require('./routes/clients'))
 
 // Clusters — scraping protection + scoring internals scrubber (Threats 1, 3)
+// requireClusterQuota is applied inside routes/clusters.js on POST /
 app.use(`${V}/clusters`, scanLimiter, scoreInternalsScrubber, require('./routes/clusters'))
 
 app.use(`${V}/referrals`, require('./routes/referrals'))
+// Grants — requirePlusTier guard is enforced inside routes/grants.js
 app.use(`${V}/grants`,    require('./routes/grants'))
 
 // Scan — scraping protection + scoring internals scrubber (Threats 1, 3)
 app.use(`${V}/scan`, scanLimiter, scoreInternalsScrubber, require('./routes/scan'))
 
+// Proposals PDF export — starter plan required (free users can view, not download)
 app.use(`${V}/proposals`,    require('./routes/proposals'))
+// Block authenticated PDF export for free tier (the public /pdf/:scanId route inside
+// proposals.js has no auth so it's intentionally exempt — it's for scan leads only)
+app.use(`${V}/reports/export`, requireExportAccess)
+
 app.use(`${V}/integrations`, require('./routes/integrations'))
 app.use(`${V}/admin`,        require('./routes/admin'))
 app.use(`${V}/cpa`,          require('./routes/cpa'))

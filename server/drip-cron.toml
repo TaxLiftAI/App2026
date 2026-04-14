@@ -1,0 +1,45 @@
+# ── Railway Cron Service — TaxLift Email Drip ──────────────────────────────────
+#
+# Deploy this as a SEPARATE Railway service (not the web service).
+# Running it inside the web process causes duplicate sends on multi-replica deploys.
+#
+# Dashboard setup (one-time):
+#   1. Railway dashboard → New Service → GitHub Repo → same App2026 repo
+#   2. Root Directory  : /server
+#   3. Start Command   : node drip-cron.js
+#   4. Schedule        : */15 * * * *   (every 15 minutes)
+#   5. Copy ALL env vars from the web service (see list below)
+#
+# Required env vars (must match the web service):
+#   NODE_ENV                = production
+#   RAILWAY_VOLUME_MOUNT_PATH = /data   ← must point to the SAME Railway Volume
+#   SMTP_HOST               = smtp.yourdomain.com
+#   SMTP_PORT               = 587
+#   SMTP_USER               = hello@taxlift.ai
+#   SMTP_PASS               = <smtp password>
+#   EMAIL_FROM              = hello@taxlift.ai   (optional, defaults above)
+#   FRONTEND_URL            = https://taxlift.ai
+#
+# CRITICAL — shared volume:
+#   The drip cron reads from the same SQLite database as the web service.
+#   Attach the SAME Railway Volume to both services and set
+#   RAILWAY_VOLUME_MOUNT_PATH=/data on both. Without this the cron sees an
+#   empty database and sends nothing.
+#
+# Test run (local):
+#   cd server && node drip-cron.js
+#   → should log "[emailDrip] Scheduler started" then exit after 30s
+#
+# SMTP options:
+#   Resend  — smtp.resend.com:587  (recommended, generous free tier)
+#   Postmark— smtp.postmarkapp.com:587
+#   AWS SES — email-smtp.<region>.amazonaws.com:587
+#   Mailgun — smtp.mailgun.org:587
+
+[build]
+builder     = "nixpacks"   # no Dockerfile needed for the cron — nixpacks installs node deps
+
+[deploy]
+startCommand        = "node drip-cron.js"
+restartPolicyType   = "never"   # cron runner restarts it on schedule; no self-restart
+numReplicas         = 1

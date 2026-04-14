@@ -1,20 +1,23 @@
 /**
- * Webhook routes — CI/CD build run ingestion
+ * Webhook routes — CI/CD build run ingestion + Jira event ingestion
  *
  * Pattern A  POST /api/v1/webhooks/github
  *   Receives GitHub App `workflow_run` events (HMAC-SHA256 verified).
- *   Inserts a build_run row and attributes it to an SR&ED cluster when
- *   the commit SHA matches evidence in the tenant's cluster set.
  *
  * Pattern C  POST /api/v1/webhooks/ci
  *   Generic endpoint for the taxlift-ci CLI agent (any CI system).
- *   Authenticated by a per-tenant API token (X-TaxLift-Token header).
+ *
+ * Jira       POST /api/v1/webhooks/jira
+ *   Receives Jira Cloud webhook events (issue_updated, worklog_created,
+ *   comment_created, sprint_started, sprint_closed).
+ *   Authenticated via Authorization: Bearer <JIRA_WEBHOOK_SECRET>.
  *
  * GET /api/v1/webhooks/build-runs
  *   Returns build runs for the logged-in tenant (paginated).
  *
  * Environment variables:
- *   GITHUB_WEBHOOK_SECRET   — secret set in the GitHub App webhook config
+ *   GITHUB_WEBHOOK_SECRET   — HMAC secret from GitHub webhook config
+ *   JIRA_WEBHOOK_SECRET     — Bearer token set in Jira webhook Authorization header
  *                             (generate with: openssl rand -hex 32)
  */
 
@@ -466,6 +469,206 @@ router.post('/ci-token', requireAuth, (req, res) => {
     return res.status(500).json({ error: 'Failed to create CI token' })
   }
 })
+
+// ── Pattern B — Jira Cloud webhook ───────────────────────────────────────────
+//
+// Setup in Jira:
+//   Project settings → Integrations → Webhooks → Create webhook
+//   URL:     https://app2026-production.up.railway.app/api/v1/webhooks/jira
+//   Events:  Issue → updated; Worklog → created; Comment → created;
+//            Sprint → started, closed
+//   Add Authorization header: Bearer <JIRA_WEBHOOK_SECRET>
+//
+// TaxLift captures:
+//   - Issue transitions (Blocked → In Progress = technological uncertainty signal)
+//   - Worklogs (developer time as SR&ED evidence)
+//   - Blocked status duration
+//   - Sprint start/close for time-boxing R&D periods
+
+router.post('/jira', (req, res) => {
+  // Verify bearer token from Authorization header
+  const secret = process.env.JIRA_WEBHOOK_SECRET
+  const authHeader = req.headers['authorization'] || ''
+  const providedToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ''
+
+  if (secret) {
+    if (!providedToken) {
+      return res.status(401).json({ error: 'Missing Authorization header' })
+    }
+    // Timing-safe comparison
+    try {
+      const matches = providedToken.length === secret.length &&
+        crypto.timingSafeEqual(Buffer.from(providedToken), Buffer.from(secret))
+      if (!matches) return res.status(401).json({ error: 'Invalid Jira webhook secret' })
+    } catch {
+      return res.status(401).json({ error: 'Invalid Jira webhook secret' })
+    }
+  } else if (process.env.NODE_ENV === 'production') {
+    // In production, always require JIRA_WEBHOOK_SECRET
+    console.warn('[webhooks/jira] JIRA_WEBHOOK_SECRET not set — rejecting unauthenticated request')
+    return res.status(401).json({ error: 'JIRA_WEBHOOK_SECRET not configured on server' })
+  }
+
+  // Parse body (express.raw() captured it; now parse)
+  let payload
+  try {
+    const raw = req.rawBody
+    payload = raw ? JSON.parse(raw.toString('utf8')) : req.body
+    if (typeof payload === 'string') payload = JSON.parse(payload)
+  } catch {
+    return res.status(400).json({ error: 'Invalid JSON payload' })
+  }
+
+  const eventType = payload.webhookEvent || ''   // e.g. "jira:issue_updated"
+
+  // Determine tenant from Jira site URL in the webhook payload
+  let tenantId = null
+  try {
+    const jiraBaseUrl = payload.issue?.self?.split('/rest/')[0]
+      || payload.sprint?.self?.split('/rest/')[0]
+      || ''
+
+    if (jiraBaseUrl) {
+      const intRow = db.prepare(`
+        SELECT tenant_id FROM integrations
+        WHERE  provider = 'jira'
+          AND  JSON_EXTRACT(config_json, '$.base_url') = ?
+          AND  active = 1
+        LIMIT 1
+      `).get(jiraBaseUrl)
+      tenantId = intRow?.tenant_id || null
+    }
+  } catch { /* ignore */ }
+
+  // ── jira:issue_updated ──────────────────────────────────────────────────────
+  if (eventType === 'jira:issue_updated' || eventType === 'jira:issue_created') {
+    const issue      = payload.issue || {}
+    const changelog  = payload.changelog || {}
+    const fields     = issue.fields || {}
+
+    const issueKey   = issue.key || ''
+    const summary    = fields.summary || ''
+    const statusName = fields.status?.name || ''
+    const assignee   = fields.assignee?.displayName || fields.assignee?.emailAddress || null
+
+    // Detect "Blocked" transition — strong SR&ED signal (technological uncertainty)
+    const wasBlocked = changelog.items?.some(item =>
+      item.field === 'status' &&
+      (item.toString?.toLowerCase().includes('block') ||
+       item.fromString?.toLowerCase().includes('block'))
+    )
+
+    // Detect story point changes for time tracking
+    const spChange = changelog.items?.find(item =>
+      item.field === 'story_points' || item.field === 'Story Points'
+    )
+
+    const now = new Date().toISOString()
+
+    if (tenantId) {
+      try {
+        db.prepare(`
+          INSERT OR IGNORE INTO jira_events
+            (id, tenant_id, issue_key, summary, status, assignee,
+             was_blocked, story_points, raw_json, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          `jev-${uuid().slice(0, 8)}`,
+          tenantId, issueKey, summary, statusName, assignee,
+          wasBlocked ? 1 : 0,
+          spChange ? Number(spChange.toString) || null : null,
+          JSON.stringify(payload).slice(0, 4000),   // cap at 4KB
+          now
+        )
+      } catch (err) {
+        // Table may not exist yet — log and continue (additive migration below)
+        console.warn('[webhooks/jira] jira_events insert failed (table may need migration):', err.message)
+      }
+    }
+
+    console.log(`[webhooks/jira] issue_updated ${issueKey} status="${statusName}" blocked=${wasBlocked} tenant=${tenantId}`)
+    return res.status(200).json({ ok: true, event: eventType, issue_key: issueKey })
+  }
+
+  // ── jira:worklog_created ────────────────────────────────────────────────────
+  if (eventType === 'jira:worklog_created' || eventType === 'jira:worklog_updated') {
+    const worklog  = payload.worklog || {}
+    const issueKey = payload.issue?.key || worklog.issueId || ''
+    const author   = worklog.author?.displayName || worklog.author?.emailAddress || null
+    const seconds  = worklog.timeSpentSeconds || 0
+    const hours    = +(seconds / 3600).toFixed(2)
+    const loggedAt = worklog.started || new Date().toISOString()
+
+    if (tenantId && issueKey) {
+      try {
+        db.prepare(`
+          INSERT OR IGNORE INTO jira_worklogs
+            (id, tenant_id, issue_key, author, hours_logged, logged_at, raw_json, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          `jwl-${uuid().slice(0, 8)}`,
+          tenantId, issueKey, author, hours, loggedAt,
+          JSON.stringify(payload).slice(0, 2000),
+          new Date().toISOString()
+        )
+      } catch (err) {
+        console.warn('[webhooks/jira] jira_worklogs insert failed:', err.message)
+      }
+    }
+
+    console.log(`[webhooks/jira] worklog ${issueKey} ${hours}h by ${author} tenant=${tenantId}`)
+    return res.status(200).json({ ok: true, event: eventType, hours })
+  }
+
+  // ── sprint_started / sprint_closed ─────────────────────────────────────────
+  if (eventType === 'sprint_started' || eventType === 'sprint_closed') {
+    const sprint = payload.sprint || {}
+    console.log(`[webhooks/jira] ${eventType} sprint="${sprint.name}" tenant=${tenantId}`)
+    return res.status(200).json({ ok: true, event: eventType, sprint: sprint.name })
+  }
+
+  // All other event types — accept and ignore
+  return res.status(200).json({ ok: true, skipped: true, reason: `event=${eventType} not processed` })
+})
+
+// ── Additive DB migration — jira_events + jira_worklogs ─────────────────────
+// Run once at module load. try/catch so existing deployments aren't disrupted.
+;(function ensureJiraTables() {
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS jira_events (
+        id          TEXT PRIMARY KEY,
+        tenant_id   TEXT NOT NULL,
+        issue_key   TEXT NOT NULL,
+        summary     TEXT NOT NULL DEFAULT '',
+        status      TEXT NOT NULL DEFAULT '',
+        assignee    TEXT,
+        was_blocked INTEGER NOT NULL DEFAULT 0,
+        story_points INTEGER,
+        raw_json    TEXT NOT NULL DEFAULT '{}',
+        created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `)
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_jira_events_tenant ON jira_events(tenant_id)`)
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_jira_events_issue  ON jira_events(issue_key)`)
+
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS jira_worklogs (
+        id           TEXT PRIMARY KEY,
+        tenant_id    TEXT NOT NULL,
+        issue_key    TEXT NOT NULL,
+        author       TEXT,
+        hours_logged REAL NOT NULL DEFAULT 0,
+        logged_at    TEXT NOT NULL,
+        raw_json     TEXT NOT NULL DEFAULT '{}',
+        created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `)
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_jira_worklogs_tenant ON jira_worklogs(tenant_id)`)
+  } catch (err) {
+    console.warn('[webhooks/jira] table migration warning:', err.message)
+  }
+})()
 
 // ── Utility ───────────────────────────────────────────────────────────────────
 
