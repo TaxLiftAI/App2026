@@ -89,6 +89,12 @@ export default function GrantsDashboard() {
     }
   }
 
+  // Gate: redirect non-Plus users to the upgrade page immediately.
+  // PlanUpgradeGate fetches the eligibility estimate and shows the funding amount as upsell.
+  useEffect(() => {
+    if (!isPlusUser) navigate('/grants/upgrade', { replace: true })
+  }, [isPlusUser, navigate])
+
   useEffect(() => { loadEligibility() }, [])
 
   if (loading) return (

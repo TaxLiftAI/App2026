@@ -258,6 +258,36 @@ async function handleWebhookEvent(event) {
   }
 }
 
+// ── POST /api/billing/portal ──────────────────────────────────────────────────
+// Creates a Stripe Billing Portal session for the authenticated user.
+// Returns { url } — frontend redirects to it. Stripe hosts the portal UI.
+router.post('/portal', requireAuth, async (req, res) => {
+  const s = getStripe()
+  if (!s) {
+    return res.status(503).json({ message: 'Stripe is not configured on the server.' })
+  }
+
+  const user = db.prepare('SELECT stripe_customer_id FROM users WHERE id = ?').get(req.user.id)
+  if (!user?.stripe_customer_id) {
+    return res.status(400).json({
+      message: 'No Stripe customer on file. Contact hello@taxlift.ai to manage your billing.',
+      noCustomer: true,
+    })
+  }
+
+  try {
+    const origin  = req.headers.origin ?? 'https://taxlift.ai'
+    const session = await s.billingPortal.sessions.create({
+      customer:   user.stripe_customer_id,
+      return_url: `${origin}/settings`,
+    })
+    res.json({ url: session.url })
+  } catch (err) {
+    console.error('[billing/portal] error:', err.message)
+    res.status(502).json({ message: err.message })
+  }
+})
+
 // ── GET /api/billing/subscription ─────────────────────────────────────────────
 router.get('/subscription', requireAuth, (req, res) => {
   const user = db.prepare(

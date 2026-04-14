@@ -170,9 +170,24 @@ export default function SettingsPage() {
   const [profileSaving, setProfileSaving] = useState(false)
 
   // Billing
-  const [subscription, setSubscription] = useState(null)
-  const [upgrading, setUpgrading]       = useState(false)
-  const [upgradeError, setUpgradeError] = useState(null)
+  const [subscription,  setSubscription]  = useState(null)
+  const [upgrading,     setUpgrading]     = useState(false)
+  const [upgradeError,  setUpgradeError]  = useState(null)
+  const [portalLoading, setPortalLoading] = useState(false)
+  const [portalError,   setPortalError]   = useState(null)
+
+  async function openBillingPortal() {
+    setPortalLoading(true); setPortalError(null)
+    try {
+      const data = await billingApi.portal()
+      if (data?.url) { window.location.href = data.url; return }
+      setPortalError('Could not open billing portal — please try again.')
+    } catch (err) {
+      setPortalError(err?.message ?? 'Could not open billing portal.')
+    } finally {
+      setPortalLoading(false)
+    }
+  }
 
   // Toast
   const [toast, setToast] = useState(null)
@@ -419,15 +434,21 @@ export default function SettingsPage() {
         {isPlusTier && (
           <>
             <div className="border-t border-gray-100" />
-            <FieldRow label="Manage subscription" hint="Update payment method or cancel">
-              <a
-                href="https://billing.stripe.com/p/login"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-sm text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
-              >
-                Open billing portal <ChevronRight size={13} />
-              </a>
+            <FieldRow label="Manage subscription" hint="Update payment method, download invoices, or cancel">
+              <div className="flex flex-col items-end gap-1">
+                <button
+                  onClick={openBillingPortal}
+                  disabled={portalLoading}
+                  className="flex items-center gap-1.5 text-sm text-indigo-600 hover:text-indigo-800 font-medium transition-colors disabled:opacity-50"
+                >
+                  {portalLoading
+                    ? <><Loader2 size={13} className="animate-spin" /> Opening…</>
+                    : <>Open billing portal <ChevronRight size={13} /></>}
+                </button>
+                {portalError && (
+                  <p className="text-xs text-red-500">{portalError}</p>
+                )}
+              </div>
             </FieldRow>
           </>
         )}

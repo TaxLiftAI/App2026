@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Lock, TrendingUp, Zap, Award, CheckCircle2, ChevronRight, Loader2 } from 'lucide-react'
 import { grants as grantsApi } from '../../lib/api'
+import { redirectToCheckout } from '../../lib/stripe'
 
 const FEATURES = [
   { icon: TrendingUp, text: 'AI eligibility matching against 7 Canadian grant programs' },
@@ -18,18 +19,26 @@ const FEATURES = [
 ]
 
 export default function PlanUpgradeGate() {
-  const navigate = useNavigate()
-  const [estimate, setEstimate] = useState(null)
-  const [loading, setLoading]   = useState(true)
+  const navigate    = useNavigate()
+  const [estimate,  setEstimate]  = useState(null)
+  const [loading,   setLoading]   = useState(true)
+  const [upgrading, setUpgrading] = useState(false)
 
   useEffect(() => {
-    // Still compute the eligibility estimate even for Core users — show value before ask
     grantsApi.eligibility()
       .then(data => { setEstimate(data); setLoading(false) })
       .catch(() => setLoading(false))
   }, [])
 
-  const potential = estimate?.total_potential_funding || 700000
+  async function handleUpgrade() {
+    setUpgrading(true)
+    const scanCredit = estimate?.sred_credit_estimate ?? 0
+    const result = await redirectToCheckout('plus', scanCredit)
+    if (!result.ok) navigate('/settings')
+    setUpgrading(false)
+  }
+
+  const potential   = estimate?.total_potential_funding || 700000
   const recommended = (estimate?.grants || []).filter(g => g.recommended).length || 3
 
   return (
@@ -95,17 +104,19 @@ export default function PlanUpgradeGate() {
         {/* CTA */}
         <div className="space-y-3">
           <button
-            onClick={() => navigate('/settings')}
-            className="w-full flex items-center justify-center gap-2 py-3.5 bg-indigo-600 text-white rounded-xl text-base font-bold hover:bg-indigo-700 shadow-sm"
+            onClick={handleUpgrade}
+            disabled={upgrading}
+            className="w-full flex items-center justify-center gap-2 py-3.5 bg-indigo-600 text-white rounded-xl text-base font-bold hover:bg-indigo-700 shadow-sm disabled:opacity-60"
           >
-            Upgrade to Plus — Unlock Grants
-            <ChevronRight size={18} />
+            {upgrading
+              ? <><Loader2 size={17} className="animate-spin" /> Starting checkout…</>
+              : <>Upgrade to Plus — Unlock Grants <ChevronRight size={18} /></>}
           </button>
           <button
-            onClick={() => navigate('/grants')}
+            onClick={() => navigate('/dashboard')}
             className="w-full py-2.5 text-sm text-gray-500 hover:text-gray-700"
           >
-            Back to Grants overview
+            Back to dashboard
           </button>
         </div>
 
