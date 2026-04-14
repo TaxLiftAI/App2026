@@ -11,6 +11,7 @@
  */
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { usePageMeta } from '../hooks/usePageMeta'
 import {
   ShieldCheck, Building2, DollarSign, Users, CheckCircle2,
   ArrowRight, FileText, Lock, Star, ChevronDown, ChevronUp,
@@ -342,6 +343,12 @@ function PartnerContactSection({ navigate }) {
 
 export default function PartnersPage() {
   const navigate = useNavigate()
+  usePageMeta({
+    title:       'CPA Partner Program — TaxLift',
+    description: 'Refer clients to TaxLift and earn $750–$9,000 per successful SR&ED claim. White-label ready, CPA-controlled, zero liability.',
+    path:        '/partners',
+    breadcrumb:  [{ name: 'Home', path: '/' }, { name: 'CPA Partners', path: '/partners' }],
+  })
 
   return (
     <div className="min-h-screen bg-white">

@@ -468,4 +468,7 @@ db.exec(`CREATE INDEX IF NOT EXISTS idx_build_runs_cluster  ON build_runs(cluste
   'ALTER TABLE users ADD COLUMN refresh_token_expires_at TEXT',
 ].forEach(sql => { try { db.exec(sql) } catch { /* already exists */ } })
 
+// ── CASL compliance: marketing email preference ────────────────────────────────
+try { db.exec('ALTER TABLE users ADD COLUMN marketing_emails INTEGER NOT NULL DEFAULT 1') } catch { /* already exists */ }
+
 module.exports = db

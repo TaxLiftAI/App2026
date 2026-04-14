@@ -7,6 +7,7 @@
  */
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { usePageMeta } from '../hooks/usePageMeta'
 import {
   ShieldCheck, BookOpen, ChevronDown, ChevronUp,
   CheckCircle2, AlertCircle, FileText, Download,
@@ -80,6 +81,12 @@ function Accordion({ title, children, defaultOpen = false }) {
 }
 
 export default function MethodologyPage() {
+  usePageMeta({
+    title:       'SR&ED Methodology — How TaxLift Identifies Qualifying Work',
+    description: 'TaxLift applies CRA\'s IC86-4R3 five-question framework to every commit. Read how we identify SR&ED clusters, score eligibility, and generate CPA-ready T661 narratives.',
+    path:        '/methodology',
+    breadcrumb:  [{ name: 'Home', path: '/' }, { name: 'Methodology', path: '/methodology' }],
+  })
   return (
     <div className="min-h-screen bg-white">
 

@@ -7,9 +7,10 @@
  */
 const router    = require('express').Router()
 const db        = require('../db')
-const { requireAuth } = require('../middleware/auth')
-const { v4: uuidv4 }  = require('../utils/uuid')
+const { requireAuth }  = require('../middleware/auth')
+const { v4: uuidv4 }   = require('../utils/uuid')
 const { alertNewLead } = require('../lib/alertEmail')
+const { scheduleDrip } = require('../lib/emailDrip')
 
 // ── Middleware: require admin role ─────────────────────────────────────────────
 function requireAdmin(req, res, next) {
@@ -37,6 +38,36 @@ router.post('/', (req, res) => {
 
     console.log(`[leads] New lead captured: ${email} (plan: ${plan_interest || 'unspecified'})`)
 
+    // If this came from the scan results page, find their most recent scan and
+    // queue the drip sequence so they actually get the follow-up emails.
+    if (source === 'free_scan') {
+      try {
+        const scan = db.prepare(`
+          SELECT id, estimated_credit, clusters_json, repos_json, commit_count
+          FROM free_scans WHERE email = ?
+          ORDER BY created_at DESC LIMIT 1
+        `).get(email.toLowerCase().trim())
+
+        if (scan) {
+          const alreadyScheduled = db.prepare(`
+            SELECT id FROM drip_emails WHERE scan_id = ? LIMIT 1
+          `).get(scan.id)
+
+          if (!alreadyScheduled) {
+            scheduleDrip(email, {
+              scan_id:          scan.id,
+              estimated_credit: scan.estimated_credit,
+              clusters:         JSON.parse(scan.clusters_json || '[]'),
+              repos:            JSON.parse(scan.repos_json    || '[]'),
+              commit_count:     scan.commit_count,
+            })
+          }
+        }
+      } catch (dripErr) {
+        console.error('[leads] drip schedule error:', dripErr.message)
+      }
+    }
+
     // Fire-and-forget founder alert — does not block the response
     alertNewLead({
       email,
@@ -55,6 +86,41 @@ router.post('/', (req, res) => {
     console.error('[leads] insert error:', err.message)
     res.status(500).json({ message: 'Failed to save lead' })
   }
+})
+
+// ── POST /api/leads/unsubscribe — public, marks email as unsubscribed ──────────
+// Called by one-click unsubscribe (RFC 8058) and the /unsubscribe page.
+// Cancels all pending drip emails for the address. CASL-required.
+router.post('/unsubscribe', (req, res) => {
+  const email = (req.body?.email ?? req.query?.email ?? '').toLowerCase().trim()
+  if (!email) return res.status(400).json({ message: 'email required' })
+
+  try {
+    // Cancel pending scan drip emails
+    db.prepare(`UPDATE drip_emails      SET status = 'unsubscribed' WHERE email = ? AND status IN ('pending','sending')`).run(email)
+    // Cancel pending user drip emails
+    db.prepare(`UPDATE user_drip_emails SET status = 'unsubscribed' WHERE email = ? AND status IN ('pending','sending')`).run(email)
+    // Mark user record if they have one
+    db.prepare(`UPDATE users SET marketing_emails = 0 WHERE email = ?`).run(email)
+    console.log(`[unsubscribe] ${email} unsubscribed`)
+    res.json({ success: true, message: 'You have been unsubscribed from all TaxLift marketing emails.' })
+  } catch (err) {
+    console.error('[unsubscribe] error:', err.message)
+    res.status(500).json({ message: 'Failed to unsubscribe' })
+  }
+})
+
+// ── GET /api/leads/unsubscribe — used by one-click unsubscribe link in email ──
+router.get('/unsubscribe', (req, res) => {
+  const email = (req.query?.email ?? '').toLowerCase().trim()
+  if (!email) return res.redirect(`${process.env.FRONTEND_URL || 'https://taxlift.ai'}/unsubscribe`)
+  try {
+    db.prepare(`UPDATE drip_emails      SET status = 'unsubscribed' WHERE email = ? AND status IN ('pending','sending')`).run(email)
+    db.prepare(`UPDATE user_drip_emails SET status = 'unsubscribed' WHERE email = ? AND status IN ('pending','sending')`).run(email)
+    db.prepare(`UPDATE users SET marketing_emails = 0 WHERE email = ?`).run(email)
+    console.log(`[unsubscribe] ${email} unsubscribed via GET`)
+  } catch { /* best-effort */ }
+  res.redirect(`${process.env.FRONTEND_URL || 'https://taxlift.ai'}/unsubscribe?done=1`)
 })
 
 // ── GET /api/leads ─────────────────────────────────────────────────────────────

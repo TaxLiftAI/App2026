@@ -4,42 +4,44 @@
         xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
           http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
 
+  <!-- ── Tier 1: Primary conversion pages ───────────────────────────────────── -->
+
   <!-- Homepage -->
   <url>
     <loc>https://taxlift.ai/</loc>
-    <lastmod>2026-04-06</lastmod>
+    <lastmod>2026-04-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
 
-  <!-- Estimator — standalone high-intent SEO page -->
+  <!-- Estimator — high-intent SEO: "SR&ED calculator Canada" -->
   <url>
     <loc>https://taxlift.ai/estimate</loc>
-    <lastmod>2026-04-06</lastmod>
+    <lastmod>2026-04-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.95</priority>
   </url>
 
-  <!-- Pricing -->
+  <!-- Pricing — "SR&ED software pricing" / "SR&ED consultant alternative" -->
   <url>
     <loc>https://taxlift.ai/pricing</loc>
-    <lastmod>2026-04-06</lastmod>
+    <lastmod>2026-04-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
 
-  <!-- Free scan -->
+  <!-- Free scan funnel landing -->
   <url>
     <loc>https://taxlift.ai/scan</loc>
-    <lastmod>2026-04-06</lastmod>
+    <lastmod>2026-04-14</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
+    <priority>0.9</priority>
   </url>
 
   <!-- Demo -->
   <url>
     <loc>https://taxlift.ai/demo</loc>
-    <lastmod>2026-04-06</lastmod>
+    <lastmod>2026-04-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -47,17 +49,89 @@
   <!-- Signup -->
   <url>
     <loc>https://taxlift.ai/signup</loc>
-    <lastmod>2026-04-06</lastmod>
+    <lastmod>2026-04-14</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.75</priority>
   </url>
 
   <!-- Login -->
   <url>
     <loc>https://taxlift.ai/login</loc>
-    <lastmod>2026-04-06</lastmod>
+    <lastmod>2026-04-14</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
+  </url>
+
+  <!-- ── Tier 2: CPA / partner pages ────────────────────────────────────────── -->
+
+  <!-- CPA partner program — "SR&ED referral partner Canada" -->
+  <url>
+    <loc>https://taxlift.ai/partners</loc>
+    <lastmod>2026-04-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- CPA partner signup -->
+  <url>
+    <loc>https://taxlift.ai/cpa/partner-signup</loc>
+    <lastmod>2026-04-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- CPA login -->
+  <url>
+    <loc>https://taxlift.ai/cpa/login</loc>
+    <lastmod>2026-04-14</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+
+  <!-- Methodology — "How SR&ED eligibility is determined" — CPA trust signal -->
+  <url>
+    <loc>https://taxlift.ai/methodology</loc>
+    <lastmod>2026-04-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+
+  <!-- Referral intake — used on partner referral links -->
+  <url>
+    <loc>https://taxlift.ai/start</loc>
+    <lastmod>2026-04-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <!-- ── Tier 3: Trust / legal / informational ──────────────────────────────── -->
+
+  <url>
+    <loc>https://taxlift.ai/security</loc>
+    <lastmod>2026-04-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <url>
+    <loc>https://taxlift.ai/terms</loc>
+    <lastmod>2026-04-14</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+  <url>
+    <loc>https://taxlift.ai/privacy</loc>
+    <lastmod>2026-04-14</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+  <url>
+    <loc>https://taxlift.ai/unsubscribe</loc>
+    <lastmod>2026-04-14</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.1</priority>
   </url>
 
 </urlset>

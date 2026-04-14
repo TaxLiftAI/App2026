@@ -151,33 +151,55 @@ function buildEmail1(scanData) {
   }
 }
 
-function buildEmail2() {
-  const body = `
-    <h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#1e293b;">Most Canadian founders leave SR&amp;ED money on the table</h1>
-    <p style="margin:0 0 24px;font-size:15px;color:#475569;">Here's why — and how to make sure you don't.</p>
+function buildEmail2(scanData = {}) {
+  const { estimated_credit = 0, repos = [] } = scanData
+  const low  = estimated_credit ? `$${Math.round(estimated_credit * 0.8).toLocaleString('en-CA')}` : null
+  const high = estimated_credit ? `$${Math.round(estimated_credit * 1.2).toLocaleString('en-CA')}` : null
+  const creditCallout = low
+    ? `<p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.7;">
+        Your scan found between <strong style="color:#4f46e5;">${low} – ${high} CAD</strong> in potential SR&amp;ED credits.
+        That's real refundable money — but only if the claim gets filed within 18 months of your fiscal year-end.
+       </p>`
+    : `<p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.7;">
+        The average CCPC that files SR&amp;ED claims receives <strong style="color:#1e293b;">~$175,000</strong> in refundable tax credits.
+        Yet most qualifying Canadian software companies never file — usually because they don't realize their day-to-day engineering work counts.
+       </p>`
 
-    <p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.7;">
-      The average CCPC that files SR&amp;ED claims receives <strong style="color:#1e293b;">~$175,000</strong> in refundable tax credits.
-      Yet the majority of qualifying Canadian software companies never file — usually because they don't realize their day-to-day engineering work counts.
-    </p>
+  const body = `
+    <h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#1e293b;">Your SR&amp;ED credits expire if you don't act</h1>
+    <p style="margin:0 0 24px;font-size:15px;color:#475569;">Here's what you need to know before your filing window closes.</p>
+
+    ${creditCallout}
 
     <!-- Stat callout -->
     <div style="background:#f0fdf4;border-left:4px solid #22c55e;padding:16px 20px;border-radius:0 8px 8px 0;margin:24px 0;">
       <p style="margin:0;font-size:14px;color:#15803d;line-height:1.6;">
         <strong>Good news:</strong> You've already done the hard part. TaxLift identified qualifying SR&amp;ED activity in your repo.
-        The remaining step is packaging it into a CPA-ready claim.
+        The remaining step is packaging it into a CPA-ready claim — TaxLift does that automatically.
       </p>
     </div>
 
-    <h2 style="margin:24px 0 12px;font-size:16px;font-weight:700;color:#1e293b;">The deadline you can't miss</h2>
+    <h2 style="margin:24px 0 12px;font-size:16px;font-weight:700;color:#1e293b;">The 18-month deadline you can't miss</h2>
     <p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.7;">
       CRA requires SR&amp;ED claims to be filed within <strong>18 months of your fiscal year-end</strong>.
       Miss it and the credits are gone permanently — no extensions, no exceptions.
     </p>
-    <p style="margin:0 0 24px;font-size:15px;color:#334155;line-height:1.7;">
-      TaxLift generates a complete, CPA-ready package: technical narratives, T661 support documentation,
-      and an expenditure schedule — so your accountant can file without the back-and-forth.
-    </p>
+
+    <!-- What TaxLift generates -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+      ${[
+        ['T661 technical narratives', 'AI-generated, CRA-compliant, ready for your CPA to review'],
+        ['Financial schedule',        'Qualified expenditures mapped from your payroll and contractor costs'],
+        ['Audit evidence chain',      'Every qualifying commit timestamped and linked to CRA activity categories'],
+        ['CPA handoff package',       'One click exports everything — your accountant files, you collect the refund'],
+      ].map(([title, desc]) => `
+        <tr>
+          <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;vertical-align:top;">
+            <p style="margin:0 0 2px;font-size:14px;font-weight:600;color:#1e293b;">✓ &nbsp;${title}</p>
+            <p style="margin:0;font-size:13px;color:#64748b;padding-left:18px;">${desc}</p>
+          </td>
+        </tr>`).join('')}
+    </table>
 
     ${ctaButton('Get your CPA-ready package →', `${FRONTEND_URL}/pricing`)}
 
@@ -186,7 +208,7 @@ function buildEmail2() {
     </p>`
 
   return {
-    subject: 'Most Canadian founders leave SR&ED money on the table — here\'s why',
+    subject: `Your SR&ED estimate expires in 18 months — here's what to do`,
     html:    layout(body),
   }
 }
@@ -324,7 +346,7 @@ async function sendDripEmail(row) {
 
   let mail
   if      (row.sequence_step === 1) mail = buildEmail1({ ...scanData, email: row.email })
-  else if (row.sequence_step === 2) mail = buildEmail2()
+  else if (row.sequence_step === 2) mail = buildEmail2(scanData)
   else                               mail = buildEmail3(scanData)
 
   const transport = getTransporter()
@@ -337,11 +359,16 @@ async function sendDripEmail(row) {
     return
   }
 
+  const unsubUrl = `${FRONTEND_URL}/unsubscribe?email=${encodeURIComponent(row.email)}&type=scan`
   await transport.sendMail({
     from:    `TaxLift <${EMAIL_FROM}>`,
     to:      row.email,
     subject: mail.subject,
     html:    mail.html,
+    headers: {
+      'List-Unsubscribe':      `<${unsubUrl}>, <mailto:${EMAIL_FROM}?subject=unsubscribe>`,
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    },
   })
 
   db.prepare(`UPDATE drip_emails SET status = 'sent', sent_at = ? WHERE id = ?`)
@@ -624,11 +651,16 @@ async function sendUserDripEmail(row) {
     return
   }
 
+  const unsubUrl = `${FRONTEND_URL}/unsubscribe?email=${encodeURIComponent(row.email)}&type=user`
   await transport.sendMail({
     from:    `"TaxLift" <${EMAIL_FROM}>`,
     to:      row.email,
     subject: mail.subject,
     html:    mail.html,
+    headers: {
+      'List-Unsubscribe':      `<${unsubUrl}>, <mailto:${EMAIL_FROM}?subject=unsubscribe>`,
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    },
   })
 
   db.prepare(`UPDATE user_drip_emails SET status = 'sent', sent_at = ? WHERE id = ?`)

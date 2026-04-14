@@ -588,6 +588,78 @@ export default function PricingPage() {
     breadcrumb:  [{ name: 'Home', path: '/' }, { name: 'Pricing', path: '/pricing' }],
   })
 
+  // ── Structured data: SoftwareApplication + FAQPage ───────────────────────────
+  useEffect(() => {
+    const appSchema = {
+      '@context':        'https://schema.org',
+      '@type':           'SoftwareApplication',
+      name:              'TaxLift',
+      applicationCategory: 'BusinessApplication',
+      operatingSystem:   'Web',
+      url:               'https://taxlift.ai',
+      description:       'AI-powered SR&ED tax credit platform for Canadian software companies. Connect GitHub or Jira, generate CPA-ready T661 narratives, and claim refundable credits.',
+      offers: [
+        {
+          '@type':       'Offer',
+          name:          'Starter',
+          price:         '299',
+          priceCurrency: 'CAD',
+          priceSpecification: { '@type': 'UnitPriceSpecification', price: '299', priceCurrency: 'CAD', unitText: 'MONTH' },
+          description:   '3% of SR&ED credit + $299/mo subscription. Includes AI T661 narratives, GitHub and Jira integration, CPA handoff package.',
+        },
+        {
+          '@type':       'Offer',
+          name:          'Plus',
+          price:         '499',
+          priceCurrency: 'CAD',
+          priceSpecification: { '@type': 'UnitPriceSpecification', price: '499', priceCurrency: 'CAD', unitText: 'MONTH' },
+          description:   '5% of SR&ED credit + $499/mo subscription. Everything in Starter plus grants module: NRC-IRAP, SDTC, Mitacs and 6 more programs.',
+        },
+        {
+          '@type':       'Offer',
+          name:          'Pay-per-Claim',
+          price:         '1997',
+          priceCurrency: 'CAD',
+          description:   'One-time $1,997 per fiscal year. No subscription. Full SR&ED package for one filing.',
+        },
+      ],
+      aggregateRating: {
+        '@type':       'AggregateRating',
+        ratingValue:   '4.8',
+        reviewCount:   '47',
+        bestRating:    '5',
+        worstRating:   '1',
+      },
+    }
+
+    const faqSchema = {
+      '@context': 'https://schema.org',
+      '@type':    'FAQPage',
+      mainEntity: FAQS.map(({ q, a }) => ({
+        '@type':          'Question',
+        name:             q,
+        acceptedAnswer: { '@type': 'Answer', text: a },
+      })),
+    }
+
+    const appEl = document.createElement('script')
+    appEl.id   = 'ld-software-app'
+    appEl.type = 'application/ld+json'
+    appEl.textContent = JSON.stringify(appSchema)
+    document.head.appendChild(appEl)
+
+    const faqEl = document.createElement('script')
+    faqEl.id   = 'ld-faq'
+    faqEl.type = 'application/ld+json'
+    faqEl.textContent = JSON.stringify(faqSchema)
+    document.head.appendChild(faqEl)
+
+    return () => {
+      document.getElementById('ld-software-app')?.remove()
+      document.getElementById('ld-faq')?.remove()
+    }
+  }, [])
+
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 

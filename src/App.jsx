@@ -124,6 +124,7 @@ const WelcomePage          = lazy(() => import('./pages/WelcomePage'))
 const VerifyEmailPage      = lazy(() => import('./pages/VerifyEmailPage'))
 const ForgotPasswordPage   = lazy(() => import('./pages/ForgotPasswordPage'))
 const ResetPasswordPage    = lazy(() => import('./pages/ResetPasswordPage'))
+const UnsubscribePage      = lazy(() => import('./pages/UnsubscribePage'))
 
 // Scan funnel
 const ScanLandingPage = lazy(() => import('./pages/scan/ScanLandingPage'))
@@ -423,6 +424,7 @@ function AppRoutes() {
       <Route path="/verify-email"    element={<VerifyEmailPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password"  element={<ResetPasswordPage />} />
+      <Route path="/unsubscribe"     element={<UnsubscribePage />} />
 
       {/* Free scan funnel — public, no auth required */}
       <Route path="/scan"         element={<ScanLandingPage />} />

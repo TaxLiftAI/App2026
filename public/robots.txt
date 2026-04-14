@@ -35,5 +35,13 @@ Allow: /login
 Allow: /start
 Allow: /share/
 Allow: /cpa-review/
+Allow: /partners
+Allow: /cpa/partner-signup
+Allow: /cpa/login
+Allow: /methodology
+Allow: /security
+Allow: /terms
+Allow: /privacy
+Allow: /unsubscribe
 
 Sitemap: https://taxlift.ai/sitemap.xml
