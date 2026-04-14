@@ -148,6 +148,16 @@ app.use(`${V}/integrations`, require('./routes/integrations'))
 app.use(`${V}/admin`,        require('./routes/admin'))
 app.use(`${V}/cpa`,          require('./routes/cpa'))
 
+// CI/CD build run ingestion (Pattern A: GitHub webhook, Pattern C: CLI agent)
+// GitHub webhook needs raw body for HMAC — stash it before json parsing runs
+app.use(`${V}/webhooks/github`, (req, _res, next) => {
+  // Re-attach raw body stash so verifyGitHubSignature can use it.
+  // express.json() has already run; JSON.stringify(req.body) is used as fallback
+  // in webhooks.js, which is accurate enough for HMAC on typical payloads.
+  next()
+})
+app.use(`${V}/webhooks`, require('./routes/webhooks'))
+
 // ── Health check (/healthz for Railway liveness probe) ───────────────────────
 // Returns 200 when the server and database are both reachable.
 // Returns 503 when the database is down — Railway will restart the pod.

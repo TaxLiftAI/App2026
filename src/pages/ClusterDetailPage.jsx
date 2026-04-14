@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, GitCommit, Ticket, Hammer, ChevronDown, ChevronUp,
@@ -11,6 +11,7 @@ import { CLUSTERS, EVIDENCE_SNAPSHOTS, USERS, DEVELOPER_INTERVIEWS, COMMENTS } f
 import { formatDate, formatDateTime, formatCurrency, formatHours, formatPercent, canDo } from '../lib/utils'
 import { useAuth } from '../context/AuthContext'
 import { useCluster, useApproveCluster, useRejectCluster, useNarrative } from '../hooks'
+import { apiFetch } from '../lib/api'
 import { FlaskConical } from 'lucide-react'
 import { StatusBadge } from '../components/ui/Badge'
 import RiskScore from '../components/ui/RiskScore'
@@ -61,12 +62,37 @@ function QualityTag({ tag }) {
 }
 
 // ── Evidence Tabs ──────────────────────────────────────────────────────────────
-function EvidenceTabs({ snapshot }) {
+function EvidenceTabs({ snapshot, clusterId }) {
   const [tab, setTab] = useState('commits')
+
+  // Live build runs from the API (Pattern A / C integration)
+  const [liveBuildRuns, setLiveBuildRuns] = useState([])
+  const [buildsLoading, setBuildsLoading] = useState(false)
+  const fetchLiveBuilds = useCallback(async () => {
+    if (!clusterId) return
+    setBuildsLoading(true)
+    try {
+      const data = await apiFetch(`/api/v1/webhooks/build-runs?cluster_id=${clusterId}&limit=20`)
+      setLiveBuildRuns(data.runs || [])
+    } catch {
+      /* ignore — live builds are best-effort */
+    } finally {
+      setBuildsLoading(false)
+    }
+  }, [clusterId])
+
+  useEffect(() => {
+    fetchLiveBuilds()
+  }, [fetchLiveBuilds])
+
+  // Merge mock build_logs with live runs (live runs take precedence)
+  const mockBuilds  = snapshot?.build_logs ?? []
+  const totalBuilds = liveBuildRuns.length > 0 ? liveBuildRuns.length : mockBuilds.length
+
   const tabs = [
-    { id: 'commits', label: `Commits (${snapshot.git_commits?.length ?? 0})`,  icon: GitCommit },
-    { id: 'tickets', label: `Jira (${snapshot.jira_tickets?.length ?? 0})`,     icon: Ticket },
-    { id: 'builds',  label: `Builds (${snapshot.build_logs?.length ?? 0})`,     icon: Hammer },
+    { id: 'commits', label: `Commits (${snapshot?.git_commits?.length ?? 0})`, icon: GitCommit },
+    { id: 'tickets', label: `Jira (${snapshot?.jira_tickets?.length ?? 0})`,    icon: Ticket },
+    { id: 'builds',  label: `Builds (${totalBuilds})`,                          icon: Hammer },
   ]
 
   return (
@@ -88,7 +114,7 @@ function EvidenceTabs({ snapshot }) {
 
       {tab === 'commits' && (
         <div className="space-y-2">
-          {snapshot.git_commits?.map(c => (
+          {snapshot?.git_commits?.map(c => (
             <div key={c.sha} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
               <code className="text-[10px] font-mono bg-slate-200 text-slate-700 px-2 py-1 rounded mt-0.5 flex-shrink-0">{c.sha.slice(0, 7)}</code>
               <div className="flex-1 min-w-0">
@@ -108,7 +134,7 @@ function EvidenceTabs({ snapshot }) {
 
       {tab === 'tickets' && (
         <div className="space-y-2">
-          {snapshot.jira_tickets?.map(t => (
+          {snapshot?.jira_tickets?.map(t => (
             <div key={t.ticket_id} className="p-4 bg-gray-50 rounded-lg border border-gray-100">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">
@@ -135,19 +161,68 @@ function EvidenceTabs({ snapshot }) {
 
       {tab === 'builds' && (
         <div className="space-y-2">
-          {snapshot.build_logs?.map(b => (
-            <div key={b.build_id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
-              <BuildStatus status={b.status} />
-              <code className="text-[10px] font-mono text-gray-500">{b.build_id}</code>
-              <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                <GitBranch size={11} />
-                <span className="font-mono">{b.branch}</span>
+          {/* Live build runs from CI/CD integration */}
+          {liveBuildRuns.length > 0 ? (
+            <>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-[10px] font-semibold text-indigo-600 uppercase tracking-wide">Live from CI/CD</span>
+                <div className="flex-1 h-px bg-indigo-100" />
+                <button onClick={fetchLiveBuilds} className="text-[10px] text-gray-400 hover:text-indigo-600 transition-colors">
+                  {buildsLoading ? 'Loading…' : '↺ Refresh'}
+                </button>
               </div>
-              <span className="text-xs text-gray-400 ml-auto">{formatDate(b.started_at)}</span>
-              {b.duration_seconds && <span className="text-xs text-gray-400">{b.duration_seconds}s</span>}
-              {b.failure_stage && <span className="text-xs text-red-500 bg-red-50 px-2 py-0.5 rounded">{b.failure_stage}</span>}
+              {liveBuildRuns.map(b => (
+                <div key={b.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                  <BuildStatus status={b.status} />
+                  <div className="flex items-center gap-1.5 text-xs text-gray-500 flex-1 min-w-0">
+                    <GitBranch size={11} className="flex-shrink-0" />
+                    <span className="font-mono truncate">{b.branch || 'unknown'}</span>
+                  </div>
+                  <span className="text-[10px] text-gray-400 capitalize">{b.provider}</span>
+                  {b.sred_eligible ? (
+                    <span className="px-1.5 py-0.5 bg-green-50 text-green-700 text-[10px] font-semibold rounded">SR&ED</span>
+                  ) : null}
+                  <span className="text-xs text-gray-400">{formatDate(b.started_at)}</span>
+                  {b.duration_seconds > 0 && (
+                    <span className="text-xs text-gray-400 flex-shrink-0">
+                      {b.duration_seconds >= 60
+                        ? `${Math.floor(b.duration_seconds / 60)}m ${b.duration_seconds % 60}s`
+                        : `${b.duration_seconds}s`}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </>
+          ) : buildsLoading ? (
+            <div className="text-center py-6 text-xs text-gray-400">Loading build runs…</div>
+          ) : mockBuilds.length > 0 ? (
+            /* Fall back to mock data if no live runs yet */
+            <>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Demo data — connect CI/CD to see live builds</span>
+                <div className="flex-1 h-px bg-gray-100" />
+              </div>
+              {mockBuilds.map(b => (
+                <div key={b.build_id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                  <BuildStatus status={b.status} />
+                  <code className="text-[10px] font-mono text-gray-500">{b.build_id}</code>
+                  <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                    <GitBranch size={11} />
+                    <span className="font-mono">{b.branch}</span>
+                  </div>
+                  <span className="text-xs text-gray-400 ml-auto">{formatDate(b.started_at)}</span>
+                  {b.duration_seconds && <span className="text-xs text-gray-400">{b.duration_seconds}s</span>}
+                  {b.failure_stage && <span className="text-xs text-red-500 bg-red-50 px-2 py-0.5 rounded">{b.failure_stage}</span>}
+                </div>
+              ))}
+            </>
+          ) : (
+            <div className="text-center py-8 text-gray-400">
+              <Hammer size={24} className="mx-auto mb-2 opacity-30" />
+              <p className="text-xs font-medium text-gray-500">No build runs yet</p>
+              <p className="text-xs mt-1">Connect your CI/CD pipeline in <strong>Integrations</strong> to capture builds as SR&ED evidence.</p>
             </div>
-          ))}
+          )}
         </div>
       )}
     </div>
@@ -1075,7 +1150,7 @@ export default function ClusterDetailPage() {
                 title="Evidence Snapshot"
                 subtitle={`Captured ${formatDateTime(snapshot.snapshot_date)} · SHA-256 verified`}
               />
-              <EvidenceTabs snapshot={snapshot} />
+              <EvidenceTabs snapshot={snapshot} clusterId={cluster?.id} />
             </Card>
           ) : (
             <Card>

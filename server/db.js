@@ -416,6 +416,41 @@ function seed() {
 
 seed()
 
+// ── build_runs — CI/CD pipeline events linked to SR&ED clusters ──────────────
+// Populated by two paths:
+//   A) GitHub App webhook (workflow_run events) — automatic for GitHub users
+//   C) taxlift-ci CLI agent — works with any CI system (Jenkins, CircleCI, etc.)
+//
+// Attribution: commit_sha → evidence_snapshot → cluster_id (set after match)
+// SRED eligibility: set by attributeBuildRun() based on branch + status + workflow
+db.exec(`
+  CREATE TABLE IF NOT EXISTS build_runs (
+    id               TEXT PRIMARY KEY,
+    tenant_id        TEXT NOT NULL,
+    cluster_id       TEXT,
+    provider         TEXT NOT NULL DEFAULT 'unknown',
+    repo             TEXT,
+    branch           TEXT,
+    commit_sha       TEXT,
+    triggered_by     TEXT,
+    workflow_name    TEXT,
+    started_at       TEXT NOT NULL,
+    finished_at      TEXT,
+    duration_seconds INTEGER NOT NULL DEFAULT 0,
+    status           TEXT NOT NULL DEFAULT 'unknown',
+    is_experimental  INTEGER NOT NULL DEFAULT 0,
+    jobs_json        TEXT NOT NULL DEFAULT '[]',
+    test_passed      INTEGER,
+    test_failed      INTEGER,
+    test_skipped     INTEGER,
+    sred_eligible    INTEGER NOT NULL DEFAULT 0,
+    created_at       TEXT NOT NULL DEFAULT (datetime('now'))
+  )
+`)
+db.exec(`CREATE INDEX IF NOT EXISTS idx_build_runs_tenant   ON build_runs(tenant_id)`)
+db.exec(`CREATE INDEX IF NOT EXISTS idx_build_runs_commit   ON build_runs(commit_sha)`)
+db.exec(`CREATE INDEX IF NOT EXISTS idx_build_runs_cluster  ON build_runs(cluster_id)`)
+
 // ── Additive migrations for existing databases ────────────────────────────────
 // CREATE TABLE IF NOT EXISTS won't add new columns to an existing table.
 // Use ALTER TABLE … ADD COLUMN (idempotent via try/catch) for every new column.
