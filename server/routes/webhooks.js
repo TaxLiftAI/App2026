@@ -135,7 +135,7 @@ router.post('/github', (req, res) => {
   // index.js mounts express.raw() for this path so req.rawBody is the original
   // bytes exactly as GitHub signed them. Never re-serialize req.body — JSON
   // serialisation changes whitespace/key order and breaks the HMAC.
-  const rawBody   = req.rawBody   // Buffer set by stripeBodyStash in index.js
+  const rawBody   = req.rawBody   // Buffer set by rawBodyStash in index.js
   const sigHeader = req.headers['x-hub-signature-256']
 
   if (!rawBody) {

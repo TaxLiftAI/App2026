@@ -74,6 +74,20 @@ app.use(securityHeaders)
 // ── Global rate limit — baseline for all routes (Threat 1) ───────────────────
 app.use(globalLimiter)
 
+// ── Webhook raw-body capture — MUST come before express.json() ───────────────
+// Both Stripe and GitHub sign the original raw bytes. express.json() consumes
+// the stream and makes re-reading impossible, so we intercept these paths first.
+const webhookRawBody = express.raw({ type: 'application/json' })
+function rawBodyStash(req, _res, next) {
+  if (Buffer.isBuffer(req.body)) req.rawBody = req.body
+  next()
+}
+// Stripe (existing)
+app.use('/api/billing/webhook',    webhookRawBody, rawBodyStash)
+app.use('/api/v1/billing/webhook', webhookRawBody, rawBodyStash)
+// GitHub
+app.use('/api/v1/webhooks/github', webhookRawBody, rawBodyStash)
+
 // Parse JSON and urlencoded bodies (for OAuth2 form POST compat)
 // Explicit 100 kb body limit prevents memory exhaustion from oversized payloads
 app.use(express.json({ limit: '100kb' }))
@@ -103,22 +117,7 @@ app.use(cors({
   credentials: true,
 }))
 
-// ── Stripe webhook — raw body BEFORE express.json(), unversioned path ────────
-// Stripe's webhook URL is registered externally and cannot change without a
-// Stripe dashboard update. Mount at BOTH paths during the transition period.
-// Once Stripe webhook URL is updated to /api/v1/billing/webhook, remove the
-// unversioned alias below.
-const stripeRawBody = express.raw({ type: 'application/json' })
-function stripeBodyStash(req, res, next) {
-  if (Buffer.isBuffer(req.body)) req.rawBody = req.body
-  next()
-}
-app.use('/api/billing/webhook',    stripeRawBody, stripeBodyStash)  // legacy alias
-app.use('/api/v1/billing/webhook', stripeRawBody, stripeBodyStash)  // new path
-
-// GitHub webhook — raw body BEFORE express.json() so HMAC-SHA256 matches exactly.
-// GitHub signs the original raw bytes; re-serialising req.body changes whitespace/order.
-app.use('/api/v1/webhooks/github', stripeRawBody, stripeBodyStash)
+// (raw-body middleware for Stripe + GitHub registered above, before express.json())
 
 // ── Routes — all under /api/v1/ ───────────────────────────────────────────────
 const V = '/api/v1'
