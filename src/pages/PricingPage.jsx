@@ -1,14 +1,14 @@
 /**
  * PricingPage — /pricing
  *
- * Two pricing tracks:
- *   Option A — Annual subscription (CPA-introduced / committed buyers)
- *   Option B — Pay-per-claim (self-serve SMBs, first-time filers)
+ * Performance-based annual pricing:
+ *   Starter — 3% of estimated SR&ED credit, paid once per fiscal year
+ *   Plus    — 5% of estimated SR&ED credit, includes Grants module
+ *   Enterprise — custom, contact sales
  *
  * URL params:
- *   ?estimate=180000   — credit estimate in CAD (pre-fills hero banner)
+ *   ?estimate=180000   — credit estimate in CAD (pre-fills hero banner, skips lead gate)
  *   ?plan=plus         — pre-highlights a specific plan
- *   ?track=claim       — pre-selects the claim-based track
  */
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -16,11 +16,11 @@ import { usePageMeta } from '../hooks/usePageMeta'
 import {
   ShieldCheck, Check, ArrowRight, ArrowLeft, Loader2, Sparkles,
   ChevronDown, ChevronUp, Zap, Star, Clock, Lock, ExternalLink,
-  TrendingUp, Calendar, FileText, RefreshCw, AlertCircle, BadgeCheck,
+  TrendingUp, Calendar, RefreshCw, AlertCircle, BadgeCheck,
   Github, DollarSign,
 } from 'lucide-react'
 import PricingCard from '../components/PricingCard'
-import { PLANS, CLAIM_PLANS, redirectToCheckout, getPlanForBilling } from '../lib/stripe'
+import { PLANS, redirectToCheckout, getPlanForBilling } from '../lib/stripe'
 import WaitlistModal from '../components/WaitlistModal'
 
 function fmtK(n) {
@@ -663,7 +663,6 @@ export default function PricingPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
-  const [track,           setTrack]           = useState(searchParams.get('track') === 'claim' ? 'claim' : 'annual')
   const [checkoutLoading, setCheckoutLoading] = useState(null)
   const [waitlistOpen,    setWaitlistOpen]    = useState(false)
   const [waitlistPlan,    setWaitlistPlan]    = useState('')
@@ -735,9 +734,17 @@ export default function PricingPage() {
       setWaitlistPlan('enterprise'); setWaitlistSource('pricing_enterprise'); setWaitlistOpen(true); return
     }
     setCheckoutLoading(planId)
-    const result = await redirectToCheckout(planId)
+    // Pass the credit estimate so server can compute the exact fee (3% or 5%)
+    const result = await redirectToCheckout(planId, estimate ?? 0)
     setCheckoutLoading(null)
-    if (!result.ok) { setWaitlistPlan(planId); setWaitlistSource('pricing_checkout_fallback'); setWaitlistOpen(true) }
+    if (!result.ok) {
+      if (result.message?.includes('run_scan') || result.message?.includes('credit estimate')) {
+        // No estimate on file — send them to scan first
+        navigate('/scan')
+        return
+      }
+      setWaitlistPlan(planId); setWaitlistSource('pricing_checkout_fallback'); setWaitlistOpen(true)
+    }
   }
 
   const fromScan = !!sessionStorage.getItem('taxlift_scan_results')
@@ -840,64 +847,24 @@ export default function PricingPage() {
           ))}
         </div>
 
-        {/* Track toggle */}
-        <div className="flex justify-center mb-6">
-          <div className="inline-flex bg-white border border-gray-200 rounded-2xl p-1.5 shadow-sm gap-1">
-            <button
-              onClick={() => setTrack('annual')}
-              className={'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ' + (track === 'annual' ? 'bg-indigo-600 text-white shadow' : 'text-gray-500 hover:text-gray-700')}
-            >
-              <TrendingUp size={14} />
-              Feature Plans (3% of credit)
-              {track === 'annual' && <span className="text-[10px] bg-white/20 rounded-full px-2 py-0.5 font-medium">Starter · Plus · Enterprise</span>}
-            </button>
-            <button
-              onClick={() => setTrack('claim')}
-              className={'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ' + (track === 'claim' ? 'bg-indigo-600 text-white shadow' : 'text-gray-500 hover:text-gray-700')}
-            >
-              <FileText size={14} />
-              Pay per Claim
-              {track === 'claim' && <span className="text-[10px] bg-white/20 rounded-full px-2 py-0.5 font-medium">First-time filers</span>}
-            </button>
-          </div>
+        <div className="text-center mb-8">
+          <p className="text-sm text-gray-500 max-w-xl mx-auto">
+            Starter is <strong className="text-gray-700">3%</strong> of your SR&amp;ED credit estimate, paid annually.
+            Plus is <strong className="text-gray-700">5%</strong> and adds the Grants module — unlocking up to $4M+ in additional Canadian funding.
+            {estimate ? <>{' '}Your fee: <strong className="text-indigo-600">{fmtK(taxliftFeeLow)}</strong> (Starter) or <strong className="text-indigo-600">{fmtK(taxliftFeeHigh)}</strong> (Plus).</> : null}
+          </p>
         </div>
 
-        {track === 'annual' ? (
-          <div className="text-center mb-8">
-            <p className="text-sm text-gray-500 max-w-xl mx-auto">
-              Starter is <strong className="text-gray-700">3%</strong> of your estimated SR&amp;ED credit. Plus is <strong className="text-gray-700">5%</strong> and adds the Grants module — unlocking up to $4M+ in additional Canadian funding.
-              {estimate ? <>{' '}Your fee range: <strong className="text-indigo-600">{fmtK(taxliftFeeLow)}–{fmtK(taxliftFeeHigh)}</strong> on a {fmtK(estimate)} credit estimate.</> : null}
-            </p>
-          </div>
-        ) : (
-          <div className="text-center mb-8">
-            <p className="text-sm text-gray-500 max-w-xl mx-auto">Pay once, get your T661 package, file with your CPA. No subscription. Come back next year when you need us.</p>
-          </div>
-        )}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start mb-4">
+          {annualPlans.map(plan => (
+            <PricingCard key={plan.id} plan={plan} ctaLoading={checkoutLoading === plan.id} onCta={() => handlePricingCta(plan.id)} />
+          ))}
+        </div>
 
-        {track === 'annual' ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start mb-4">
-            {annualPlans.map(plan => (
-              <PricingCard key={plan.id} plan={plan} ctaLoading={checkoutLoading === plan.id} onCta={() => handlePricingCta(plan.id)} />
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start max-w-3xl mx-auto mb-4">
-            {Object.values(CLAIM_PLANS).map(plan => (
-              <ClaimCard key={plan.id} plan={plan} ctaLoading={checkoutLoading === plan.id} onCta={() => handlePricingCta(plan.id)} />
-            ))}
-          </div>
-        )}
-
-        <div className="text-center mb-12 space-y-2">
+        <div className="text-center mb-12">
           <p className="text-xs text-gray-400">
-            {track === 'claim'
-              ? 'Prices in CAD · one-time fee per fiscal year · payment processed via Stripe'
-              : 'Prices in CAD · 3% of estimated SR&ED credit · 14-day free trial on all plans · payment processed via Stripe'}
+            Prices in CAD · {estimate ? `your fee = ${fmtK(estimate)} estimate × 3% or 5%` : '3% or 5% of your SR&ED credit estimate'} · paid once per fiscal year · processed via Stripe
           </p>
-          {track === 'claim' && (
-            <p className="text-xs text-gray-400">Want year-round coverage?{' '}<button onClick={() => setTrack('annual')} className="text-indigo-500 hover:underline">See feature plans →</button></p>
-          )}
         </div>
 
         {/* ── Scan upsell — shown when no personalised estimate yet ───────────── */}

@@ -159,50 +159,9 @@ export const PLANS = {
   },
 }
 
-// ── Option B: Pay-per-claim plans ─────────────────────────────────────────────
-export const CLAIM_PLANS = {
-  claim: {
-    id:          'claim',
-    name:        'Single Claim',
-    price:       '$1,997',
-    period:      'one-time · per fiscal year',
-    description: 'Everything you need to prepare and file one SR&ED claim — pay once, file once.',
-    features: [
-      'Full T661 narrative package (one fiscal year)',
-      'GitHub & Jira integrations',
-      'CPA handoff PDF + evidence chain',
-      'Narrative quality scoring',
-      'Audit-ready document package',
-      '90-day post-filing support window',
-    ],
-    cta:         'Get started',
-    highlighted: false,
-    badge:       'First-time filers',
-    note:        'No subscription. Come back next year when you need us.',
-    priceId:     import.meta.env.VITE_STRIPE_PRICE_CLAIM ?? null,
-  },
-  claim_always_on: {
-    id:          'claim_always_on',
-    name:        'Claim + Always-On',
-    price:       '$1,997',
-    period:      '/yr + $99/mo',
-    description: 'Annual claim package plus year-round sync, audit vault, and mid-year SR&ED tracking.',
-    features: [
-      'Everything in Single Claim',
-      '✦ Continuous GitHub/Jira sync year-round',
-      '✦ Audit vault — evidence stored & versioned',
-      '✦ Mid-year SR&ED activity tracker',
-      '✦ Next-year claim prep starts automatically',
-      '✦ CRA inquiry response templates',
-      'Priority support',
-    ],
-    cta:         'Get started',
-    highlighted: true,
-    badge:       'Best value',
-    note:        'Pause the $99/mo anytime — claim fee stays fixed.',
-    priceId:     import.meta.env.VITE_STRIPE_PRICE_CLAIM_ALWAYS_ON ?? null,
-  },
-}
+// ── Pay-per-claim removed — model is annual 3%/5% of credit estimate ──────────
+// Empty export kept so any stray import { CLAIM_PLANS } doesn't break at build time.
+export const CLAIM_PLANS = {}
 
 // ── Resolve plan display (billing period no longer changes price — kept for compat) ──
 export function getPlanForBilling(plan, _billingPeriod) {
@@ -217,24 +176,25 @@ export function calcFee(creditEstimate, planId = 'starter') {
   return Math.round(creditEstimate * rate)
 }
 
-// ── Redirect to Stripe Checkout ────────────────────────────────────────────────
-export async function redirectToCheckout(planId, billingPeriod = 'annual') {
-  const allPlans = { ...PLANS, ...CLAIM_PLANS }
-  if (!allPlans[planId] || planId === 'enterprise') {
+/**
+ * redirectToCheckout — sends the user to Stripe Checkout for annual payment.
+ *
+ * @param {string} planId         — 'starter' | 'plus'
+ * @param {number} creditEstimate — customer's SR&ED credit estimate in CAD
+ *                                  Server calculates fee = estimate × rate
+ *                                  and validates against DB-stored scan data.
+ */
+export async function redirectToCheckout(planId, creditEstimate = 0) {
+  if (!PLANS[planId] || planId === 'enterprise') {
     return { ok: false, message: 'Invalid plan' }
   }
-
-  const plan = allPlans[planId]
-  const resolvedPriceId =
-    billingPeriod === 'semiannual' ? (plan.priceIdSemiAnnual ?? plan.priceId) :
-    billingPeriod === 'monthly'    ? (plan.priceIdMonthly    ?? plan.priceId) :
-    plan.priceId
 
   try {
     const data = await billing.createCheckoutSession(
       planId,
       `${window.location.origin}/success?plan=${planId}`,
       `${window.location.origin}/cancel?plan=${planId}`,
+      creditEstimate,
     )
 
     if (data?.url) {
