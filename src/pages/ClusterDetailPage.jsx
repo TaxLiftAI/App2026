@@ -7,7 +7,7 @@ import {
   MessageSquare, Star, PenLine, Timer, GitMerge, Search, Scissors,
   History, Save, GitCompare, RotateCcw,
 } from 'lucide-react'
-import { EVIDENCE_SNAPSHOTS, USERS, DEVELOPER_INTERVIEWS, COMMENTS } from '../data/mockData'
+import { CLUSTERS, EVIDENCE_SNAPSHOTS, USERS, DEVELOPER_INTERVIEWS, COMMENTS } from '../data/mockData'
 import { formatDate, formatDateTime, formatCurrency, formatHours, formatPercent, canDo } from '../lib/utils'
 import { useAuth } from '../context/AuthContext'
 import { useCluster, useApproveCluster, useRejectCluster, useNarrative } from '../hooks'
@@ -885,29 +885,30 @@ export default function ClusterDetailPage() {
 
   // #10 — Split cluster
   function handleSplit() {
-    const snap = EVIDENCE_SNAPSHOTS[c.evidence_snapshot_id]
+    const cur = clusterState ?? fetchedCluster   // 'c' not yet declared at handler-def time
+    const snap = EVIDENCE_SNAPSHOTS[cur.evidence_snapshot_id]
     const childCommits = snap?.git_commits?.filter(cm => splitSelectedCommits.has(cm.sha)) ?? []
     const childTickets = snap?.jira_tickets?.filter(t => splitSelectedTickets.has(t.ticket_id)) ?? []
-    const childHours = childCommits.length && c.aggregate_time_hours
-      ? Math.round((childCommits.length / (snap?.git_commits?.length ?? 1)) * c.aggregate_time_hours * 10) / 10
+    const childHours = childCommits.length && cur.aggregate_time_hours
+      ? Math.round((childCommits.length / (snap?.git_commits?.length ?? 1)) * cur.aggregate_time_hours * 10) / 10
       : null
 
     // New child cluster (mock)
     const child = {
       id: `clus-split-${Date.now().toString(36)}`,
-      tenant_id: c.tenant_id,
+      tenant_id: cur.tenant_id,
       status: 'New',
       created_at: new Date().toISOString(),
       business_component: splitNewName.trim(),
-      trigger_rules: c.trigger_rules,
-      risk_score: c.risk_score,
+      trigger_rules: cur.trigger_rules,
+      risk_score: cur.risk_score,
       aggregate_time_hours: childHours,
       eligibility_percentage: null,
       estimated_credit_cad: null,
       estimated_credit_usd: null,
       evidence_snapshot_id: null,
       narrative_id: null,
-      eligibility_rule_version_id: c.eligibility_rule_version_id,
+      eligibility_rule_version_id: cur.eligibility_rule_version_id,
       merged_into_cluster_id: null,
       manual_override_pct: null,
       manual_override_reason: null,
@@ -916,14 +917,14 @@ export default function ClusterDetailPage() {
       proxy_confidence: null,
       _split_commits: childCommits,
       _split_tickets: childTickets,
-      _split_from: c.id,
+      _split_from: cur.id,
     }
 
     // Remaining commits / tickets stay in original
     const remainingCommitCount = (snap?.git_commits?.length ?? 0) - childCommits.length
-    const remainHours = c.aggregate_time_hours && snap?.git_commits?.length
-      ? Math.round((remainingCommitCount / snap.git_commits.length) * c.aggregate_time_hours * 10) / 10
-      : c.aggregate_time_hours
+    const remainHours = cur.aggregate_time_hours && snap?.git_commits?.length
+      ? Math.round((remainingCommitCount / snap.git_commits.length) * cur.aggregate_time_hours * 10) / 10
+      : cur.aggregate_time_hours
 
     setSplitChild(child)
     setClusterState(prev => ({
@@ -947,7 +948,7 @@ export default function ClusterDetailPage() {
   }
 
   const c = clusterState ?? cluster
-  const n = narrativeState ?? narrative
+  const n = narrativeState ?? fetchedNarrative
   const interview = DEVELOPER_INTERVIEWS[c.id]
 
   return (
