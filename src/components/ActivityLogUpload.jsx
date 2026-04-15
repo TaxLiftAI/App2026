@@ -94,7 +94,7 @@ function fmt(n) {
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
-export default function ActivityLogUpload({ className = '', onEstimate, demoMode = false, id }) {
+export default function ActivityLogUpload({ className = '', onEstimate, demoMode = false, id, subtitle }) {
   const fileRef = useRef()
   const [state,    setState]    = useState('idle')   // idle | parsing | uploading | done | error
   const [error,    setError]    = useState(null)
@@ -151,9 +151,9 @@ export default function ActivityLogUpload({ className = '', onEstimate, demoMode
           <div>
             <p className="text-sm font-semibold text-gray-900">Activity Log Upload</p>
             <p className="text-[11px] text-gray-400">
-              {demoMode
+              {subtitle ?? (demoMode
                 ? 'Download the template, fill in your R&D hours, and upload after signing in'
-                : 'Supplement GitHub/Jira data with manual R&D hours'}
+                : 'Supplement GitHub/Jira data with manual R&D hours')}
             </p>
           </div>
         </div>
