@@ -94,7 +94,7 @@ function fmt(n) {
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
-export default function ActivityLogUpload({ className = '', onEstimate }) {
+export default function ActivityLogUpload({ className = '', onEstimate, demoMode = false, id }) {
   const fileRef = useRef()
   const [state,    setState]    = useState('idle')   // idle | parsing | uploading | done | error
   const [error,    setError]    = useState(null)
@@ -141,7 +141,7 @@ export default function ActivityLogUpload({ className = '', onEstimate }) {
   const busy = state === 'parsing' || state === 'uploading'
 
   return (
-    <div className={`bg-white border border-gray-200 rounded-2xl overflow-hidden ${className}`}>
+    <div id={id} className={`bg-white border border-gray-200 rounded-2xl overflow-hidden ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
         <div className="flex items-center gap-2.5">
@@ -150,7 +150,11 @@ export default function ActivityLogUpload({ className = '', onEstimate }) {
           </div>
           <div>
             <p className="text-sm font-semibold text-gray-900">Activity Log Upload</p>
-            <p className="text-[11px] text-gray-400">Supplement GitHub/Jira data with manual R&amp;D hours</p>
+            <p className="text-[11px] text-gray-400">
+              {demoMode
+                ? 'Download the template, fill in your R&D hours, and upload after signing in'
+                : 'Supplement GitHub/Jira data with manual R&D hours'}
+            </p>
           </div>
         </div>
         <a
@@ -222,27 +226,45 @@ export default function ActivityLogUpload({ className = '', onEstimate }) {
           </div>
         )}
 
-        {/* Drop zone */}
+        {/* Drop zone — disabled in demo mode */}
         {(state === 'idle' || state === 'error') && (
-          <div
-            onDrop={handleDrop}
-            onDragOver={e => e.preventDefault()}
-            onClick={() => fileRef.current?.click()}
-            className="border-2 border-dashed border-gray-200 hover:border-indigo-300 rounded-xl p-6 text-center cursor-pointer transition-colors group"
-          >
-            <Upload size={20} className="text-gray-300 group-hover:text-indigo-400 mx-auto mb-2 transition-colors" />
-            <p className="text-xs font-medium text-gray-600 group-hover:text-indigo-600 transition-colors">
-              Drop your activity log here, or click to browse
-            </p>
-            <p className="text-[10px] text-gray-400 mt-1">.xlsx files · max 8 MB</p>
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".xlsx,.xls"
-              className="hidden"
-              onChange={e => handleFile(e.target.files[0])}
-            />
-          </div>
+          demoMode ? (
+            <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center bg-gray-50">
+              <Upload size={20} className="text-gray-300 mx-auto mb-2" />
+              <p className="text-xs font-medium text-gray-500">
+                Upload available after signing in
+              </p>
+              <p className="text-[10px] text-gray-400 mt-1">
+                Download the template above, fill it in, then create a free account to upload
+              </p>
+              <a
+                href="/register"
+                className="inline-flex items-center gap-1.5 mt-3 text-xs font-semibold text-indigo-600 hover:text-indigo-800 underline"
+              >
+                Create free account →
+              </a>
+            </div>
+          ) : (
+            <div
+              onDrop={handleDrop}
+              onDragOver={e => e.preventDefault()}
+              onClick={() => fileRef.current?.click()}
+              className="border-2 border-dashed border-gray-200 hover:border-indigo-300 rounded-xl p-6 text-center cursor-pointer transition-colors group"
+            >
+              <Upload size={20} className="text-gray-300 group-hover:text-indigo-400 mx-auto mb-2 transition-colors" />
+              <p className="text-xs font-medium text-gray-600 group-hover:text-indigo-600 transition-colors">
+                Drop your activity log here, or click to browse
+              </p>
+              <p className="text-[10px] text-gray-400 mt-1">.xlsx files · max 8 MB</p>
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".xlsx,.xls"
+                className="hidden"
+                onChange={e => handleFile(e.target.files[0])}
+              />
+            </div>
+          )
         )}
 
         {/* Loading */}

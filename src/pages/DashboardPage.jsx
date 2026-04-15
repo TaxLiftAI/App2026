@@ -742,15 +742,14 @@ export default function DashboardPage() {
         integrations={integrations}
       />
 
-      {/* Activity Log upload — always visible (supplement GitHub/Jira with manual hours) */}
-      {!usingMock && (
-        <ActivityLogUpload
-          onEstimate={est => {
-            // Surface the credit estimate in the URL so the stat card can pick it up on next load
-            window.dispatchEvent(new CustomEvent('taxlift:changelog-estimate', { detail: est }))
-          }}
-        />
-      )}
+      {/* Activity Log upload — always visible, demo mode shows download-only */}
+      <ActivityLogUpload
+        id="activity-log"
+        demoMode={usingMock}
+        onEstimate={est => {
+          window.dispatchEvent(new CustomEvent('taxlift:changelog-estimate', { detail: est }))
+        }}
+      />
 
       {/* ── EMPTY STATE ─────────────────────────────────────────────────────────
           Real user, no clusters yet. Show the value-prop CTA only — no charts,
