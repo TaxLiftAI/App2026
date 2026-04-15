@@ -576,7 +576,10 @@ export default function OnboardingWizardPage() {
             provider={provider}
             backfill={backfill}
             sensitivity={sensitivity}
-            onDone={path => navigate(path)}
+            onDone={path => {
+              const ALLOWED = ['/welcome', '/integrations', '/dashboard']
+              navigate(ALLOWED.includes(path) ? path : '/dashboard')
+            }}
           />
         )}
       </div>
