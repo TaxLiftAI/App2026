@@ -150,6 +150,25 @@ export default function ScanReposPage() {
           <p className="text-sm text-gray-500 mt-1">
             Choose your most active R&D repos. Focus on ML, algorithms, platform, or core product — not docs or config repos.
           </p>
+          {/* Coming-soon platform chips */}
+          <div className="flex flex-wrap items-center gap-2 mt-3">
+            <span className="text-[11px] text-gray-400">Currently: GitHub</span>
+            <span className="text-[11px] text-gray-300">·</span>
+            {[
+              { name: 'GitLab', icon: '🦊' },
+              { name: 'Bitbucket', icon: '🪣' },
+              { name: 'Azure DevOps', icon: '🔷' },
+            ].map(p => (
+              <a
+                key={p.name}
+                href={`mailto:hello@taxlift.ai?subject=${encodeURIComponent(p.name + ' integration request')}`}
+                className="inline-flex items-center gap-1 text-[10px] bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-2 py-0.5 font-semibold hover:bg-amber-100 transition-colors"
+                title={`Request ${p.name} integration`}
+              >
+                {p.icon} {p.name} — coming soon
+              </a>
+            ))}
+          </div>
         </div>
 
         {/* Search */}
