@@ -9,6 +9,8 @@ import Card from '../components/ui/Card'
 import Modal from '../components/ui/Modal'
 import Button from '../components/ui/Button'
 import { useAuth } from '../context/AuthContext'
+import { QualificationBadges, qualifyCluster } from '../components/SREDQualificationPanel'
+import { EVIDENCE_SNAPSHOTS } from '../data/mockData'
 
 const PLAN_LIMITS = { free: 3, starter: 25, plus: Infinity, enterprise: Infinity }
 
@@ -392,7 +394,7 @@ export default function ClustersPage() {
                       </td>
                     )}
                     <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 mb-1">
                         <span className={`text-sm font-medium transition-colors ${isSelected ? 'text-indigo-700' : 'text-gray-900 group-hover:text-indigo-700'}`}>
                           {cluster.business_component ?? <span className="italic text-gray-400">Unnamed</span>}
                         </span>
@@ -403,6 +405,11 @@ export default function ClustersPage() {
                           <span className="px-1.5 py-0.5 bg-blue-100 text-blue-600 text-[10px] font-semibold rounded" title={`Proxy time estimate · Confidence: ${cluster.proxy_confidence}`}>PROXY</span>
                         )}
                       </div>
+                      <QualificationBadges
+                        cluster={cluster}
+                        commits={EVIDENCE_SNAPSHOTS[cluster.evidence_snapshot_id]?.git_commits ?? []}
+                        onClick={e => { e.stopPropagation(); navigate(`/clusters/${cluster.id}`) }}
+                      />
                     </td>
                     <td className="px-5 py-3.5"><StatusBadge status={cluster.status} /></td>
                     <td className="px-5 py-3.5"><RiskScore score={cluster.risk_score} /></td>

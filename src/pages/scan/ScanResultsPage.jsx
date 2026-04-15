@@ -32,6 +32,131 @@ import {
   FileSpreadsheet,
 } from 'lucide-react'
 import ActivityLogUpload from '../../components/ActivityLogUpload'
+import { qualifyCluster } from '../../components/SREDQualificationPanel'
+
+// ── SR&ED qualification criterion labels ─────────────────────────────────────
+const CRITERION_LABELS = {
+  systematic:  { short: 'Systematic', ref: 'ITA s.248(1)(a)' },
+  uncertainty: { short: 'Uncertainty', ref: 'ITA s.248(1)(b)' },
+  advancement: { short: 'Advancement', ref: 'ITA s.248(1)(c)' },
+}
+
+// ── Scan cluster card with expandable qualification breakdown ─────────────────
+function ScanClusterCard({ cluster, theme, meta, qual, commits }) {
+  const [expanded, setExpanded] = useState(false)
+
+  function scoreColor(n) {
+    if (n >= 75) return { bar: 'bg-emerald-500', text: 'text-emerald-600', pill: 'bg-emerald-50 border-emerald-200 text-emerald-700' }
+    if (n >= 50) return { bar: 'bg-amber-400',   text: 'text-amber-600',   pill: 'bg-amber-50 border-amber-200 text-amber-700' }
+    return           { bar: 'bg-red-400',         text: 'text-red-500',     pill: 'bg-red-50 border-red-200 text-red-700' }
+  }
+
+  const overallC = scoreColor(qual.overall)
+
+  return (
+    <div className={`rounded-xl border overflow-hidden ${meta.color}`}>
+      {/* Main row */}
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="text-lg flex-shrink-0">{meta.icon}</span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold truncate">{cluster.business_component ?? cluster.name}</p>
+              <p className="text-[11px] opacity-70 mt-0.5">
+                {cluster._commitCount ?? cluster.commit_count ?? 0} commits · {Math.round(cluster.aggregate_time_hours)} hrs
+              </p>
+            </div>
+          </div>
+          <div className="text-right flex-shrink-0">
+            <p className="text-base font-bold tabular-nums">{fmtK(cluster.estimated_credit_cad)}</p>
+            <p className="text-[10px] opacity-60">estimated ITC</p>
+          </div>
+        </div>
+
+        {/* Qualification signal row */}
+        <div className="mt-3 flex items-center gap-2 flex-wrap">
+          {Object.entries(qual.criteria).map(([key, data]) => {
+            const c = scoreColor(data.score)
+            return (
+              <span key={key} className={`inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${c.pill}`}>
+                {CRITERION_LABELS[key].short} {data.score}%
+              </span>
+            )
+          })}
+          <button
+            onClick={() => setExpanded(v => !v)}
+            className="ml-auto flex items-center gap-1 text-[10px] font-semibold opacity-80 hover:opacity-100 transition-opacity"
+          >
+            {expanded ? 'Hide' : 'Why this qualifies'}
+            {expanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+          </button>
+        </div>
+      </div>
+
+      {/* Expandable qualification breakdown */}
+      {expanded && (
+        <div className="border-t border-current/10 bg-white px-4 py-4 space-y-3">
+          {/* 3-criterion breakdown */}
+          <div className="grid grid-cols-3 gap-2">
+            {Object.entries(qual.criteria).map(([key, data]) => {
+              const c    = scoreColor(data.score)
+              const meta = CRITERION_LABELS[key]
+              return (
+                <div key={key} className={`rounded-lg border p-2.5 ${c.pill.includes('emerald') ? 'bg-emerald-50 border-emerald-200' : c.pill.includes('amber') ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className={`text-[10px] font-bold ${c.text}`}>{meta.short}</p>
+                    <span className={`text-[10px] font-bold ${c.text}`}>{data.score}%</span>
+                  </div>
+                  <div className="w-full bg-white/60 rounded-full h-1 mb-1.5">
+                    <div className={`h-1 rounded-full ${c.bar}`} style={{ width: `${data.score}%` }} />
+                  </div>
+                  <p className="text-[9px] text-gray-500 font-mono">{meta.ref}</p>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Top evidence commits */}
+          {qual.topEvidenceCommits.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wide">Qualifying evidence commits</p>
+              {qual.topEvidenceCommits.map(cm => (
+                <div key={cm.sha} className="flex items-start gap-2 bg-slate-50 rounded-lg px-2.5 py-1.5 border border-slate-100">
+                  <span className="font-mono text-[9px] text-gray-400 flex-shrink-0 mt-0.5">{cm.sha?.slice(0, 7)}</span>
+                  <p className="text-[11px] text-gray-700 font-mono leading-tight">{cm.message}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Talking points */}
+          <div className="bg-indigo-50 rounded-xl border border-indigo-100 px-3 py-2.5">
+            <p className="text-[10px] font-semibold text-indigo-600 uppercase tracking-wide mb-1.5">If CRA asks why this qualifies, say:</p>
+            <p className="text-xs text-indigo-900 leading-relaxed">
+              "This project involved genuine technological uncertainty — we did not know at the outset
+              whether <strong>{theme}</strong> could meet our requirements using standard techniques.
+              The commit history shows a structured experimental process: hypothesis, implementation,
+              measurement, and iteration. Each cycle produced new knowledge that informed the next."
+            </p>
+          </div>
+
+          {/* Weaknesses */}
+          {qual.weaknesses.length > 0 && (
+            <div className="flex items-start gap-2 bg-amber-50 rounded-xl border border-amber-100 px-3 py-2.5">
+              <AlertTriangle size={12} className="text-amber-500 flex-shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-[10px] font-semibold text-amber-700">Strengthen before filing:</p>
+                {qual.weaknesses.map((w, i) => (
+                  <p key={i} className="text-[11px] text-amber-700">· {w}</p>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ── Animated number hook ──────────────────────────────────────────────────────
 function useAnimatedNumber(target, duration = 800) {
@@ -573,31 +698,38 @@ Generated by TaxLift (taxlift.ai) · Free SR\u0026ED scan`
 
           <div className="space-y-3">
             {topClusters.map((cluster, i) => {
-              const theme = cluster._theme ?? cluster.theme ?? 'General R&D'
-              const meta  = THEME_META[theme] ?? { icon: '🔬', color: 'text-indigo-700 bg-indigo-50 border-indigo-200' }
+              const theme   = cluster._theme ?? cluster.theme ?? 'General R&D'
+              const meta    = THEME_META[theme] ?? { icon: '🔬', color: 'text-indigo-700 bg-indigo-50 border-indigo-200' }
+              // Build synthetic commit list from _topCommits for the qualification engine
+              const syntheticCommits = (cluster._topCommits ?? []).map((c, ci) => ({
+                sha: `sc-${i}-${ci}`,
+                message: c.msg ?? c.message ?? '',
+              }))
+              // Build synthetic trigger_rules from _signals
+              const syntheticRules = (cluster._signals ?? []).map(sig => ({
+                heuristic: sig.includes('experiment') ? 'ExperimentalBranches'
+                  : sig.includes('churn') ? 'HighCodeChurn'
+                  : sig.includes('perf') ? 'PerformanceOptimization'
+                  : 'ExperimentalBranches',
+                weight: 0.25,
+                fired_value: 0.80,
+                threshold: 0.70,
+              }))
+              const syntheticCluster = {
+                trigger_rules: syntheticRules.length
+                  ? syntheticRules
+                  : [{ heuristic: 'ExperimentalBranches', weight: 0.35, fired_value: 0.80, threshold: 0.70 }],
+              }
+              const qual    = qualifyCluster(syntheticCluster, syntheticCommits)
               return (
-                <div key={cluster.id ?? i} className={`rounded-xl border p-4 ${meta.color}`}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="text-lg flex-shrink-0">{meta.icon}</span>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold truncate">{cluster.business_component ?? cluster.name}</p>
-                        <p className="text-[11px] opacity-70 mt-0.5">
-                          {cluster._commitCount ?? cluster.commit_count ?? 0} commits · {Math.round(cluster.aggregate_time_hours)} hrs
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-base font-bold tabular-nums">{fmtK(cluster.estimated_credit_cad)}</p>
-                      <p className="text-[10px] opacity-60">estimated ITC</p>
-                    </div>
-                  </div>
-                  {cluster._signals?.slice(0, 2).map((sig, j) => (
-                    <p key={j} className="text-[10px] font-mono opacity-60 mt-1.5 truncate">
-                      · {sig}
-                    </p>
-                  ))}
-                </div>
+                <ScanClusterCard
+                  key={cluster.id ?? i}
+                  cluster={cluster}
+                  theme={theme}
+                  meta={meta}
+                  qual={qual}
+                  commits={syntheticCommits}
+                />
               )
             })}
           </div>

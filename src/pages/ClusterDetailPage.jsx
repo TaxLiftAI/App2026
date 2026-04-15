@@ -21,6 +21,7 @@ import Modal from '../components/ui/Modal'
 import CommentThread from '../components/ui/CommentThread'
 import UpgradeModal from '../components/ui/UpgradeModal'
 import NarrativeQualityCard from '../components/NarrativeQualityCard'
+import SREDQualificationPanel from '../components/SREDQualificationPanel'
 
 // ── Heuristic icon map ─────────────────────────────────────────────────────────
 const HEURISTIC_ICONS = {
@@ -1103,6 +1104,13 @@ export default function ClusterDetailPage() {
           </div>
         ))}
       </div>
+
+      {/* ── Why this qualifies ─────────────────────────────────────────────── */}
+      <SREDQualificationPanel
+        cluster={c}
+        commits={snapshot?.git_commits ?? []}
+        defaultOpen={false}
+      />
 
       {/* Main content: 3/5 evidence + 2/5 narrative */}
       <div className="grid grid-cols-5 gap-4">
