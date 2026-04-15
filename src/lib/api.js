@@ -164,6 +164,18 @@ export const auth = {
   getProfile:     ()        => get('/api/v1/auth/profile'),
   updateProfile:  (payload) => request('PATCH', '/api/v1/auth/profile', { body: payload }),
   changePassword: (payload) => post('/api/v1/auth/change-password', { body: payload }),
+
+  // CPA partner formal application — maps CpaRegisterPage fields to /cpa/partner-signup
+  cpaRegister: (payload) => post('/api/v1/cpa/partner-signup', {
+    body: {
+      full_name:    payload.partner_name,
+      email:        payload.email,
+      firm_name:    payload.firm_name,
+      province:     payload.province,
+      phone:        payload.phone      ?? '',
+      client_count: payload.firm_size  ?? '',
+    },
+  }),
 }
 
 // ── Clients (CPA portal) ──────────────────────────────────────────────────────

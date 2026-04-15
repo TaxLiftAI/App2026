@@ -217,6 +217,19 @@ db.exec(`
     feedback_note TEXT NOT NULL DEFAULT '',
     created_at    TEXT NOT NULL DEFAULT (datetime('now'))
   );
+
+  CREATE TABLE IF NOT EXISTS cpa_partners (
+    id            TEXT PRIMARY KEY,
+    full_name     TEXT NOT NULL,
+    email         TEXT UNIQUE NOT NULL,
+    firm_name     TEXT NOT NULL,
+    province      TEXT NOT NULL DEFAULT 'ON',
+    phone         TEXT NOT NULL DEFAULT '',
+    client_count  TEXT NOT NULL DEFAULT '',
+    referral_code TEXT UNIQUE NOT NULL,
+    status        TEXT NOT NULL DEFAULT 'pending',
+    created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+  );
 `)
 
 console.log('[db] Ready —', DB_PATH)

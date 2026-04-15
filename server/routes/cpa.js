@@ -15,6 +15,11 @@ const SMTP_USER    = process.env.SMTP_USER
 const SMTP_PASS    = process.env.SMTP_PASS
 const FRONTEND_URL = (process.env.FRONTEND_URL || 'https://app.taxlift.ai').replace(/\/$/, '')
 
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
 let _transporter = null
 function getTransporter() {
   if (_transporter) return _transporter
@@ -263,23 +268,8 @@ router.post('/partner-signup', async (req, res) => {
   const makeId = require('../utils/uuid').makeId || (() => require('crypto').randomUUID())
   const now    = new Date().toISOString()
 
-  // Store in cpa_partners table (create if needed)
+  // Store in cpa_partners table (schema defined in db.js)
   try {
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS cpa_partners (
-        id           TEXT PRIMARY KEY,
-        full_name    TEXT NOT NULL,
-        email        TEXT UNIQUE NOT NULL,
-        firm_name    TEXT NOT NULL,
-        province     TEXT NOT NULL DEFAULT 'ON',
-        phone        TEXT NOT NULL DEFAULT '',
-        client_count TEXT NOT NULL DEFAULT '',
-        referral_code TEXT UNIQUE NOT NULL,
-        status       TEXT NOT NULL DEFAULT 'pending',
-        created_at   TEXT NOT NULL DEFAULT (datetime('now'))
-      )
-    `)
-
     db.prepare(`
       INSERT OR IGNORE INTO cpa_partners
         (id, full_name, email, firm_name, province, phone, client_count, referral_code, created_at)
@@ -357,10 +347,5 @@ router.post('/partner-signup', async (req, res) => {
 
   res.json({ ok: true, referral_code: refCode, referral_url: referralUrl })
 })
-
-function escHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-}
 
 module.exports = router
