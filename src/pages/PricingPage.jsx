@@ -17,7 +17,7 @@ import {
   ShieldCheck, Check, ArrowRight, ArrowLeft, Loader2, Sparkles,
   ChevronDown, ChevronUp, Zap, Star, Clock, Lock, ExternalLink,
   TrendingUp, Calendar, RefreshCw, AlertCircle, BadgeCheck,
-  Github, DollarSign,
+  Github, DollarSign, X, Building2,
 } from 'lucide-react'
 import PricingCard from '../components/PricingCard'
 import { PLANS, redirectToCheckout, getPlanForBilling } from '../lib/stripe'
@@ -663,13 +663,15 @@ export default function PricingPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
-  const [checkoutLoading, setCheckoutLoading] = useState(null)
-  const [waitlistOpen,    setWaitlistOpen]    = useState(false)
-  const [waitlistPlan,    setWaitlistPlan]    = useState('')
-  const [waitlistSource,  setWaitlistSource]  = useState('pricing')
-  const [estimate,        setEstimate]        = useState(null)
-  const [clusterCount,    setClusterCount]    = useState(null)
-  const [gateCleared,     setGateCleared]     = useState(false)
+  const [checkoutLoading,   setCheckoutLoading]   = useState(null)
+  const [waitlistOpen,      setWaitlistOpen]      = useState(false)
+  const [waitlistPlan,      setWaitlistPlan]      = useState('')
+  const [waitlistSource,    setWaitlistSource]    = useState('pricing')
+  const [estimate,          setEstimate]          = useState(null)
+  const [clusterCount,      setClusterCount]      = useState(null)
+  const [gateCleared,       setGateCleared]       = useState(false)
+  const [referralModalOpen, setReferralModalOpen] = useState(false)
+  const [referralCode,      setReferralCode]      = useState('')
 
   // Auto-unlock: ?estimate= param, existing scan results, or returning visitor (same session)
   useEffect(() => {
@@ -943,12 +945,12 @@ export default function PricingPage() {
               )}
             </div>
             <div className="flex-shrink-0">
-              <a
-                href="mailto:hello@taxlift.ai?subject=CPA%20Referral%20Pricing%20Inquiry"
+              <button
+                onClick={() => setReferralModalOpen(true)}
                 className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors shadow-sm whitespace-nowrap"
               >
                 Get referral pricing <ArrowRight size={14} />
-              </a>
+              </button>
             </div>
           </div>
         </div>
@@ -1009,6 +1011,93 @@ export default function PricingPage() {
       </div>
 
       <WaitlistModal isOpen={waitlistOpen} onClose={() => setWaitlistOpen(false)} defaultPlan={waitlistPlan} source={waitlistSource} />
+
+      {/* ── CPA Referral Modal ──────────────────────────────────────────────── */}
+      {referralModalOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm"
+            onClick={() => setReferralModalOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl p-8">
+              <button
+                onClick={() => setReferralModalOpen(false)}
+                className="absolute right-4 top-4 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                aria-label="Close"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center mb-4">
+                <Building2 size={22} className="text-emerald-600" />
+              </div>
+
+              <h2 className="text-xl font-bold text-slate-900 mb-1">CPA Referral Pricing</h2>
+              <p className="text-slate-500 text-sm leading-relaxed mb-6">
+                Your CPA firm should have sent you a referral code. Enter it below to lock in
+                the <strong className="text-slate-800">3% contingency fee</strong> — nothing
+                due until CRA pays you.
+              </p>
+
+              <div className="mb-4">
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  CPA referral code <span className="text-slate-400 font-normal">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={referralCode}
+                  onChange={e => setReferralCode(e.target.value.trim())}
+                  placeholder="e.g. HARTWELL-2025"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent font-mono"
+                />
+                <p className="mt-1.5 text-[11px] text-slate-400">
+                  No code? You can still proceed — enter your CPA's email during signup and we'll verify the referral.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <button
+                  onClick={() => {
+                    setReferralModalOpen(false)
+                    const params = new URLSearchParams({ plan: 'starter' })
+                    if (referralCode) params.set('ref', referralCode)
+                    if (estimate)     params.set('estimate', String(estimate))
+                    navigate('/signup?' + params.toString())
+                  }}
+                  className="flex items-center justify-center gap-2 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 rounded-xl transition-colors"
+                >
+                  {referralCode ? 'Apply code & create account' : 'Create account'}
+                  <ArrowRight size={15} />
+                </button>
+                <button
+                  onClick={() => {
+                    setReferralModalOpen(false)
+                    navigate('/scan')
+                  }}
+                  className="flex items-center justify-center w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium py-3 rounded-xl transition-colors text-sm"
+                >
+                  Run my free scan first
+                </button>
+              </div>
+
+              <div className="mt-5 pt-4 border-t border-gray-100 flex flex-wrap gap-x-4 gap-y-1.5">
+                {[
+                  'No payment until CRA refund',
+                  'One-time fee — no subscription',
+                  'Full T661 package included',
+                ].map(f => (
+                  <div key={f} className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                    <Check size={10} className="text-emerald-500" />
+                    {f}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }
