@@ -199,8 +199,8 @@ function EvidenceTabs({ snapshot, clusterId }) {
             /* Fall back to mock data if no live runs yet */
             <>
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Demo data — connect CI/CD to see live builds</span>
-                <div className="flex-1 h-px bg-gray-100" />
+                <span className="text-[10px] font-semibold text-indigo-400 uppercase tracking-wide">Demo builds — connect CI/CD to see live data</span>
+                <div className="flex-1 h-px bg-indigo-100" />
               </div>
               {mockBuilds.map(b => (
                 <div key={b.build_id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
