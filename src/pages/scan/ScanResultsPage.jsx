@@ -29,8 +29,10 @@ import {
   Sparkles, AlertTriangle, TrendingUp, Clock, BarChart3,
   CheckCircle2, Mail, ExternalLink, RefreshCw, FlaskConical,
   Download, X, Github, Users, Copy, ChevronDown, ChevronUp,
-  FileSpreadsheet,
+  FileSpreadsheet, DollarSign, CalendarDays, FileText, Shield,
+  ToggleLeft, ToggleRight,
 } from 'lucide-react'
+import { useAuth } from '../../context/AuthContext'
 import ActivityLogUpload from '../../components/ActivityLogUpload'
 import { qualifyCluster } from '../../components/SREDQualificationPanel'
 
@@ -215,6 +217,12 @@ const THEME_META = {
 
 export default function ScanResultsPage() {
   const navigate = useNavigate()
+  const { currentUser } = useAuth()
+
+  // Paid-plan gate — Starter / Plus / Enterprise unlock the four premium features
+  const isPaid = ['starter', 'plus', 'enterprise'].includes(
+    currentUser?.subscription_tier?.toLowerCase() ?? ''
+  )
 
   // Read scan results from sessionStorage
   const [results] = useState(() => {
@@ -232,6 +240,90 @@ export default function ScanResultsPage() {
   const [showDemoModal,  setShowDemoModal]  = useState(false)
   const [showCpaPanel,   setShowCpaPanel]   = useState(false)
   const [cpaDraftCopied, setCpaDraftCopied] = useState(false)
+
+  // ── Feature 1: Payroll rate override ─────────────────────────────────────
+  const [showPayroll,    setShowPayroll]    = useState(false)
+  const [devRate,        setDevRate]        = useState(72)
+  const [senRate,        setSenRate]        = useState(92)
+  const [archRate,       setArchRate]       = useState(116)
+  // Weighted avg of custom rates (50% dev, 35% senior, 15% arch)
+  const customAvgRate   = Math.round(devRate * 0.50 + senRate * 0.35 + archRate * 0.15)
+  const defaultAvgRate  = Math.round(72   * 0.50 + 92  * 0.35 + 116  * 0.15)  // 83
+  const payrollMultiplier = customAvgRate / defaultAvgRate
+
+  // ── Feature 2: Retroactive lookback ──────────────────────────────────────
+  const [showLookback, setShowLookback] = useState(false)
+  // Derive claimable fiscal years (CRA FY = Apr 1 – Mar 31, 18-month lookback)
+  function getFiscalYear(date = new Date()) {
+    const yr = date.getFullYear()
+    return date.getMonth() >= 3 ? yr : yr - 1  // Apr onwards = current FY
+  }
+  const currentFY    = getFiscalYear()
+  const lookbackYears = [currentFY, currentFY - 1, currentFY - 2]  // up to 3 prior FYs
+  // Rough per-year estimate: current year is baseline, prior years at 90% and 75%
+  const fyMultipliers = [1.0, 0.90, 0.75]
+
+  // ── Feature 3: T661 CSV export ────────────────────────────────────────────
+  function handleExportT661Csv() {
+    const company = (results?.repos ?? []).map(r => r.split('/').pop()).filter(Boolean).join(', ') || 'Company'
+    const qualExp = Math.round((credit * payrollMultiplier) / totalRate)
+    const rows = [
+      ['TaxLift SR&ED Export — T661 Field Mapping'],
+      ['Generated', new Date().toLocaleDateString('en-CA')],
+      ['Company', company],
+      ['Fiscal Year', `FY${currentFY}/${currentFY + 1}`],
+      ['CCPC Status', isCcpc ? 'Yes — CCPC' : 'No — Non-CCPC'],
+      ['Province', province],
+      [],
+      ['=== EXPENDITURE SUMMARY ==='],
+      ['Field', 'T661 Line', 'Value (CAD)'],
+      ['Qualified SR&ED Expenditures', 'Line 205', qualExp],
+      ['Investment Tax Credit (estimated)', 'Line 360', Math.round(credit * payrollMultiplier)],
+      ['Federal ITC Rate', '', `${(federalRate * 100).toFixed(0)}%`],
+      ['Provincial ITC Rate', '', `${(provRate * 100).toFixed(1)}%`],
+      ['Combined ITC Rate', '', `${(totalRate * 100).toFixed(1)}%`],
+      ['Total Qualifying Hours', '', Math.round(hoursTotal)],
+      ['Developer Avg Rate Used', '', `$${customAvgRate}/hr`],
+      [],
+      ['=== SR&ED PROJECT CLUSTERS ==='],
+      ['Project Name (T661 Part 2)', 'Theme', 'Qualifying Hours', 'Estimated Credit', 'Commit Count', 'Evidence Strength %'],
+      ...clusters.map(c => [
+        c.business_component ?? c._theme ?? c.name ?? 'Unnamed',
+        c._theme ?? '',
+        Math.round(c.aggregate_time_hours ?? 0),
+        Math.round(c.estimated_credit_cad ?? 0),
+        c._commitCount ?? c.commit_count ?? 0,
+        `${Math.round((c.eligibility_percentage ?? 0.7) * 100)}%`,
+      ]),
+      [],
+      ['=== CRA METHODOLOGY REFERENCES ==='],
+      ['Reference', 'Application'],
+      ['ITA s.248(1)', 'SR&ED definition — systematic investigation criterion'],
+      ['ITA s.127(9)', 'Investment Tax Credit definition'],
+      ['ITA s.127(10.1)', 'CCPC enhanced refundable rate (35% on first $3M)'],
+      ['CRA T4088', 'Guide to Form T661'],
+      ['CRA IT-151R5', 'Scientific Research and Experimental Development Expenditures'],
+      [],
+      ['DISCLAIMER: This export is an estimate for CPA review. It does not constitute a filed T661 claim. Consult a qualified SR&ED practitioner before filing.'],
+    ]
+    const csv = rows.map(row =>
+      Array.isArray(row)
+        ? row.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')
+        : `"${String(row ?? '').replace(/"/g, '')}"`
+    ).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `taxlift-t661-export-fy${currentFY}-${new Date().toISOString().slice(0,10)}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  // ── Feature 4: Methodology audit trail ───────────────────────────────────
+  const [showAuditTrail, setShowAuditTrail] = useState(false)
 
   // Redirect to landing if no results (e.g. direct URL visit)
   useEffect(() => {
@@ -252,8 +344,10 @@ export default function ScanResultsPage() {
   // Rebase the raw credit on current rates (scan used 0.35 federal by default)
   const baseCredit  = results?.estimated_credit ?? 0
   const credit      = Math.round(baseCredit * (totalRate / 0.43))  // 0.43 = original assumed 0.35+0.08
-  const creditLow   = Math.round(credit * 0.65)
-  const creditHigh  = Math.round(credit * 1.35)
+  // If paid and custom payroll rates differ from defaults, apply the multiplier
+  const creditAdj   = isPaid ? Math.round(credit * payrollMultiplier) : credit
+  const creditLow   = Math.round(creditAdj * 0.65)
+  const creditHigh  = Math.round(creditAdj * 1.35)
 
   const animLow  = useAnimatedNumber(creditLow,  900)
   const animHigh = useAnimatedNumber(creditHigh, 1100)
@@ -588,6 +682,298 @@ Generated by TaxLift (taxlift.ai) · Free SR\u0026ED scan`
           )}
         </div>
 
+        {/* ══════════════════════════════════════════════════════════════════════
+            FEATURE 1 — Payroll Rate Override
+            Free:  locked panel showing the $72/hr assumption with upgrade CTA
+            Paid:  editable salary inputs per role; credit recalculates live
+        ══════════════════════════════════════════════════════════════════════ */}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          <button
+            onClick={() => isPaid ? setShowPayroll(v => !v) : null}
+            className={`w-full flex items-center justify-between gap-3 px-5 py-4 ${isPaid ? 'hover:bg-gray-50 cursor-pointer' : 'cursor-default'} transition-colors`}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${isPaid ? 'bg-emerald-50' : 'bg-gray-100'}`}>
+                <DollarSign size={15} className={isPaid ? 'text-emerald-600' : 'text-gray-400'} />
+              </div>
+              <div className="text-left min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-gray-900">Payroll Rate Override</p>
+                  {!isPaid && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-full px-2 py-0.5">
+                      <Lock size={9} /> Starter
+                    </span>
+                  )}
+                  {isPaid && payrollMultiplier !== 1 && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full px-2 py-0.5">
+                      ✓ Custom rates applied
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {isPaid
+                    ? `Using $${customAvgRate}/hr weighted avg · Credit ${payrollMultiplier > 1 ? 'increased' : payrollMultiplier < 1 ? 'decreased' : 'unchanged'} from default`
+                    : 'Replace $72/hr assumption with your actual T4 salary data — makes the estimate board-ready'}
+                </p>
+              </div>
+            </div>
+            {isPaid
+              ? (showPayroll ? <ChevronUp size={15} className="text-gray-400 flex-shrink-0" /> : <ChevronDown size={15} className="text-gray-400 flex-shrink-0" />)
+              : <ArrowRight size={14} className="text-indigo-400 flex-shrink-0" />
+            }
+          </button>
+
+          {/* Free: teaser locked state */}
+          {!isPaid && (
+            <div className="border-t border-gray-100 px-5 py-4 bg-gray-50">
+              <div className="grid grid-cols-3 gap-3 mb-3 opacity-50 pointer-events-none select-none">
+                {[
+                  { label: 'Developer (avg)', value: '$72/hr', role: '50% of hours' },
+                  { label: 'Senior Developer', value: '$92/hr', role: '35% of hours' },
+                  { label: 'Architect / ML Eng', value: '$116/hr', role: '15% of hours' },
+                ].map(r => (
+                  <div key={r.label} className="bg-white border border-gray-200 rounded-xl p-3">
+                    <p className="text-[10px] text-gray-400 mb-1">{r.label}</p>
+                    <p className="text-base font-bold text-gray-300 font-mono">{r.value}</p>
+                    <p className="text-[10px] text-gray-300 mt-0.5">{r.role}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs text-gray-500 max-w-xs">
+                  Your actual developer salaries may be 30–50% higher. Enter real T4 rates to get a number you can take to your board.
+                </p>
+                <button
+                  onClick={() => navigate(`/signup?from=scan&plan=starter&credit=${creditAdj}`)}
+                  className="flex-shrink-0 flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-colors"
+                >
+                  Unlock <ArrowRight size={11} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Paid: editable rate inputs */}
+          {isPaid && showPayroll && (
+            <div className="border-t border-gray-100 px-5 py-4 bg-gray-50 space-y-4">
+              <p className="text-xs text-gray-500">
+                Enter your actual average hourly rates by role. The credit estimate updates live.
+                Use gross salary ÷ 1,800 annual hours as a quick conversion.
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: 'Developer', sub: '~50% of SR&ED hours', val: devRate, set: setDevRate, min: 40, max: 200 },
+                  { label: 'Senior Developer', sub: '~35% of SR&ED hours', val: senRate, set: setSenRate, min: 50, max: 250 },
+                  { label: 'Architect / ML Eng', sub: '~15% of SR&ED hours', val: archRate, set: setArchRate, min: 60, max: 350 },
+                ].map(r => (
+                  <div key={r.label} className="bg-white border border-gray-200 rounded-xl p-3">
+                    <p className="text-[10px] font-medium text-gray-600 mb-2">{r.label}</p>
+                    <div className="flex items-center gap-1 mb-1">
+                      <span className="text-sm text-gray-400">$</span>
+                      <input
+                        type="number"
+                        min={r.min}
+                        max={r.max}
+                        value={r.val}
+                        onChange={e => r.set(Math.max(r.min, Math.min(r.max, Number(e.target.value) || r.min)))}
+                        className="w-full text-base font-bold text-gray-900 font-mono border-0 bg-transparent focus:outline-none focus:ring-0 p-0"
+                      />
+                      <span className="text-xs text-gray-400">/hr</span>
+                    </div>
+                    <input
+                      type="range" min={r.min} max={r.max} value={r.val}
+                      onChange={e => r.set(Number(e.target.value))}
+                      className="w-full h-1.5 accent-emerald-500"
+                    />
+                    <p className="text-[10px] text-gray-400 mt-1">{r.sub}</p>
+                  </div>
+                ))}
+              </div>
+              {/* Live result */}
+              <div className={`rounded-xl p-4 flex items-center justify-between gap-4 ${
+                payrollMultiplier > 1 ? 'bg-emerald-50 border border-emerald-200'
+                  : payrollMultiplier < 1 ? 'bg-amber-50 border border-amber-200'
+                  : 'bg-gray-100 border border-gray-200'
+              }`}>
+                <div>
+                  <p className="text-xs text-gray-500 mb-0.5">Adjusted weighted avg rate</p>
+                  <p className="text-sm font-bold text-gray-900 font-mono">${customAvgRate}/hr</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">
+                    {payrollMultiplier > 1
+                      ? `+${((payrollMultiplier - 1) * 100).toFixed(0)}% above default`
+                      : payrollMultiplier < 1
+                      ? `${((1 - payrollMultiplier) * 100).toFixed(0)}% below default`
+                      : 'Same as default'}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-gray-500 mb-0.5">Updated credit estimate</p>
+                  <p className="text-xl font-extrabold text-gray-900">
+                    {fmtK(creditLow)} – {fmtK(creditHigh)}
+                  </p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">
+                    {payrollMultiplier !== 1 && `was ${fmtK(Math.round(credit * 0.65))}–${fmtK(Math.round(credit * 1.35))} at default rates`}
+                  </p>
+                </div>
+              </div>
+              <p className="text-[10px] text-gray-400">
+                Tip: use the employee's T4 Box 14 employment income ÷ 1,800 working hours for the most accurate rate.
+                Overhead is already factored in at 20%.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* ══════════════════════════════════════════════════════════════════════
+            FEATURE 2 — Retroactive 18-Month Lookback
+            Free:  locked banner with "FY2024 + FY2023 opportunity detected"
+            Paid:  per-year credit estimates with filing deadlines + urgency
+        ══════════════════════════════════════════════════════════════════════ */}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          <button
+            onClick={() => isPaid ? setShowLookback(v => !v) : null}
+            className={`w-full flex items-center justify-between gap-3 px-5 py-4 ${isPaid ? 'hover:bg-gray-50 cursor-pointer' : 'cursor-default'} transition-colors`}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${isPaid ? 'bg-violet-50' : 'bg-gray-100'}`}>
+                <CalendarDays size={15} className={isPaid ? 'text-violet-600' : 'text-gray-400'} />
+              </div>
+              <div className="text-left min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-gray-900">18-Month Retroactive Lookback</p>
+                  {!isPaid && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-full px-2 py-0.5">
+                      <Lock size={9} /> Starter
+                    </span>
+                  )}
+                  {isPaid && (
+                    <span className="text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-2 py-0.5">
+                      {lookbackYears.length} years claimable
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {isPaid
+                    ? `FY${lookbackYears[1]}/${lookbackYears[1]+1} and FY${lookbackYears[2]}/${lookbackYears[2]+1} are still open for amendment`
+                    : `FY${currentFY - 1} + FY${currentFY - 2} likely claimable — you may have left money on the table`}
+                </p>
+              </div>
+            </div>
+            {isPaid
+              ? (showLookback ? <ChevronUp size={15} className="text-gray-400 flex-shrink-0" /> : <ChevronDown size={15} className="text-gray-400 flex-shrink-0" />)
+              : <ArrowRight size={14} className="text-indigo-400 flex-shrink-0" />
+            }
+          </button>
+
+          {/* Free: teaser */}
+          {!isPaid && (
+            <div className="border-t border-gray-100 px-5 py-4 bg-violet-50/40">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {lookbackYears.slice(1).map((fy, i) => (
+                      <div key={fy} className="bg-white border border-violet-200 rounded-xl px-4 py-2.5 text-center min-w-[120px]">
+                        <p className="text-xs font-bold text-violet-700">FY{fy}/{fy+1}</p>
+                        <p className="text-lg font-extrabold text-gray-300 mt-0.5 blur-sm select-none">$???K</p>
+                        <p className="text-[10px] text-gray-400">estimated credit</p>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    CRA allows SR&ED amendments for up to 18 months after your original T2 filing deadline.
+                    Prior-year claims are often larger than current-year.
+                  </p>
+                </div>
+                <button
+                  onClick={() => navigate(`/signup?from=scan&plan=starter&credit=${creditAdj}`)}
+                  className="flex-shrink-0 flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-colors"
+                >
+                  See retroactive estimates <ArrowRight size={11} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Paid: full per-year breakdown */}
+          {isPaid && showLookback && (
+            <div className="border-t border-gray-100 px-5 py-5 space-y-4">
+              <p className="text-xs text-gray-500">
+                Based on your current-year activity, here are estimated credits for open prior years.
+                CRA allows T2 amendments for SR&ED up to 18 months after the filing deadline (ITA s.152(4)(b)).
+              </p>
+              <div className="space-y-3">
+                {lookbackYears.map((fy, i) => {
+                  const mult     = fyMultipliers[i]
+                  const fyCredit = Math.round(creditAdj * mult)
+                  const fyLow    = Math.round(fyCredit * 0.65)
+                  const fyHigh   = Math.round(fyCredit * 1.35)
+                  // Amendment deadline: 18 months after Corp T2 deadline = 6 months after FY end
+                  // FY ends Mar 31 of (fy+1), T2 due Sep 30 of (fy+1), amendment deadline Mar 31 of (fy+2)
+                  const amendDeadline = `Mar 31, ${fy + 2}`
+                  const isCurrentYear = i === 0
+                  const isUrgent = i === 1  // last full year
+                  return (
+                    <div key={fy} className={`rounded-xl border p-4 ${
+                      isCurrentYear ? 'bg-indigo-50 border-indigo-200'
+                        : isUrgent   ? 'bg-amber-50 border-amber-200'
+                        : 'bg-gray-50 border-gray-200'
+                    }`}>
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`text-sm font-bold ${isCurrentYear ? 'text-indigo-700' : isUrgent ? 'text-amber-700' : 'text-gray-700'}`}>
+                              FY{fy}/{fy+1}
+                            </span>
+                            {isCurrentYear && (
+                              <span className="text-[10px] bg-indigo-100 text-indigo-600 font-semibold px-2 py-0.5 rounded-full">
+                                Current year — this scan
+                              </span>
+                            )}
+                            {isUrgent && (
+                              <span className="text-[10px] bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full">
+                                ⚠ Deadline {amendDeadline}
+                              </span>
+                            )}
+                            {!isCurrentYear && !isUrgent && (
+                              <span className="text-[10px] bg-gray-100 text-gray-500 font-semibold px-2 py-0.5 rounded-full">
+                                Deadline {amendDeadline}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-gray-500">
+                            {isCurrentYear
+                              ? 'Based on this scan — your current filing year'
+                              : `Estimated based on ${Math.round(mult * 100)}% of current year activity. Connect prior-year repos to refine.`}
+                          </p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="text-lg font-extrabold text-gray-900">{fmtK(fyLow)}–{fmtK(fyHigh)}</p>
+                          <p className="text-[10px] text-gray-400">estimated credit</p>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              {/* Total opportunity */}
+              <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-gray-700">Total retroactive opportunity (3 years)</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">Conservative estimate · subject to CRA review</p>
+                </div>
+                <p className="text-2xl font-extrabold text-gray-900">
+                  {fmtK(Math.round(lookbackYears.reduce((s, _, i) => s + creditAdj * fyMultipliers[i] * 0.65, 0)))}–
+                  {fmtK(Math.round(lookbackYears.reduce((s, _, i) => s + creditAdj * fyMultipliers[i] * 1.35, 0)))}
+                </p>
+              </div>
+              <p className="text-[10px] text-gray-400">
+                ITA s.152(4)(b) — CRA typically allows SR&ED T2 amendments for 18 months after the
+                original assessment. File sooner rather than later to avoid losing prior years.
+              </p>
+            </div>
+          )}
+        </div>
+
         {/* ── Download Proposal PDF ────────────────────────────────────────── */}
         <div className="flex items-center justify-between gap-3 bg-white rounded-2xl shadow-sm border border-indigo-100 px-5 py-3.5">
           <div className="min-w-0">
@@ -606,6 +992,177 @@ Generated by TaxLift (taxlift.ai) · Free SR\u0026ED scan`
               : <><Download size={14} /> Download Audit Package</>
             }
           </button>
+        </div>
+
+        {/* ══════════════════════════════════════════════════════════════════════
+            FEATURE 3 — T661 Structured CSV Export
+            Free:  locked button with field-name preview
+            Paid:  one-click CSV download mapping to T661 schedule fields
+        ══════════════════════════════════════════════════════════════════════ */}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between gap-3 px-5 py-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${isPaid ? 'bg-teal-50' : 'bg-gray-100'}`}>
+                <FileSpreadsheet size={15} className={isPaid ? 'text-teal-600' : 'text-gray-400'} />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-gray-900">T661 Data Export (CPA-Ready CSV)</p>
+                  {!isPaid && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-full px-2 py-0.5">
+                      <Lock size={9} /> Starter
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {isPaid
+                    ? 'Structured CSV mapping to T661 schedule lines — open in Excel or import to TaxCycle / ProFile'
+                    : 'Fields: T661 Line 205, Line 360, cluster narratives, hours by role — hand this to your CPA'}
+                </p>
+              </div>
+            </div>
+            {isPaid ? (
+              <button
+                onClick={handleExportT661Csv}
+                className="flex-shrink-0 flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white font-semibold text-sm px-4 py-2.5 rounded-xl transition-colors whitespace-nowrap shadow-sm"
+              >
+                <Download size={14} /> Export CSV
+              </button>
+            ) : (
+              <button
+                onClick={() => navigate(`/signup?from=scan&plan=starter&credit=${creditAdj}`)}
+                className="flex-shrink-0 flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm px-4 py-2.5 rounded-xl transition-colors whitespace-nowrap shadow-sm"
+              >
+                <Lock size={13} /> Unlock Export
+              </button>
+            )}
+          </div>
+
+          {/* Field preview — always visible, blurred for free users */}
+          <div className={`border-t border-gray-100 px-5 py-3 bg-gray-50 ${!isPaid ? 'opacity-40 select-none pointer-events-none blur-[1px]' : ''}`}>
+            <div className="flex flex-wrap gap-2">
+              {[
+                'T661 Line 205 — Qualified SR&ED Expenditures',
+                'T661 Line 360 — ITC Claimed',
+                'Developer hours by role',
+                'Per-cluster project names',
+                'Evidence commit counts',
+                'ITC rate methodology',
+                'CRA reference citations',
+              ].map(f => (
+                <span key={f} className="text-[10px] bg-white border border-gray-200 text-gray-500 px-2 py-0.5 rounded-md font-mono">
+                  {f}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ══════════════════════════════════════════════════════════════════════
+            FEATURE 4 — Methodology Audit Trail
+            Free:  locked — shows what's inside but can't expand
+            Paid:  full calculation chain — qualified expenditures → ITC rate
+                   → credit; plus a CPA-signable methodology statement
+        ══════════════════════════════════════════════════════════════════════ */}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          <button
+            onClick={() => isPaid ? setShowAuditTrail(v => !v) : navigate(`/signup?from=scan&plan=starter&credit=${creditAdj}`)}
+            className="w-full flex items-center justify-between gap-3 px-5 py-4 hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${isPaid ? 'bg-slate-100' : 'bg-gray-100'}`}>
+                <Shield size={15} className={isPaid ? 'text-slate-600' : 'text-gray-400'} />
+              </div>
+              <div className="text-left min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-gray-900">Methodology Audit Trail</p>
+                  {!isPaid ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-full px-2 py-0.5">
+                      <Lock size={9} /> Starter
+                    </span>
+                  ) : (
+                    <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full px-2 py-0.5 font-semibold">
+                      CRA-auditable
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Full calculation chain — qualified expenditures → ITC rate → credit · includes CPA-signable methodology statement
+                </p>
+              </div>
+            </div>
+            {isPaid
+              ? (showAuditTrail ? <ChevronUp size={15} className="text-gray-400 flex-shrink-0" /> : <ChevronDown size={15} className="text-gray-400 flex-shrink-0" />)
+              : <ArrowRight size={14} className="text-indigo-400 flex-shrink-0" />
+            }
+          </button>
+
+          {isPaid && showAuditTrail && (() => {
+            const qualExp    = Math.round(creditAdj / totalRate)
+            const overheadAmt= Math.round(qualExp * 0.20)
+            const labourAmt  = Math.round(qualExp * 0.80)
+            const fedCredit  = Math.round(qualExp * federalRate)
+            const provCredit = Math.round(qualExp * provRate)
+            return (
+              <div className="border-t border-gray-100 px-5 py-5 space-y-5">
+                {/* Calculation chain */}
+                <div>
+                  <p className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-3">Calculation Chain</p>
+                  <div className="space-y-2">
+                    {[
+                      { step: '1', label: 'SR&ED qualifying hours identified', value: `~${Math.round(hoursTotal)}h`, note: 'From commit-to-hour proxy across all clusters' },
+                      { step: '2', label: `Labour cost at $${customAvgRate}/hr weighted avg`, value: fmtK(labourAmt), note: `${Math.round(devRate * 0.5 + senRate * 0.35 + archRate * 0.15)}/hr × ${Math.round(hoursTotal)}h × 80% labour share` },
+                      { step: '3', label: 'Overhead proxy (20% of labour)', value: fmtK(overheadAmt), note: 'CRA traditional method — proxy election not modelled' },
+                      { step: '4', label: 'Total qualified SR&ED expenditures', value: fmtK(qualExp), note: 'T661 Line 205 — ITA s.37(1)' },
+                      { step: '5', label: `Federal ITC @ ${(federalRate*100).toFixed(0)}% (${isCcpc ? 'CCPC' : 'Non-CCPC'})`, value: fmtK(fedCredit), note: `ITA s.127(9)${isCcpc ? ' + s.127(10.1) refundable' : ''}` },
+                      { step: '6', label: `Provincial ITC @ ${(provRate*100).toFixed(1)}% (${province})`, value: fmtK(provCredit), note: `${province} SR&ED provincial credit` },
+                      { step: '7', label: 'Total estimated ITC', value: fmtK(creditAdj), note: 'T661 Line 360 — federal + provincial combined', bold: true },
+                    ].map(r => (
+                      <div key={r.step} className={`flex items-start justify-between gap-4 py-2 border-b border-gray-100 last:border-0 ${r.bold ? 'bg-indigo-50 -mx-5 px-5 rounded-none' : ''}`}>
+                        <div className="flex items-start gap-3 min-w-0">
+                          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5 ${r.bold ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-600'}`}>{r.step}</span>
+                          <div className="min-w-0">
+                            <p className={`text-xs font-medium ${r.bold ? 'text-indigo-700' : 'text-gray-700'}`}>{r.label}</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">{r.note}</p>
+                          </div>
+                        </div>
+                        <span className={`text-sm font-bold flex-shrink-0 ${r.bold ? 'text-indigo-700' : 'text-gray-900'}`}>{r.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* CPA-signable methodology statement */}
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <FileText size={13} className="text-slate-500" />
+                    <p className="text-xs font-bold text-slate-700">Methodology Statement — for CPA Review</p>
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    SR&ED credit estimate prepared using the <strong>traditional method</strong> under ITA s.37(1).
+                    Qualifying R&D hours were identified via systematic analysis of {commitCount} Git commits
+                    across {clusters.length} activity cluster{clusters.length !== 1 ? 's' : ''}, using CRA's
+                    three-part test (s.248(1)) to assess systematic investigation, technological uncertainty,
+                    and advancement of knowledge. Labour costs calculated at ${customAvgRate}/hr weighted average
+                    (Developer ${devRate}/hr · Senior ${senRate}/hr · Architect ${archRate}/hr).
+                    Overhead applied at 20% proxy. ITC calculated at {(federalRate*100).toFixed(0)}%
+                    federal ({isCcpc ? 'CCPC refundable — ITA s.127(10.1)' : 'non-CCPC — ITA s.127(9)'}) +
+                    {(provRate*100).toFixed(1)}% provincial ({province}).
+                    Estimate does not account for prior-year ITC recapture, taxable income thresholds,
+                    or proxy election vs. traditional method trade-offs. CPA review required before filing.
+                  </p>
+                  <p className="text-[10px] text-slate-400 mt-2">
+                    References: ITA s.37(1), s.127(9), s.127(10.1), s.248(1) · CRA T4088 · CRA IT-151R5
+                  </p>
+                </div>
+
+                <p className="text-[10px] text-gray-400">
+                  This audit trail is exportable via the T661 CSV export above. Provide it to your CPA
+                  alongside the PDF audit package to support the T661 filing.
+                </p>
+              </div>
+            )
+          })()}
         </div>
 
         {/* ── Share with CPA ───────────────────────────────────────────────── */}
