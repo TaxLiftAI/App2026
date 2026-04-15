@@ -429,16 +429,19 @@ function ClientDetailDrawer({ client, onClose }) {
 
         {/* Footer actions */}
         <div className="px-6 py-4 border-t border-gray-100 space-y-2">
-          {isReady ? (
+          {/* Primary: oversight/review – always available */}
+          <button
+            onClick={() => { onClose(); navigate(`/cpa-portal/oversight/${client.id}`) }}
+            className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors"
+          >
+            <FileText size={15} /> Review &amp; Edit Narratives →
+          </button>
+          {isReady && (
             <button
               onClick={() => { onClose(); navigate(`/cpa-portal/report/${client.id}`) }}
-              className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors"
+              className="w-full flex items-center justify-center gap-2 border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-sm font-semibold py-2.5 rounded-xl transition-colors"
             >
-              <FileText size={15} /> View T661 Package →
-            </button>
-          ) : (
-            <button disabled className="w-full flex items-center justify-center gap-2 bg-gray-100 text-gray-400 text-sm font-medium py-2.5 rounded-xl cursor-not-allowed">
-              <FileText size={15} /> CPA Package not yet ready
+              <FileText size={15} /> View T661 Package
             </button>
           )}
           <button

@@ -163,6 +163,7 @@ app.use(`${V}/integrations`, require('./routes/integrations'))
 app.use(`${V}/admin`,        require('./routes/admin'))
 app.use(`${V}/cpa`,          require('./routes/cpa'))
 app.use(`${V}/changelog`,    require('./routes/changelog'))
+app.use(`${V}/audit`,        require('./routes/audit'))
 
 // CI/CD build run ingestion (Pattern A: GitHub webhook, Pattern C: CLI agent)
 // GitHub webhook needs raw body for HMAC — stash it before json parsing runs
