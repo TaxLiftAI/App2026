@@ -658,16 +658,16 @@ export default function DashboardPage() {
           The integration-degraded banner lives in Layout.jsx and shows
           separately in the fixed top bar — no need to duplicate it here.    */}
       {usingMock ? (
-        <div className="flex items-center gap-3 px-4 py-2.5 bg-indigo-50 border border-indigo-200 rounded-xl text-xs">
-          <FlaskConical size={13} className="text-indigo-500 flex-shrink-0" />
-          <span className="text-indigo-700 flex-1">
-            Showing demo data — <strong>connect a data source</strong> to see your real R&amp;D clusters and SR&amp;ED credit estimate.
-          </span>
+        <div className="flex items-center justify-between gap-4 px-4 py-3 bg-indigo-600 rounded-xl text-xs text-white">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <FlaskConical size={13} className="text-indigo-200 flex-shrink-0" />
+            <span className="font-medium">This is a demo — connect GitHub or Jira to analyse your real R&amp;D activity.</span>
+          </div>
           <button
-            onClick={() => navigate('/integrations')}
-            className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 whitespace-nowrap underline"
+            onClick={() => navigate('/quick-connect')}
+            className="flex-shrink-0 bg-white text-indigo-700 font-semibold px-3 py-1 rounded-lg hover:bg-indigo-50 transition-colors whitespace-nowrap"
           >
-            Connect now →
+            Connect now
           </button>
         </div>
       ) : (stale.length > 0 || needsReview.length > 0) && !isEmptyState ? (
