@@ -43,6 +43,15 @@ const cookieLib = require('cookie')
 const { globalLimiter, authLimiter, scanLimiter, leadsLimiter } = require('./middleware/rateLimiter')
 const { securityHeaders, botGuard, scoreInternalsScrubber }     = require('./middleware/security')
 
+// ── Startup guard: fail hard if JWT_SECRET is absent in production ────────────
+// A missing secret would cause every signToken() call to throw at runtime,
+// leaving users unable to log in. Catch it here so the deploy fails loudly
+// rather than silently serving broken auth.
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  console.error('[startup] FATAL: JWT_SECRET is not set. Refusing to start in production.')
+  process.exit(1)
+}
+
 // ── Bootstrap database (runs migrations + seed on first start) ────────────────
 const db = require('./db')
 
@@ -162,6 +171,8 @@ app.use(`${V}/reports/export`, requireExportAccess)
 app.use(`${V}/integrations`, require('./routes/integrations'))
 app.use(`${V}/admin`,        require('./routes/admin'))
 app.use(`${V}/cpa`,          require('./routes/cpa'))
+// changelog route removed
+app.use(`${V}/audit`,        require('./routes/audit'))
 
 // CI/CD build run ingestion (Pattern A: GitHub webhook, Pattern C: CLI agent)
 // GitHub webhook needs raw body for HMAC — stash it before json parsing runs

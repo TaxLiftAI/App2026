@@ -34,8 +34,6 @@ numReplicas        = 1
 # Set these in Railway dashboard → your service → Variables:
 #
 #   JWT_SECRET          = <random 64-char hex>   # openssl rand -hex 32
-#   TOKEN_ENCRYPTION_KEY= <random 64-char hex>   # openssl rand -hex 32  (AES-256-GCM for OAuth tokens at rest)
-#   REFERRAL_SECRET     = <random 64-char hex>   # openssl rand -hex 32  (HMAC signing for CPA review tokens)
 #   NODE_ENV            = production
 #   PORT                = 3001                    # Railway sets this automatically
 #   FRONTEND_URL        = https://taxlift.ai
