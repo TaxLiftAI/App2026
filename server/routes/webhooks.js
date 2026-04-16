@@ -433,7 +433,7 @@ router.post('/ci-token', requireAuth, (req, res) => {
   const role     = req.user?.role
 
   if (!tenantId) return res.status(401).json({ error: 'Unauthorized' })
-  if (!['admin', 'reviewer'].includes(role)) {
+  if (!['Admin', 'Reviewer'].includes(role)) {
     return res.status(403).json({ error: 'Admin or Reviewer role required' })
   }
 

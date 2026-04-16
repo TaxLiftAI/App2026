@@ -117,8 +117,13 @@ router.get('/github/callback', optionalAuth, async (req, res) => {
 // server directly.  OAuthCallbackPage.jsx calls this POST endpoint instead, so
 // the browser can send the code in a JSON body (avoids CORS issues with GitHub).
 router.post('/github/exchange', async (req, res) => {
-  const { code } = req.body ?? {}
+  const { code, state } = req.body ?? {}
   if (!code) return res.status(400).json({ message: 'code is required' })
+
+  // CSRF guard — same state cookie check as the GET callback
+  if (!validateOAuthState(req, res, state)) {
+    return res.status(403).json({ message: 'OAuth state mismatch — possible CSRF. Please try connecting again.' })
+  }
 
   const missing = missingEnv('GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET')
   if (missing.length) {
@@ -287,6 +292,9 @@ router.get('/github/commits', async (req, res) => {
 
   const { repo, per_page = 100, page = 1 } = req.query
   if (!repo) return res.status(400).json({ message: 'repo query param required (format: owner/repo)' })
+  if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) {
+    return res.status(400).json({ message: 'Invalid repo format — expected owner/repo (letters, digits, hyphens, dots only)' })
+  }
 
   try {
     const resp = await axios.get(`https://api.github.com/repos/${repo}/commits`, {

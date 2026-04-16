@@ -179,19 +179,6 @@ function securityHeaders(_req, res, next) {
   res.setHeader('X-Frame-Options', 'DENY')                     // prevent clickjacking
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
   res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
-  // Content-Security-Policy — restrict resource origins to mitigate XSS
-  res.setHeader(
-    'Content-Security-Policy',
-    [
-      "default-src 'self'",
-      "script-src 'self' https://js.stripe.com",
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: https:",
-      "connect-src 'self' https://api.stripe.com https://uploads.github.com",
-      "frame-src https://js.stripe.com",
-      "frame-ancestors 'none'",
-    ].join('; ')
-  )
   // HSTS — tell browsers to only use HTTPS for 2 years (Railway is HTTPS-only)
   // Only set in production; local dev uses HTTP which breaks HSTS
   if (process.env.NODE_ENV === 'production') {

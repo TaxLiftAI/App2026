@@ -113,12 +113,13 @@ export function getJiraAuthUrl(state, pkceChallenge) {
  *
  * Returns null when the proxy is unreachable, triggering demo-mode fallback.
  */
-export async function exchangeGitHubCode(code) {
+export async function exchangeGitHubCode(code, state) {
   try {
     const res = await fetch('/api/v1/oauth/github/exchange', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ code }),
+      method:      'POST',
+      headers:     { 'Content-Type': 'application/json' },
+      credentials: 'include',   // send CSRF state cookie alongside the body
+      body:        JSON.stringify({ code, state }),
     })
     if (!res.ok) {
       const body = await res.json().catch(() => ({}))

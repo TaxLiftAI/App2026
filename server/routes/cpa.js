@@ -183,6 +183,24 @@ router.get('/smtp-status', requireAuth, (req, res) => {
   res.json({ configured: !!(SMTP_HOST && SMTP_USER && SMTP_PASS) })
 })
 
+// ── POST /api/cpa/review-token ────────────────────────────────────────────────
+// Auth required. Accepts a review package payload, returns an HMAC-signed token.
+// The frontend calls this instead of encoding client-side with btoa.
+router.post('/review-token', requireAuth, (req, res) => {
+  const { sign } = require('../lib/cpaReviewToken')
+  const payload = req.body ?? {}
+  if (!payload.companyName && !payload.clusters) {
+    return res.status(400).json({ message: 'payload must include companyName and clusters' })
+  }
+  try {
+    const token = sign(payload)
+    res.json({ token })
+  } catch (err) {
+    console.error('[cpa/review-token] sign error:', err.message)
+    res.status(500).json({ message: 'Failed to generate review token' })
+  }
+})
+
 // ── POST /api/cpa/send-handoff ────────────────────────────────────────────────
 router.post('/send-handoff', requireAuth, async (req, res) => {
   const {
@@ -195,6 +213,12 @@ router.post('/send-handoff', requireAuth, async (req, res) => {
 
   if (!cpaEmail || !reviewLink) {
     return res.status(400).json({ message: 'cpaEmail and reviewLink are required' })
+  }
+
+  // MED-7: prevent authenticated phishing — only allow links back to taxlift.ai
+  const ALLOWED_REVIEW_ORIGIN = 'https://taxlift.ai/'
+  if (!reviewLink.startsWith(ALLOWED_REVIEW_ORIGIN)) {
+    return res.status(400).json({ message: 'reviewLink must start with https://taxlift.ai/' })
   }
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/

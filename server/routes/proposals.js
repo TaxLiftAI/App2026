@@ -13,6 +13,8 @@ const express     = require('express')
 const router      = express.Router()
 const db          = require('../db')
 const PDFDocument = require('pdfkit')
+const { requireAuth }  = require('../middleware/auth')
+const { scanLimiter }  = require('../middleware/rateLimiter')
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const C = {
@@ -433,7 +435,7 @@ function drawPage2(doc, { creditLow, creditHigh }) {
  * GET /api/proposals/pdf/:scanId
  * Fetch scan from DB and stream a PDF. Opens inline in the browser PDF viewer.
  */
-router.get('/pdf/:scanId', (req, res) => {
+router.get('/pdf/:scanId', requireAuth, scanLimiter, (req, res) => {
   try {
     const row = db.prepare('SELECT * FROM free_scans WHERE id = ?').get(req.params.scanId)
     if (!row) return res.status(404).json({ message: 'Scan not found' })
