@@ -126,19 +126,27 @@ export default function ScanRunningPage() {
 
       for (const repoFullName of repos) {
         try {
-          const res = await fetch(
-            `https://api.github.com/repos/${repoFullName}/commits?per_page=200`,
-            { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github+json' } }
-          )
-          if (!res.ok) continue
-          const commits = await res.json()
-          if (!Array.isArray(commits)) continue
+          // Paginate up to 3 pages × 100 commits = 300 commits per repo
+          // The GitHub API caps per_page at 100; multiple pages capture older R&D work
+          let allCommits = []
+          for (let page = 1; page <= 3; page++) {
+            const res = await fetch(
+              `https://api.github.com/repos/${repoFullName}/commits?per_page=100&page=${page}`,
+              { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github+json' } }
+            )
+            if (!res.ok) break
+            const pageCommits = await res.json()
+            if (!Array.isArray(pageCommits) || pageCommits.length === 0) break
+            allCommits.push(...pageCommits)
+            if (pageCommits.length < 100) break   // last page — no more commits
+          }
+          if (allCommits.length === 0) continue
 
-          totalCommits += commits.length
+          totalCommits += allCommits.length
           setStep(2)
 
           const repoName = repoFullName.split('/')[1]
-          const clusters = scanCommits(commits, repoName)
+          const clusters = scanCommits(allCommits, repoName)
           if (clusters) allClusters.push(...clusters)
         } catch (err) {
           console.warn(`[ScanRunningPage] Failed to scan ${repoFullName}:`, err.message)

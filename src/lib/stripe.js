@@ -23,8 +23,11 @@ import { loadStripe } from '@stripe/stripe-js'
 import { billing } from './api'
 
 // ── Performance pricing rates ─────────────────────────────────────────────────
-export const PERFORMANCE_RATE      = 0.03   // 3% — Starter plan
-export const PERFORMANCE_RATE_PLUS = 0.05   // 5% — Plus plan (includes Grants module)
+export const PERFORMANCE_RATE      = 0      // legacy — pricing is now $999 flat
+export const PERFORMANCE_RATE_PLUS = 0      // legacy — CPA Partner Seat is $4,800/yr
+export const FLAT_FEE              = 999    // SR&ED Filing Package flat fee (CAD)
+export const CPA_PARTNER_FEE       = 4800   // CPA Partner Seat annual fee (CAD)
+export const CPA_REFERRAL_COMMISSION = 300  // per referred client (CAD)
 
 // ── CPA partner referral fees (flat, paid at T661 package delivery) ───────────
 // Flat structure avoids CPA Canada Rule 205 independence concerns that arise
@@ -72,64 +75,55 @@ export function getStripe() {
 export const PLANS = {
   starter: {
     id:   'starter',
-    name: 'Starter',
+    name: 'SR&ED Filing Package',
 
-    // ── Performance pricing: 3% of estimated SR&ED credit ────────────────────
-    price:         '3%',
-    period:        'of your SR&ED credit',
-    priceDetail:   'e.g. $150K credit → $4,500 fee',
+    // ── Flat fee: $999 per fiscal year ───────────────────────────────────────
+    price:         '$999',
+    period:        'per fiscal year',
+    priceDetail:   'One-time flat fee — no percentage of your refund',
     priceId:       import.meta.env.VITE_STRIPE_PRICE_STARTER ?? null,
 
-    // Legacy flat-rate price IDs kept for reference (no longer displayed):
-    priceIdSemiAnnual: import.meta.env.VITE_STRIPE_PRICE_STARTER_SEMI    ?? null,
-    priceIdMonthly:    import.meta.env.VITE_STRIPE_PRICE_STARTER_MONTHLY ?? null,
-
-    description:   'SR&ED automation for Canadian tech companies making their first claim.',
+    description:   'Everything you need to file SR&ED — flat fee, keep your full refund.',
     features: [
       'Unlimited SR&ED clusters',
-      'AI narrative generation',
-      'Narrative quality scoring (5 dimensions)',
+      'AI T661 narrative generation',
       'GitHub & Jira integrations',
-      'CPA handoff package PDF',
-      'Evidence chain of custody',
+      'CPA-ready handoff package PDF',
+      'SHA-256 commit evidence chain',
       'Audit vault — 3 years retained',
+      'Prior-year catch-up (18 months)',
       'Email support',
     ],
-    cta:            'Start 14-day free trial',
-    highlighted:    false,
-    badge:          null,
+    cta:            'Get started — $999',
+    highlighted:    true,
+    badge:          'Flat fee',
     grantsIncluded: false,
   },
 
   plus: {
     id:   'plus',
-    name: 'Plus',
+    name: 'CPA Partner Seat',
 
-    // ── Performance pricing: 5% of estimated SR&ED credit ────────────────────
-    price:       '5%',
-    period:      'of your SR&ED credit',
-    priceDetail: 'e.g. $150K credit → $7,500 fee · includes Grants module',
+    // ── CPA partner: $4,800/yr with $300 referral commission ─────────────────
+    price:       '$4,800',
+    period:      'per year',
+    priceDetail: '$300 referral commission per client you bring on',
     priceId:     import.meta.env.VITE_STRIPE_PRICE_PLUS ?? null,
 
-    // Legacy flat-rate price IDs kept for reference (no longer displayed):
-    priceIdSemiAnnual: import.meta.env.VITE_STRIPE_PRICE_PLUS_SEMI    ?? null,
-    priceIdMonthly:    import.meta.env.VITE_STRIPE_PRICE_PLUS_MONTHLY ?? null,
-
-    description:   'SR&ED + Grants module — unlock up to $4M+ in additional Canadian innovation funding.',
+    description:   'For CPA firms — add SR&ED as a service and earn $300 per client referral.',
     features: [
-      'Everything in Starter',
-      '✦ Grants module — 9 programs matched automatically',
-      '✦ NRC-IRAP, OITC, NGen + provincial programs',
-      '✦ Gap-fill interview & AI section drafting',
-      '✦ Application tracker with deadline alerts',
-      'CPA referral portal & commission tracking',
-      'Audit-ready document vault',
-      'Priority Slack support',
+      'Unlimited client workspaces',
+      'White-label CPA handoff experience',
+      '$300 commission per referred client',
+      'Co-branded intake link',
+      'Client pipeline dashboard',
+      'Priority support & onboarding',
+      '✦ More grants coming soon: NRC-IRAP, SDTC, OITC, Mitacs',
     ],
-    cta:            'Start 14-day free trial',
-    highlighted:    true,
-    badge:          'Most popular',
-    grantsIncluded: true,
+    cta:            'Apply for partner seat',
+    highlighted:    false,
+    badge:          'CPA Partners',
+    grantsIncluded: false,
   },
 
   enterprise: {
@@ -141,39 +135,35 @@ export const PLANS = {
     priceDetail: null,
     priceId:     null,
 
-    description: 'Everything in Plus — white-label, API access, and a dedicated CPA partner.',
+    description: 'White-label deployment, API access, and a dedicated CPA partner for large firms.',
     features: [
-      'Everything in Plus',
-      'White-label CPA portal',
+      'Everything in CPA Partner',
+      'White-label portal with your branding',
       'API access for custom integrations',
-      'Dedicated CPA partner & account manager',
+      'Dedicated account manager',
       'SSO / SAML + on-prem deployment',
-      'Custom AI fine-tuning',
+      'Custom volume commission rates',
       'SLA-backed uptime guarantee',
-      'Volume commission rates',
     ],
     cta:            'Contact sales',
     highlighted:    false,
     badge:          null,
-    grantsIncluded: true,
+    grantsIncluded: false,
   },
 }
 
-// ── Pay-per-claim removed — model is annual 3%/5% of credit estimate ──────────
-// Empty export kept so any stray import { CLAIM_PLANS } doesn't break at build time.
+// ── Legacy exports — kept so stray imports don't break at build time ──────────
 export const CLAIM_PLANS = {}
 
-// ── Resolve plan display (billing period no longer changes price — kept for compat) ──
+// ── Resolve plan display (billing period toggle no longer applies — kept for compat) ──
 export function getPlanForBilling(plan, _billingPeriod) {
-  return plan  // performance pricing: price is always 3% of credit
+  return plan
 }
 
-// ── Calculate the fee for a given credit estimate ─────────────────────────────
-// Fee is based on the conservative scan estimate (not actual CRA assessment).
-// If actual CRA assessment comes in >30% below estimate, partial refund policy applies.
-export function calcFee(creditEstimate, planId = 'starter') {
-  const rate = planId === 'plus' ? PERFORMANCE_RATE_PLUS : PERFORMANCE_RATE
-  return Math.round(creditEstimate * rate)
+// ── Calculate the fee — now flat $999 regardless of credit estimate ───────────
+// Kept for backward compat with any callers that pass a credit estimate.
+export function calcFee(_creditEstimate, _planId = 'starter') {
+  return 999
 }
 
 /**
