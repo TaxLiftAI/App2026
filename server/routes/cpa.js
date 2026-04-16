@@ -237,7 +237,7 @@ router.post('/send-handoff', requireAuth, async (req, res) => {
     res.json({ ok: true, message: `Package emailed to ${cpaEmail}` })
   } catch (err) {
     console.error('[cpa/send-handoff] Send error:', err.message)
-    res.status(502).json({ message: `Failed to send email: ${err.message}` })
+    res.status(502).json({ message: process.env.NODE_ENV !== 'production' ? `Failed to send email: ${err.message}` : 'Failed to send email' })
   }
 })
 

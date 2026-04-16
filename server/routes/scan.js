@@ -16,6 +16,7 @@ const { makeId } = require('../utils/uuid')
 const { scheduleDrip } = require('../lib/emailDrip')
 const { alertHighValueScan } = require('../lib/alertEmail')
 const { requireAuth }       = require('../middleware/auth')
+const { leadsLimiter }      = require('../middleware/rateLimiter')
 
 /**
  * POST /api/scan/free
@@ -30,7 +31,9 @@ const { requireAuth }       = require('../middleware/auth')
  *   user_id         string   (optional — if user happens to be logged in)
  * }
  */
-router.post('/free', (req, res) => {
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+router.post('/free', leadsLimiter, (req, res) => {
   try {
     const {
       email            = '',
@@ -41,6 +44,11 @@ router.post('/free', (req, res) => {
       hours_total      = 0,
       user_id          = null,
     } = req.body
+
+    // Validate email format before any drip scheduling
+    if (email && !EMAIL_RE.test(email)) {
+      return res.status(400).json({ message: 'Invalid email address' })
+    }
 
     const id = makeId()
 
@@ -95,7 +103,7 @@ router.post('/free', (req, res) => {
     res.json({ ok: true, id, estimated_credit, cluster_count: clusters.length })
   } catch (err) {
     console.error('[scan/free] error:', err.message)
-    res.status(500).json({ message: 'Failed to save scan results', detail: err.message })
+    res.status(500).json({ message: 'Failed to save scan results', ...(process.env.NODE_ENV !== 'production' && { detail: err.message }) })
   }
 })
 

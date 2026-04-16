@@ -448,7 +448,7 @@ router.get('/pdf/:scanId', (req, res) => {
   } catch (err) {
     console.error('[proposals/pdf GET] error:', err.message)
     if (!res.headersSent) {
-      res.status(500).json({ message: 'Failed to generate PDF', detail: err.message })
+      res.status(500).json({ message: 'Failed to generate PDF', ...(process.env.NODE_ENV !== 'production' && { detail: err.message }) })
     }
   }
 })
@@ -464,7 +464,7 @@ router.post('/pdf', (req, res) => {
   } catch (err) {
     console.error('[proposals/pdf POST] error:', err.message)
     if (!res.headersSent) {
-      res.status(500).json({ message: 'Failed to generate PDF', detail: err.message })
+      res.status(500).json({ message: 'Failed to generate PDF', ...(process.env.NODE_ENV !== 'production' && { detail: err.message }) })
     }
   }
 })

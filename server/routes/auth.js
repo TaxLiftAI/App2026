@@ -139,7 +139,7 @@ async function sendVerificationEmail(email, token) {
       auth:   { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
     })
   } catch {
-    console.log(`[auth/verify] SMTP not configured. Verify URL: ${verifyUrl}`)
+    console.log(`[auth/verify] SMTP not configured. Verify token (first 8): ${token.slice(0, 8)}...`)
     return
   }
 
@@ -448,7 +448,7 @@ router.post('/forgot-password', async (req, res) => {
     })
     console.log(`[auth/forgot-password] Reset email sent to ${user.email}`)
   } catch {
-    console.log(`[auth/forgot-password] SMTP not configured. Reset URL: ${resetUrl}`)
+    console.log(`[auth/forgot-password] SMTP not configured. Reset token (first 8): ${resetToken.slice(0, 8)}...`)
   }
 })
 

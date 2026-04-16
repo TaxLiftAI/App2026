@@ -55,11 +55,10 @@ function validateOAuthState(req, res, expectedState) {
   res.clearCookie(OAUTH_STATE_COOKIE, clearOpts)
 
   if (!cookieState) {
-    // No cookie — could be an old browser or the flow wasn't initiated via /state.
-    // Warn but allow: the browser SPA already validates state client-side.
-    // Strict mode would return 403 here; we log and continue.
-    console.warn('[oauth] state cookie missing — state CSRF guard bypassed')
-    return true
+    // No cookie means the flow was not initiated through our /state endpoint.
+    // Treat as a potential CSRF attack and block unconditionally.
+    console.warn('[oauth] state cookie missing — possible CSRF, blocking callback')
+    return false
   }
 
   if (expectedState && cookieState !== expectedState) {
@@ -109,7 +108,7 @@ router.get('/github/callback', optionalAuth, async (req, res) => {
       token_type:   resp.data.token_type,
     })
   } catch (err) {
-    res.status(502).json({ message: 'GitHub token exchange failed', detail: err.message })
+    res.status(502).json({ message: 'GitHub token exchange failed', ...(process.env.NODE_ENV !== 'production' && { detail: err.message }) })
   }
 })
 
@@ -150,7 +149,7 @@ router.post('/github/exchange', async (req, res) => {
       token_type:   resp.data.token_type,
     })
   } catch (err) {
-    res.status(502).json({ message: 'GitHub token exchange failed', detail: err.message })
+    res.status(502).json({ message: 'GitHub token exchange failed', ...(process.env.NODE_ENV !== 'production' && { detail: err.message }) })
   }
 })
 

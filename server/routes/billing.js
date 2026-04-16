@@ -164,7 +164,7 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
 
   } catch (err) {
     console.error('[billing] create-checkout-session error:', err.message)
-    res.status(502).json({ message: err.message })
+    res.status(502).json({ message: process.env.NODE_ENV !== 'production' ? err.message : 'Service unavailable' })
   }
 })
 
@@ -197,7 +197,7 @@ router.post('/webhook', async (req, res) => {
     res.json({ received: true })
   } catch (err) {
     console.error('[billing/webhook] handler error:', err.message)
-    res.status(500).json({ message: err.message })
+    res.status(500).json({ message: process.env.NODE_ENV !== 'production' ? err.message : 'Webhook handler error' })
   }
 })
 
@@ -286,7 +286,7 @@ router.post('/portal', requireAuth, async (req, res) => {
     res.json({ url: session.url })
   } catch (err) {
     console.error('[billing/portal] error:', err.message)
-    res.status(502).json({ message: err.message })
+    res.status(502).json({ message: process.env.NODE_ENV !== 'production' ? err.message : 'Service unavailable' })
   }
 })
 
