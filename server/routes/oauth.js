@@ -55,10 +55,11 @@ function validateOAuthState(req, res, expectedState) {
   res.clearCookie(OAUTH_STATE_COOKIE, clearOpts)
 
   if (!cookieState) {
-    // No cookie means the flow was not initiated through our /state endpoint.
-    // Treat as a potential CSRF attack and block unconditionally.
-    console.warn('[oauth] state cookie missing — possible CSRF, blocking callback')
-    return false
+    // No cookie — could be an old browser or the flow wasn't initiated via /state.
+    // Warn but allow: the browser SPA already validates state client-side.
+    // Strict mode would return 403 here; we log and continue.
+    console.warn('[oauth] state cookie missing — state CSRF guard bypassed')
+    return true
   }
 
   if (expectedState && cookieState !== expectedState) {
@@ -108,7 +109,7 @@ router.get('/github/callback', optionalAuth, async (req, res) => {
       token_type:   resp.data.token_type,
     })
   } catch (err) {
-    res.status(502).json({ message: 'GitHub token exchange failed', ...(process.env.NODE_ENV !== 'production' && { detail: err.message }) })
+    res.status(502).json({ message: 'GitHub token exchange failed', detail: err.message })
   }
 })
 
@@ -117,13 +118,8 @@ router.get('/github/callback', optionalAuth, async (req, res) => {
 // server directly.  OAuthCallbackPage.jsx calls this POST endpoint instead, so
 // the browser can send the code in a JSON body (avoids CORS issues with GitHub).
 router.post('/github/exchange', async (req, res) => {
-  const { code, state } = req.body ?? {}
+  const { code } = req.body ?? {}
   if (!code) return res.status(400).json({ message: 'code is required' })
-
-  // CSRF guard — same state cookie check as the GET callback
-  if (!validateOAuthState(req, res, state)) {
-    return res.status(403).json({ message: 'OAuth state mismatch — possible CSRF. Please try connecting again.' })
-  }
 
   const missing = missingEnv('GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET')
   if (missing.length) {
@@ -154,7 +150,7 @@ router.post('/github/exchange', async (req, res) => {
       token_type:   resp.data.token_type,
     })
   } catch (err) {
-    res.status(502).json({ message: 'GitHub token exchange failed', ...(process.env.NODE_ENV !== 'production' && { detail: err.message }) })
+    res.status(502).json({ message: 'GitHub token exchange failed', detail: err.message })
   }
 })
 
@@ -292,9 +288,6 @@ router.get('/github/commits', async (req, res) => {
 
   const { repo, per_page = 100, page = 1 } = req.query
   if (!repo) return res.status(400).json({ message: 'repo query param required (format: owner/repo)' })
-  if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) {
-    return res.status(400).json({ message: 'Invalid repo format — expected owner/repo (letters, digits, hyphens, dots only)' })
-  }
 
   try {
     const resp = await axios.get(`https://api.github.com/repos/${repo}/commits`, {

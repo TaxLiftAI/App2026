@@ -1,16 +1,11 @@
 const router = require('express').Router()
 const db     = require('../db')
-const { requireAuth }    = require('../middleware/auth')
-const { decrypt }        = require('../lib/tokenEncryption')
+const { requireAuth } = require('../middleware/auth')
 
 router.use(requireAuth)
 
 router.get('/', (req, res) => {
-  const row  = db.prepare('SELECT github_token, atlassian_token FROM users WHERE id = ?').get(req.user.id)
-  const user = row ? {
-    github_token:    row.github_token    ? decrypt(row.github_token)    : null,
-    atlassian_token: row.atlassian_token ? decrypt(row.atlassian_token) : null,
-  } : null
+  const user = db.prepare('SELECT github_token, atlassian_token FROM users WHERE id = ?').get(req.user.id)
   const integrations = [
     {
       integration:    'github',

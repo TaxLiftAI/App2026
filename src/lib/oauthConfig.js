@@ -33,24 +33,15 @@
 export const GITHUB_CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID ?? ''
 export const JIRA_CLIENT_ID   = import.meta.env.VITE_JIRA_CLIENT_ID   ?? ''
 
-// ── localStorage key constants (kept for OAUTH_STATE + PKCE only) ─────────────
-// ⚠️  Access tokens are NO LONGER stored in localStorage — XSS can steal them.
-//     Tokens live in module-level memory only; they are lost on page reload,
-//     which is intentional: users re-authorise on each session.
+// ── localStorage key constants ─────────────────────────────────────────────────
 export const LS_KEYS = {
+  GITHUB_TOKEN:    'taxlift_github_token',
+  GITHUB_USER:     'taxlift_github_user',
+  JIRA_TOKEN:      'taxlift_jira_token',
+  JIRA_CLOUD_ID:   'taxlift_jira_cloud_id',
+  JIRA_REFRESH:    'taxlift_jira_refresh',
   OAUTH_STATE:     'taxlift_oauth_state',   // format: "provider:randomState"
   PKCE_VERIFIER:   'taxlift_pkce_verifier',
-}
-
-// ── In-memory token store (module singleton) ───────────────────────────────────
-// Not persisted across page reloads. All GitHub API calls should go through the
-// backend proxy (/api/v1/oauth/*) rather than calling GitHub directly.
-const _memTokens = {
-  github_token:   null,
-  github_user:    null,
-  jira_token:     null,
-  jira_cloud_id:  null,
-  jira_refresh:   null,
 }
 
 // ── PKCE helpers ───────────────────────────────────────────────────────────────
@@ -76,7 +67,7 @@ export function getGitHubAuthUrl(state) {
   const params = new URLSearchParams({
     client_id:    GITHUB_CLIENT_ID,
     redirect_uri: `${window.location.origin}/oauth/callback`,
-    scope:        'read:user read:org',
+    scope:        'repo read:org read:user',
     state,
     allow_signup: 'false',
   })
@@ -113,13 +104,12 @@ export function getJiraAuthUrl(state, pkceChallenge) {
  *
  * Returns null when the proxy is unreachable, triggering demo-mode fallback.
  */
-export async function exchangeGitHubCode(code, state) {
+export async function exchangeGitHubCode(code) {
   try {
     const res = await fetch('/api/v1/oauth/github/exchange', {
-      method:      'POST',
-      headers:     { 'Content-Type': 'application/json' },
-      credentials: 'include',   // send CSRF state cookie alongside the body
-      body:        JSON.stringify({ code, state }),
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ code }),
     })
     if (!res.ok) {
       const body = await res.json().catch(() => ({}))
@@ -172,38 +162,37 @@ export async function exchangeJiraCode(code, verifier) {
   }
 }
 
-// ── Token storage helpers (in-memory only — no localStorage) ──────────────────
+// ── Token storage helpers ──────────────────────────────────────────────────────
 export function getStoredToken(provider) {
-  if (provider === 'github') return _memTokens.github_token
-  if (provider === 'jira')   return _memTokens.jira_token
+  if (provider === 'github') return localStorage.getItem(LS_KEYS.GITHUB_TOKEN)
+  if (provider === 'jira')   return localStorage.getItem(LS_KEYS.JIRA_TOKEN)
   return null
 }
 
 export function getStoredUser(provider) {
-  if (provider === 'github') return _memTokens.github_user
+  if (provider === 'github') return localStorage.getItem(LS_KEYS.GITHUB_USER)
   return null
 }
 
 export function storeToken(provider, token, meta = {}) {
   if (provider === 'github') {
-    _memTokens.github_token = token
-    if (meta.login) _memTokens.github_user = meta.login
+    localStorage.setItem(LS_KEYS.GITHUB_TOKEN, token)
+    if (meta.login) localStorage.setItem(LS_KEYS.GITHUB_USER, meta.login)
   }
   if (provider === 'jira') {
-    _memTokens.jira_token = token
-    if (meta.cloudId) _memTokens.jira_cloud_id = meta.cloudId
-    if (meta.refreshToken) _memTokens.jira_refresh = meta.refreshToken
+    localStorage.setItem(LS_KEYS.JIRA_TOKEN, token)
+    if (meta.cloudId) localStorage.setItem(LS_KEYS.JIRA_CLOUD_ID, meta.cloudId)
   }
 }
 
 export function clearToken(provider) {
   if (provider === 'github') {
-    _memTokens.github_token = null
-    _memTokens.github_user  = null
+    localStorage.removeItem(LS_KEYS.GITHUB_TOKEN)
+    localStorage.removeItem(LS_KEYS.GITHUB_USER)
   }
   if (provider === 'jira') {
-    _memTokens.jira_token    = null
-    _memTokens.jira_cloud_id = null
-    _memTokens.jira_refresh  = null
+    localStorage.removeItem(LS_KEYS.JIRA_TOKEN)
+    localStorage.removeItem(LS_KEYS.JIRA_CLOUD_ID)
+    localStorage.removeItem(LS_KEYS.JIRA_REFRESH)
   }
 }

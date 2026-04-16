@@ -28,42 +28,20 @@
  * }
  */
 
-/**
- * encodeCpaToken — async, server-signed (HMAC-SHA256 via /api/v1/cpa/review-token).
- * Falls back to unsigned btoa token when the backend is unreachable (demo/dev mode).
- *
- * Returns a token string: "<b64url-payload>.<hex-hmac>" (v2) or legacy "<b64url>" (v1).
- */
-export async function encodeCpaToken(payload) {
-  try {
-    const res = await fetch('/api/v1/cpa/review-token', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(payload),
-      credentials: 'include',
-    })
-    if (res.ok) {
-      const { token } = await res.json()
-      return token
-    }
-  } catch {
-    // backend unavailable — fall back to unsigned btoa token (dev / demo mode only)
-  }
-  // Unsigned fallback (v1) — only used when the backend is unreachable
+export function encodeCpaToken(payload) {
   const json = JSON.stringify({ v: 1, ...payload })
-  return btoa(json).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  return btoa(json)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '')
 }
 
 export function decodeCpaToken(token) {
   try {
-    // v2 signed token: "<b64url-payload>.<hex-hmac>" — strip signature before decoding
-    const lastDot = token.lastIndexOf('.')
-    const encoded = lastDot > 0 ? token.slice(0, lastDot) : token
-
-    const b64     = encoded.replace(/-/g, '+').replace(/_/g, '/')
+    const b64     = token.replace(/-/g, '+').replace(/_/g, '/')
     const padded  = b64 + '=='.slice(0, (4 - (b64.length % 4)) % 4)
     const payload = JSON.parse(atob(padded))
-    if (payload?.v !== 1 && payload?.v !== 2) return null
+    if (payload?.v !== 1) return null
     return payload
   } catch {
     return null
