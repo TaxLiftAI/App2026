@@ -177,14 +177,16 @@ router.post('/webhook', async (req, res) => {
   const secret = process.env.STRIPE_WEBHOOK_SECRET
 
   if (!secret) {
-    console.warn('[billing/webhook] STRIPE_WEBHOOK_SECRET not set — skipping signature verification')
+    console.error('[billing/webhook] STRIPE_WEBHOOK_SECRET not configured — rejecting webhook')
+    return res.status(500).json({ message: 'Webhook endpoint not configured' })
+  }
+  if (!sig) {
+    return res.status(400).json({ message: 'Missing stripe-signature header' })
   }
 
   let event
   try {
-    event = secret && sig
-      ? s.webhooks.constructEvent(req.rawBody ?? req.body, sig, secret)
-      : (typeof req.body === 'object' ? req.body : JSON.parse(req.body))
+    event = s.webhooks.constructEvent(req.rawBody ?? req.body, sig, secret)
   } catch (err) {
     console.error('[billing/webhook] signature verification failed:', err.message)
     return res.status(400).json({ message: `Webhook signature error: ${err.message}` })

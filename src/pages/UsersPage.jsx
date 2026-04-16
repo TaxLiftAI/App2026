@@ -72,9 +72,9 @@ export default function UsersPage() {
     <div className="space-y-4">
       {/* Demo mode banner */}
       {usingMock && (
-        <div className="flex items-center gap-2.5 px-4 py-3 bg-indigo-600 rounded-xl text-xs text-white">
-          <FlaskConical size={13} className="text-indigo-200 flex-shrink-0" />
-          <span className="font-medium">Demo mode — user data is not live. Connect a data source to see real accounts.</span>
+        <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700">
+          <FlaskConical size={13} />
+          <span>Using demo data — backend not connected.</span>
         </div>
       )}
 

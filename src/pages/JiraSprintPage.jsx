@@ -362,16 +362,17 @@ export default function JiraSprintPage() {
 
       {/* ── Demo mode banner ── */}
       {isDemo && (
-        <div className="flex items-center justify-between gap-4 px-4 py-3 bg-indigo-600 rounded-xl text-xs text-white">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <FlaskConical size={13} className="text-indigo-200 flex-shrink-0" />
-            <span className="font-medium">This is a demo showing TaxLift's own sprint history — connect Jira to analyse your real sprints.</span>
+        <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl">
+          <FlaskConical size={15} className="text-amber-600 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-amber-800">Demo mode — showing TaxLift's own sprint history</p>
+            <p className="text-[11px] text-amber-600 mt-0.5">Connect Jira to generate this report from your real sprint data automatically.</p>
           </div>
           <button
-            onClick={() => navigate('/quick-connect')}
-            className="flex-shrink-0 bg-white text-indigo-700 font-semibold px-3 py-1 rounded-lg hover:bg-indigo-50 transition-colors whitespace-nowrap"
+            onClick={() => navigate('/integrations')}
+            className="flex-shrink-0 flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors"
           >
-            Connect Jira
+            Connect Jira <ExternalLink size={11} />
           </button>
         </div>
       )}

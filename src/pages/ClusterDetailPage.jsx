@@ -21,7 +21,6 @@ import Modal from '../components/ui/Modal'
 import CommentThread from '../components/ui/CommentThread'
 import UpgradeModal from '../components/ui/UpgradeModal'
 import NarrativeQualityCard from '../components/NarrativeQualityCard'
-import SREDQualificationPanel from '../components/SREDQualificationPanel'
 
 // ── Heuristic icon map ─────────────────────────────────────────────────────────
 const HEURISTIC_ICONS = {
@@ -200,8 +199,8 @@ function EvidenceTabs({ snapshot, clusterId }) {
             /* Fall back to mock data if no live runs yet */
             <>
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-[10px] font-semibold text-indigo-400 uppercase tracking-wide">Demo builds — connect CI/CD to see live data</span>
-                <div className="flex-1 h-px bg-indigo-100" />
+                <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Demo data — connect CI/CD to see live builds</span>
+                <div className="flex-1 h-px bg-gray-100" />
               </div>
               {mockBuilds.map(b => (
                 <div key={b.build_id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
@@ -1104,13 +1103,6 @@ export default function ClusterDetailPage() {
           </div>
         ))}
       </div>
-
-      {/* ── Why this qualifies ─────────────────────────────────────────────── */}
-      <SREDQualificationPanel
-        cluster={c}
-        commits={snapshot?.git_commits ?? []}
-        defaultOpen={false}
-      />
 
       {/* Main content: 3/5 evidence + 2/5 narrative */}
       <div className="grid grid-cols-5 gap-4">

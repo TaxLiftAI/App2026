@@ -16,10 +16,12 @@ const express     = require('express')
 const router      = express.Router()
 const { spawn }   = require('child_process')
 const path        = require('path')
+const { requireAuth }  = require('../middleware/auth')
+const { scanLimiter }  = require('../middleware/rateLimiter')
 
 const SCRIPT = path.join(__dirname, '../scripts/audit_pdf.py')
 
-router.post('/pdf', (req, res) => {
+router.post('/pdf', requireAuth, scanLimiter, (req, res) => {
   const body = req.body
   if (!body || !body.clusters) {
     return res.status(400).json({ error: 'clusters array required' })
@@ -53,7 +55,8 @@ router.post('/pdf', (req, res) => {
   py.on('close', code => {
     if (code !== 0) {
       console.error('[audit/pdf] python exited', code, stderr)
-      return res.status(500).json({ error: 'PDF generation failed', detail: stderr.slice(0, 300) })
+      const detail = process.env.NODE_ENV !== 'production' ? stderr.slice(0, 300) : undefined
+      return res.status(500).json({ error: 'PDF generation failed', ...(detail && { detail }) })
     }
     const pdf = Buffer.concat(chunks)
     const company = (body.repos?.[0] ?? 'company').split('/')[0]

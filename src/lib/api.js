@@ -303,14 +303,6 @@ export const grants = {
   directory:         ()        => get('/api/v1/grants/directory'),
 }
 
-// ── Activity Log / Changelog ──────────────────────────────────────────────────
-export const changelog = {
-  upload:   (filename, rows, province) =>
-    post('/api/v1/changelog/upload', { body: { filename, rows, province } }),
-  list:     () => get('/api/v1/changelog'),
-  estimate: () => get('/api/v1/changelog/estimate'),
-}
-
 // ── Admin ─────────────────────────────────────────────────────────────────────
 export const admin = {
   funnel:      ()        => get('/api/v1/admin/funnel'),

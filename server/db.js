@@ -230,20 +230,6 @@ db.exec(`
     status        TEXT NOT NULL DEFAULT 'pending',
     created_at    TEXT NOT NULL DEFAULT (datetime('now'))
   );
-
-  CREATE TABLE IF NOT EXISTS changelog_uploads (
-    id                   TEXT PRIMARY KEY,
-    user_id              TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    filename             TEXT NOT NULL DEFAULT '',
-    total_rows           INTEGER NOT NULL DEFAULT 0,
-    eligible_hours       INTEGER NOT NULL DEFAULT 0,
-    elig_expenditure     INTEGER NOT NULL DEFAULT 0,
-    federal_credit       INTEGER NOT NULL DEFAULT 0,
-    provincial_credit    INTEGER NOT NULL DEFAULT 0,
-    province             TEXT NOT NULL DEFAULT 'ON',
-    raw_json             TEXT NOT NULL DEFAULT '[]',
-    created_at           TEXT NOT NULL DEFAULT (datetime('now'))
-  );
 `)
 
 console.log('[db] Ready —', DB_PATH)

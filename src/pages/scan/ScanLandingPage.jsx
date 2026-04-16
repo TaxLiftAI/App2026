@@ -209,34 +209,6 @@ export default function ScanLandingPage() {
         </div>
       </div>
 
-      {/* GitLab / Bitbucket / Azure DevOps coming soon */}
-      <div className="max-w-md mx-auto px-4 mt-2 mb-6">
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
-          <p className="text-xs text-slate-500 mb-2.5 font-medium">More integrations coming soon</p>
-          <div className="flex items-center justify-center gap-3 flex-wrap">
-            {[
-              { name: 'GitLab',      icon: '🦊' },
-              { name: 'Bitbucket',   icon: '🪣' },
-              { name: 'Azure DevOps',icon: '🔷' },
-            ].map(p => (
-              <div key={p.name} className="flex items-center gap-1.5 bg-white/8 border border-white/10 rounded-lg px-3 py-1.5">
-                <span className="text-sm">{p.icon}</span>
-                <span className="text-xs text-slate-400 font-medium">{p.name}</span>
-                <span className="text-[9px] bg-amber-500/20 text-amber-400 border border-amber-500/20 rounded-full px-1.5 py-0.5 font-semibold ml-1">
-                  Soon
-                </span>
-              </div>
-            ))}
-          </div>
-          <a
-            href="mailto:hello@taxlift.ai?subject=GitLab%20%2F%20Bitbucket%20integration%20waitlist"
-            className="inline-flex items-center gap-1.5 mt-3 text-[11px] text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
-          >
-            Notify me when my platform is supported →
-          </a>
-        </div>
-      </div>
-
       {/* Social proof: example qualifying commits */}
       <div className="max-w-3xl mx-auto px-4 pb-16">
         <p className="text-center text-xs text-slate-500 mb-4 uppercase tracking-wide font-medium">

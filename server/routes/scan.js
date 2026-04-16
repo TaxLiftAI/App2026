@@ -15,6 +15,7 @@ const db      = require('../db')
 const { makeId } = require('../utils/uuid')
 const { scheduleDrip } = require('../lib/emailDrip')
 const { alertHighValueScan } = require('../lib/alertEmail')
+const { requireAuth }       = require('../middleware/auth')
 
 /**
  * POST /api/scan/free
@@ -122,10 +123,9 @@ router.get('/free/:id', (req, res) => {
  * Associate a free scan with a newly-registered user.
  * Called after the user signs up, passing their new user_id.
  */
-router.patch('/free/:id/associate', (req, res) => {
+router.patch('/free/:id/associate', requireAuth, (req, res) => {
   try {
-    const { user_id } = req.body
-    if (!user_id) return res.status(400).json({ message: 'user_id required' })
+    const user_id = req.user.id
     db.prepare('UPDATE free_scans SET user_id = ? WHERE id = ?').run(user_id, req.params.id)
     res.json({ ok: true })
   } catch (err) {
@@ -138,7 +138,8 @@ router.patch('/free/:id/associate', (req, res) => {
  * GET /api/scan/drip/status/:email
  * Admin endpoint — returns the drip email queue for a given email address.
  */
-router.get('/drip/status/:email', (req, res) => {
+router.get('/drip/status/:email', requireAuth, (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Forbidden' })
   try {
     const rows = db.prepare(`
       SELECT id, email, scan_id, sequence_step, send_after, sent_at, status, created_at

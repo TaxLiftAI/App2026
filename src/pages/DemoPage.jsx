@@ -4,9 +4,6 @@
  *
  * Shows a fully interactive walkthrough of the product using hardcoded
  * Acme Technologies Inc. sample data. No signup or GitHub connection needed.
- *
- * Updated Apr 2026: CCPC toggle + methodology, per-cluster qualification
- * breakdown, "What you get" tier explainer, audit PDF download CTA.
  */
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
@@ -14,135 +11,12 @@ import { usePageMeta } from '../hooks/usePageMeta'
 import {
   ArrowRight, Lock, Sparkles, GitBranch, Clock, CheckCircle2,
   AlertTriangle, FileText, BarChart2, Package, TrendingUp, X,
-  Zap, Building2, ChevronDown, ChevronUp, Shield, Download,
-  ToggleLeft, ToggleRight, HelpCircle, Star,
+  Zap, Building2,
 } from 'lucide-react'
 import {
   DEMO_COMPANY, DEMO_SUMMARY, DEMO_CLUSTERS,
   DEMO_NARRATIVE_QUALITY, DEMO_NARRATIVE_CLUSTER1, DEMO_GRANTS,
 } from '../lib/demoData'
-
-// ── Provincial SR&ED rates (same as production) ───────────────────────────────
-const PROV_RATES = {
-  ON: 0.08, QC: 0.30, BC: 0.10, AB: 0.10,
-  MB: 0.07, SK: 0.075, NS: 0.15,
-}
-const PROV_LABELS = {
-  ON: 'Ontario', QC: 'Québec', BC: 'British Columbia',
-  AB: 'Alberta', MB: 'Manitoba', SK: 'Saskatchewan', NS: 'Nova Scotia',
-}
-
-// Base demo credit assumed at 35% federal + 8% ON = 43% total
-const BASE_TOTAL_RATE = 0.43
-const BASE_CREDIT_LOW  = 112_000
-const BASE_CREDIT_HIGH = 158_000
-
-function calcCredit(base, isCcpc, province) {
-  const fed  = isCcpc ? 0.35 : 0.15
-  const prov = PROV_RATES[province] ?? 0.08
-  return Math.round(base * (fed + prov) / BASE_TOTAL_RATE / 1000)
-}
-
-// ── Per-cluster qualification data (synthetic, keyed by cluster id) ────────────
-const CLUSTER_QUAL = {
-  'cl-001': {
-    overall: 87,
-    systematic: {
-      score: 90, label: 'Strong',
-      colour: 'green',
-      evidence: 'Multiple experimental branches with controlled ablation studies; A/B testing framework for model variants.',
-    },
-    uncertainty: {
-      score: 85, label: 'Strong',
-      colour: 'green',
-      evidence: 'Novel transformer architecture choices had unknown performance characteristics at scale; no prior art addressed this dataset distribution.',
-    },
-    advancement: {
-      score: 85, label: 'Strong',
-      colour: 'green',
-      evidence: 'Accuracy improved from 67% → 94%; inference latency reduced 3.2× — quantified and documented.',
-    },
-    talking_point: 'Your team ran systematic experiments to advance beyond existing ML frameworks. The measured accuracy gain and latency reduction are textbook SR&ED advancement of knowledge.',
-    weakness: null,
-  },
-  'cl-002': {
-    overall: 79,
-    systematic: {
-      score: 82, label: 'Good',
-      colour: 'green',
-      evidence: 'Spike branches (spike/raft-consensus, spike/paxos-alt) document hypothesis testing; revert commits show iterative approach.',
-    },
-    uncertainty: {
-      score: 88, label: 'Strong',
-      colour: 'green',
-      evidence: 'Consensus algorithm behaviour under partial network partitions with Byzantine faults was not predictable from existing literature.',
-    },
-    advancement: {
-      score: 68, label: 'Moderate',
-      colour: 'amber',
-      evidence: 'Throughput improved ~40% under partition scenarios. Quantification could be stronger — add benchmark reports to evidence.',
-    },
-    talking_point: 'Distributed consensus under Byzantine conditions is a well-recognised area of technological uncertainty. Your spike-and-revert development pattern directly shows systematic investigation.',
-    weakness: 'Add latency/throughput benchmark reports to strengthen Advancement of Knowledge evidence.',
-  },
-  'cl-003': {
-    overall: 74,
-    systematic: {
-      score: 76, label: 'Good',
-      colour: 'green',
-      evidence: 'poc/cache-invalidation and poc/edge-worker branches show formal hypothesis testing.',
-    },
-    uncertainty: {
-      score: 80, label: 'Good',
-      colour: 'green',
-      evidence: 'Optimal cache invalidation strategy for globally distributed edge nodes was not determinable without experimentation.',
-    },
-    advancement: {
-      score: 65, label: 'Moderate',
-      colour: 'amber',
-      evidence: 'Cache hit-rate improvements are referenced in commit messages but not formally benchmarked.',
-    },
-    talking_point: 'Edge caching at global scale involves genuine technological uncertainty — existing CDN primitives couldn\'t solve your consistency problem without novel experimentation.',
-    weakness: 'Attach p99 latency comparisons before/after to cache experiment commits to raise Advancement score.',
-  },
-  'cl-004': {
-    overall: 68,
-    systematic: {
-      score: 65, label: 'Moderate',
-      colour: 'amber',
-      evidence: 'Some experimental patterns visible; fewer formal spike branches than other clusters.',
-    },
-    uncertainty: {
-      score: 72, label: 'Good',
-      colour: 'green',
-      evidence: 'Real-time fraud signal aggregation at sub-100ms SLA with explainability requirements had no known solution.',
-    },
-    advancement: {
-      score: 66, label: 'Moderate',
-      colour: 'amber',
-      evidence: 'System meets SLA targets but quantified advancement documentation is sparse.',
-    },
-    talking_point: 'The combination of real-time constraints AND explainability in fraud detection is a documented research gap — strong uncertainty argument.',
-    weakness: 'Add more experiment-prefix commits and a written technical narrative describing the systematic approach to strengthen this cluster.',
-  },
-}
-
-// ── Tier feature comparison ────────────────────────────────────────────────────
-const FREE_FEATURES = [
-  'Scan up to 2 GitHub repos',
-  'Basic cluster detection',
-  'Estimated credit range',
-  'Public commit history only',
-]
-const STARTER_FEATURES = [
-  'Unlimited repos + Jira/Linear',
-  'Full SR&ED qualification scores',
-  'AI-generated T661 narratives',
-  'Audit-ready PDF package',
-  'Activity log uploads',
-  'CPA collaboration portal',
-  'CCPC / province ITC calculator',
-]
 
 // ── Animated counter hook ─────────────────────────────────────────────────────
 function useCountUp(target, duration = 1600, start = false) {
@@ -281,291 +155,49 @@ function StatTile({ label, value, sub, icon: Icon, color }) {
   )
 }
 
-// ── Cluster card — with "Why this qualifies" toggle ───────────────────────────
-function ClusterCard({ cluster, onUpgrade }) {
-  const [open, setOpen] = useState(false)
-  const qual = CLUSTER_QUAL[cluster.id]
-
-  const colourClasses = {
-    green: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
-    amber: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', dot: 'bg-amber-400' },
-    red:   { bg: 'bg-red-50',   text: 'text-red-700',   border: 'border-red-200',   dot: 'bg-red-500'   },
-  }
-
+// ── Cluster card ──────────────────────────────────────────────────────────────
+function ClusterCard({ cluster }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-      {/* Main cluster info */}
-      <div className="p-5">
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="flex-1 min-w-0">
-            <h4 className="font-semibold text-slate-900 text-sm leading-snug mb-1.5">
-              {cluster.name}
-            </h4>
-            <span className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full ${cluster.badge_class}`}>
-              {cluster.theme}
-            </span>
-          </div>
-          <div className="text-right flex-shrink-0">
-            <div className="text-lg font-extrabold text-slate-900">
-              ${(cluster.estimated_credit / 1000).toFixed(0)}K
-            </div>
-            <div className="text-[10px] text-slate-400">est. credit</div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4 text-xs text-slate-500 mb-3">
-          <span className="flex items-center gap-1">
-            <GitBranch size={11} />
-            {cluster.qualifying_commits} commits
-          </span>
-          <span className="flex items-center gap-1">
-            <Clock size={11} />
-            {cluster.rd_hours}h R&D
-          </span>
-          {qual && (
-            <span className="flex items-center gap-1 font-semibold text-indigo-600">
-              <Shield size={11} />
-              {qual.overall}% CRA fit
-            </span>
-          )}
-        </div>
-
-        <div className="mb-3">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] text-slate-400">Evidence coverage</span>
-            <span className="text-[10px] font-semibold text-slate-600">{cluster.progress}%</span>
-          </div>
-          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-700 ${cluster.color_class}`}
-              style={{ width: `${cluster.progress}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Toggle button */}
-        {qual && (
-          <button
-            onClick={() => setOpen(v => !v)}
-            className="flex items-center gap-1.5 text-[11px] text-indigo-600 font-semibold hover:text-indigo-800 transition-colors"
-          >
-            <HelpCircle size={12} />
-            Why this qualifies
-            {open ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-          </button>
-        )}
-      </div>
-
-      {/* Qualification breakdown — expanded */}
-      {qual && open && (
-        <div className="border-t border-gray-100 bg-slate-50 p-4 space-y-3">
-          {/* 3-criterion grid */}
-          {[
-            { key: 'systematic',  label: 'Systematic Investigation', cra: 's.248(1)(a)' },
-            { key: 'uncertainty', label: 'Technological Uncertainty', cra: 's.248(1)(b)' },
-            { key: 'advancement', label: 'Advancement of Knowledge',  cra: 's.248(1)(c)' },
-          ].map(({ key, label, cra }) => {
-            const c = qual[key]
-            const cc = colourClasses[c.colour]
-            return (
-              <div key={key} className={`rounded-lg border p-3 ${cc.bg} ${cc.border}`}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <div className={`w-2 h-2 rounded-full ${cc.dot} flex-shrink-0`} />
-                    <span className={`text-[11px] font-bold ${cc.text}`}>{label}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className={`text-[10px] font-semibold ${cc.text} bg-white/70 px-1.5 py-0.5 rounded-full border ${cc.border}`}>
-                      {c.label} · {c.score}%
-                    </span>
-                    <span className="text-[9px] text-slate-400 font-mono">{cra}</span>
-                  </div>
-                </div>
-                <p className="text-[11px] text-slate-600 leading-relaxed">{c.evidence}</p>
-              </div>
-            )
-          })}
-
-          {/* Talking point */}
-          <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3">
-            <div className="text-[10px] font-bold text-indigo-500 uppercase tracking-wide mb-1">
-              Audit talking point
-            </div>
-            <p className="text-[11px] text-indigo-800 leading-relaxed italic">"{qual.talking_point}"</p>
-          </div>
-
-          {/* Weakness (if any) */}
-          {qual.weakness && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-2">
-              <AlertTriangle size={12} className="text-amber-500 flex-shrink-0 mt-0.5" />
-              <p className="text-[11px] text-amber-800 leading-relaxed">{qual.weakness}</p>
-            </div>
-          )}
-
-          <button
-            onClick={onUpgrade}
-            className="w-full text-[11px] text-indigo-600 font-semibold hover:underline flex items-center justify-center gap-1 pt-1"
-          >
-            <Sparkles size={11} />
-            Get full qualification report for your repos
-          </button>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── CCPC methodology panel ────────────────────────────────────────────────────
-function CcpcMethodologyPanel({ isCcpc, setIsCcpc, province, setProvince, adjLow, adjHigh }) {
-  const [open, setOpen] = useState(false)
-  const fedRate  = isCcpc ? 35 : 15
-  const provRate = Math.round((PROV_RATES[province] ?? 0.08) * 100 * 10) / 10
-  const totalRate = fedRate + provRate
-
-  return (
-    <div className="mt-4 bg-white/15 backdrop-blur-sm rounded-xl border border-white/20 overflow-hidden">
-      {/* Toggle row */}
-      <div className="px-4 py-3 flex flex-wrap items-center gap-3">
-        {/* CCPC toggle */}
-        <div className="flex items-center gap-2">
-          <span className="text-indigo-100 text-xs font-medium">CCPC</span>
-          <button
-            onClick={() => setIsCcpc(v => !v)}
-            className="flex-shrink-0 text-white hover:opacity-80 transition-opacity"
-            title={isCcpc ? 'Canadian-Controlled Private Corp (35% federal)' : 'Non-CCPC (15% federal)'}
-          >
-            {isCcpc
-              ? <ToggleRight size={22} className="text-white" />
-              : <ToggleLeft  size={22} className="text-indigo-300" />
-            }
-          </button>
-          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${isCcpc ? 'bg-white/20 text-white' : 'bg-white/10 text-indigo-300'}`}>
-            {isCcpc ? '35% federal' : '15% federal'}
+    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex-1 min-w-0">
+          <h4 className="font-semibold text-slate-900 text-sm leading-snug mb-1.5">
+            {cluster.name}
+          </h4>
+          <span className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full ${cluster.badge_class}`}>
+            {cluster.theme}
           </span>
         </div>
-
-        {/* Province selector */}
-        <div className="flex items-center gap-2">
-          <span className="text-indigo-100 text-xs font-medium">Province</span>
-          <select
-            value={province}
-            onChange={e => setProvince(e.target.value)}
-            className="text-xs bg-white/15 text-white border border-white/25 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-white/40"
-          >
-            {Object.entries(PROV_LABELS).map(([code, name]) => (
-              <option key={code} value={code} className="text-slate-900 bg-white">{code} — {name}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Adjusted range badge */}
-        {(adjLow !== 112 || adjHigh !== 158) && (
-          <div className="ml-auto text-right">
-            <div className="text-xs text-indigo-200">Adjusted estimate</div>
-            <div className="text-sm font-bold text-white">${adjLow}K – ${adjHigh}K</div>
+        <div className="text-right flex-shrink-0">
+          <div className="text-lg font-extrabold text-slate-900">
+            ${(cluster.estimated_credit / 1000).toFixed(0)}K
           </div>
-        )}
-
-        {/* Methodology toggle */}
-        <button
-          onClick={() => setOpen(v => !v)}
-          className="flex items-center gap-1 text-indigo-200 text-xs hover:text-white transition-colors"
-        >
-          How it's calculated
-          {open ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-        </button>
-      </div>
-
-      {/* Methodology detail */}
-      {open && (
-        <div className="border-t border-white/15 px-4 py-4 space-y-3">
-          {/* Rate card */}
-          <div className="bg-white/10 rounded-lg p-3 text-xs">
-            <div className="text-indigo-100 font-semibold mb-2 text-[11px] uppercase tracking-wide">ITC Rate Breakdown</div>
-            <div className="flex justify-between text-indigo-100 mb-1">
-              <span>Federal ITC ({isCcpc ? 'CCPC, first $3M' : 'non-CCPC'})</span>
-              <span className="font-bold text-white">{fedRate}%</span>
-            </div>
-            <div className="flex justify-between text-indigo-100 mb-1">
-              <span>Provincial — {PROV_LABELS[province]}</span>
-              <span className="font-bold text-white">{provRate}%</span>
-            </div>
-            <div className="flex justify-between border-t border-white/20 pt-1.5 mt-1.5">
-              <span className="font-semibold text-white">Combined ITC rate</span>
-              <span className="font-bold text-white">{totalRate}%</span>
-            </div>
-          </div>
-
-          {/* CRA references */}
-          <div className="text-[10px] text-indigo-200 space-y-0.5">
-            <div>· ITA s.127(9) — Investment Tax Credit definition</div>
-            <div>· ITA s.127(10.1) — CCPC enhanced refundable rate</div>
-            <div>· CRA T4088 Guide · IT-151R5</div>
-            {province === 'QC' && <div>· Revenu Québec — crédit d'impôt R-D 30% (RI)</div>}
-          </div>
-
-          <p className="text-[10px] text-indigo-200">
-            Estimate assumes qualified SR&ED expenditures on current and capital account.
-            Actual refundable vs. non-refundable split depends on CCPC status, taxable income,
-            and prior-year ITC balance. Confirm with your CPA.
-          </p>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── "What you get" tier explainer ─────────────────────────────────────────────
-function TierExplainer({ onUpgrade }) {
-  return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-      <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-bold text-slate-900 mb-0.5">What you get</h3>
-          <p className="text-xs text-slate-500">Free scan vs. Starter plan</p>
-        </div>
-        <Star size={16} className="text-amber-400" />
-      </div>
-
-      <div className="p-5 grid grid-cols-2 gap-4">
-        {/* Free */}
-        <div>
-          <div className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">Free scan</div>
-          <div className="space-y-2">
-            {FREE_FEATURES.map(f => (
-              <div key={f} className="flex items-start gap-2">
-                <CheckCircle2 size={13} className="text-slate-400 flex-shrink-0 mt-0.5" />
-                <span className="text-[11px] text-slate-500">{f}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Starter */}
-        <div className="bg-indigo-50 rounded-xl p-3 border border-indigo-100">
-          <div className="text-xs font-bold text-indigo-600 uppercase tracking-wide mb-3 flex items-center gap-1">
-            <Zap size={11} />
-            Starter
-          </div>
-          <div className="space-y-2">
-            {STARTER_FEATURES.map(f => (
-              <div key={f} className="flex items-start gap-2">
-                <CheckCircle2 size={13} className="text-indigo-500 flex-shrink-0 mt-0.5" />
-                <span className="text-[11px] text-indigo-800 font-medium">{f}</span>
-              </div>
-            ))}
-          </div>
+          <div className="text-[10px] text-slate-400">est. credit</div>
         </div>
       </div>
 
-      <div className="px-5 pb-5">
-        <button
-          onClick={onUpgrade}
-          className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm py-2.5 rounded-xl transition-colors"
-        >
-          Start your real scan — it's free
-          <ArrowRight size={14} />
-        </button>
+      <div className="flex items-center gap-4 text-xs text-slate-500 mb-3">
+        <span className="flex items-center gap-1">
+          <GitBranch size={11} />
+          {cluster.qualifying_commits} commits
+        </span>
+        <span className="flex items-center gap-1">
+          <Clock size={11} />
+          {cluster.rd_hours}h R&D
+        </span>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[10px] text-slate-400">Evidence coverage</span>
+          <span className="text-[10px] font-semibold text-slate-600">{cluster.progress}%</span>
+        </div>
+        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all duration-700 ${cluster.color_class}`}
+            style={{ width: `${cluster.progress}%` }}
+          />
+        </div>
       </div>
     </div>
   )
@@ -650,15 +282,9 @@ function NarrativeQualitySection({ onUpgrade }) {
 // TAB 1 — SR&ED Overview
 // ═══════════════════════════════════════════════════════════════════════════════
 function OverviewTab({ onUpgrade }) {
-  const [animate, setAnimate]   = useState(false)
-  const [isCcpc,   setIsCcpc]   = useState(true)
-  const [province, setProvince] = useState('ON')
-
-  const adjLow  = calcCredit(BASE_CREDIT_LOW,  isCcpc, province)
-  const adjHigh = calcCredit(BASE_CREDIT_HIGH, isCcpc, province)
-
-  const creditLow  = useCountUp(adjLow,  1400, animate)
-  const creditHigh = useCountUp(adjHigh, 1400, animate)
+  const [animate, setAnimate] = useState(false)
+  const creditLow  = useCountUp(112, 1400, animate)
+  const creditHigh = useCountUp(158, 1400, animate)
 
   useEffect(() => {
     const t = setTimeout(() => setAnimate(true), 120)
@@ -676,13 +302,6 @@ function OverviewTab({ onUpgrade }) {
         <p className="text-indigo-200 text-sm">
           Based on {DEMO_SUMMARY.qualifying_commits} qualifying commits across {DEMO_SUMMARY.cluster_count} clusters
         </p>
-
-        {/* CCPC + methodology panel inside hero */}
-        <CcpcMethodologyPanel
-          isCcpc={isCcpc}     setIsCcpc={setIsCcpc}
-          province={province} setProvince={setProvince}
-          adjLow={adjLow}     adjHigh={adjHigh}
-        />
       </div>
 
       {/* Stat tiles */}
@@ -710,21 +329,15 @@ function OverviewTab({ onUpgrade }) {
         />
       </div>
 
-      {/* Cluster cards — with "Why this qualifies" toggle */}
+      {/* Cluster cards */}
       <div>
-        <h3 className="text-sm font-bold text-slate-900 mb-1">SR&ED Clusters</h3>
-        <p className="text-xs text-slate-500 mb-3">
-          Each cluster groups related commits. Toggle "Why this qualifies" to see the CRA 3-part test assessment.
-        </p>
+        <h3 className="text-sm font-bold text-slate-900 mb-3">SR&ED Clusters</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {DEMO_CLUSTERS.map(cluster => (
-            <ClusterCard key={cluster.id} cluster={cluster} onUpgrade={onUpgrade} />
+            <ClusterCard key={cluster.id} cluster={cluster} />
           ))}
         </div>
       </div>
-
-      {/* "What you get" tier explainer */}
-      <TierExplainer onUpgrade={onUpgrade} />
 
       {/* Quality score + top activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -765,23 +378,6 @@ function OverviewTab({ onUpgrade }) {
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Audit PDF download CTA — locked in demo */}
-      <div className="relative rounded-xl border border-gray-200 overflow-hidden">
-        <div className="blur-sm select-none pointer-events-none p-6 flex items-center justify-between gap-4">
-          <div>
-            <h4 className="font-bold text-slate-900 text-sm mb-1">Download Audit Package</h4>
-            <p className="text-xs text-slate-500">
-              PDF includes cover page, cluster narratives, expenditure schedule, and CRA methodology.
-            </p>
-          </div>
-          <div className="flex-shrink-0 flex items-center gap-2 bg-slate-900 text-white font-medium text-sm px-4 py-2.5 rounded-xl">
-            <Download size={14} />
-            Download PDF
-          </div>
-        </div>
-        <LockOverlay onUnlock={onUpgrade} label="Connect GitHub to generate your audit package" />
       </div>
     </div>
   )
@@ -1014,7 +610,6 @@ function CpaTab({ onUpgrade }) {
               { icon: BarChart2, label: 'Developer Hours Breakdown — All Clusters' },
               { icon: Package,   label: 'Evidence Chain of Custody Report' },
               { icon: FileText,  label: 'T661 Narrative — All 4 Clusters' },
-              { icon: Shield,    label: 'CPA Qualification Approval Audit Trail' },
             ].map(item => {
               const Icon = item.icon
               return (

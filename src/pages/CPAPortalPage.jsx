@@ -5,7 +5,7 @@ import {
   AlertCircle, Clock, ArrowRight, LayoutGrid, List, ChevronDown,
   Mail, Phone, MapPin, Calendar, FileText, GitMerge, Layers,
   ShieldAlert, TrendingUp, ExternalLink, X, RefreshCw, Info, Share2,
-  BadgeCheck, UserPlus, Link2, FlaskConical,
+  BadgeCheck, UserPlus, Link2,
 } from 'lucide-react'
 import { CPA_FIRM, CPA_CLIENTS, getCPAPortalStats } from '../data/mockData'
 import { formatCurrency } from '../lib/utils'
@@ -429,19 +429,16 @@ function ClientDetailDrawer({ client, onClose }) {
 
         {/* Footer actions */}
         <div className="px-6 py-4 border-t border-gray-100 space-y-2">
-          {/* Primary: oversight/review – always available */}
-          <button
-            onClick={() => { onClose(); navigate(`/cpa-portal/oversight/${client.id}`) }}
-            className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors"
-          >
-            <FileText size={15} /> Review &amp; Edit Narratives →
-          </button>
-          {isReady && (
+          {isReady ? (
             <button
               onClick={() => { onClose(); navigate(`/cpa-portal/report/${client.id}`) }}
-              className="w-full flex items-center justify-center gap-2 border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-sm font-semibold py-2.5 rounded-xl transition-colors"
+              className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors"
             >
-              <FileText size={15} /> View T661 Package
+              <FileText size={15} /> View T661 Package →
+            </button>
+          ) : (
+            <button disabled className="w-full flex items-center justify-center gap-2 bg-gray-100 text-gray-400 text-sm font-medium py-2.5 rounded-xl cursor-not-allowed">
+              <FileText size={15} /> CPA Package not yet ready
             </button>
           )}
           <button
@@ -602,7 +599,7 @@ export default function CPAPortalPage() {
                   </span>
                 )}
                 {dataSource === 'mock' && (
-                  <span className="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 bg-indigo-400/30 text-indigo-200 rounded-full border border-indigo-400/30">
+                  <span className="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 bg-amber-400/20 text-amber-300 rounded-full border border-amber-400/30">
                     Demo
                   </span>
                 )}
@@ -637,16 +634,6 @@ export default function CPAPortalPage() {
           </div>
         </div>
       </div>
-
-      {/* Demo mode banner */}
-      {dataSource === 'mock' && (
-        <div className="flex items-center justify-between gap-4 px-4 py-3 bg-indigo-600 rounded-xl text-xs text-white">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <FlaskConical size={13} className="text-indigo-200 flex-shrink-0" />
-            <span className="font-medium">This is a demo — client data shown is sample only. Real clients appear once connected.</span>
-          </div>
-        </div>
-      )}
 
       {/* ── Fiscal year tabs (Fix 6) ── */}
       <div className="flex items-center justify-between gap-4 flex-wrap -mb-2">

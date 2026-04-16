@@ -183,7 +183,7 @@ async function sendVerificationEmail(email, token) {
 
 // ── POST /api/auth/register ───────────────────────────────────────────────────
 router.post('/register', async (req, res) => {
-  const { email, password, full_name = '', firm_name = '', role = 'admin' } = req.body ?? {}
+  const { email, password, full_name = '', firm_name = '' } = req.body ?? {}
 
   if (!email || !password) {
     return res.status(400).json({ message: 'email and password are required' })
@@ -205,7 +205,7 @@ router.post('/register', async (req, res) => {
   const password_hash = await bcrypt.hash(password, 10)
   const tenant_id     = `tenant-${id.slice(0, 8)}`
 
-  const safeRole = ['admin', 'developer', 'reviewer', 'cpa'].includes(role) ? role : 'admin'
+  const assignedRole = 'user'
 
   const verifyToken = makeVerifyToken()
 
@@ -213,7 +213,7 @@ router.post('/register', async (req, res) => {
     INSERT INTO users (id, email, password_hash, full_name, firm_name, role, tenant_id,
                        email_verify_token, email_verify_sent_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-  `).run(id, email.toLowerCase(), password_hash, full_name, firm_name, safeRole, tenant_id, verifyToken)
+  `).run(id, email.toLowerCase(), password_hash, full_name, firm_name, assignedRole, tenant_id, verifyToken)
 
   // Fire-and-forget — never blocks the response
   sendVerificationEmail(email.toLowerCase(), verifyToken)
@@ -402,9 +402,10 @@ router.post('/forgot-password', async (req, res) => {
     if (Date.now() < sentAt.getTime() + 10 * 60 * 1000) return
   }
 
-  const resetToken = makeVerifyToken()
+  const resetToken     = makeVerifyToken()
+  const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex')
   db.prepare(`UPDATE users SET password_reset_token = ?, password_reset_sent_at = datetime('now') WHERE id = ?`)
-    .run(resetToken, user.id)
+    .run(resetTokenHash, user.id)
 
   const resetUrl = `${APP_URL}/reset-password?token=${resetToken}`
   let transport
@@ -460,7 +461,8 @@ router.post('/reset-password', async (req, res) => {
   const pwErr = validatePassword(typeof password === 'string' ? password : '')
   if (pwErr) return res.status(400).json({ message: pwErr })
 
-  const user = db.prepare('SELECT id, email, password_reset_sent_at FROM users WHERE password_reset_token = ?').get(token)
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex')
+  const user = db.prepare('SELECT id, email, password_reset_sent_at FROM users WHERE password_reset_token = ?').get(tokenHash)
   if (!user) return res.status(404).json({ message: 'This reset link is invalid or has already been used.' })
 
   // 1-hour expiry
