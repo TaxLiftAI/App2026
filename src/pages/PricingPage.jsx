@@ -1,10 +1,9 @@
 /**
  * PricingPage — /pricing
  *
- * Performance-based annual pricing:
- *   Starter — 3% of estimated SR&ED credit, paid once per fiscal year
- *   Plus    — 5% of estimated SR&ED credit, includes Grants module
- *   Enterprise — custom, contact sales
+ * Flat-fee pricing:
+ *   SR&ED Filing Package — $999 one-time per fiscal year (direct customers)
+ *   CPA Partner Seat     — $4,800/year (CPA firms; earn $300 commission per referred client)
  *
  * URL params:
  *   ?estimate=180000   — credit estimate in CAD (pre-fills hero banner, skips lead gate)
@@ -17,7 +16,7 @@ import {
   ShieldCheck, Check, ArrowRight, ArrowLeft, Loader2, Sparkles,
   ChevronDown, ChevronUp, Zap, Star, Clock, Lock, ExternalLink,
   TrendingUp, Calendar, RefreshCw, AlertCircle, BadgeCheck,
-  Github, DollarSign,
+  Github, DollarSign, X, Building2,
 } from 'lucide-react'
 import PricingCard from '../components/PricingCard'
 import { PLANS, redirectToCheckout, getPlanForBilling } from '../lib/stripe'
@@ -32,16 +31,12 @@ function fmtK(n) {
 
 const FAQS = [
   {
-    q: "How does the fee work — and what if my actual CRA assessment is lower than the estimate?",
-    a: "Starter is 3% of your scan estimate; Plus is 5%. The fee is charged when your CPA-ready package is complete and you are ready to file — before CRA processes your claim. Our scan estimate is intentionally conservative (we use a low hourly rate and a per-commit proxy that understates most real claims), so actual CRA assessments typically meet or exceed the estimate. That said, if your actual CRA assessment comes in more than 30% below the scan estimate, we will issue a partial refund for the difference. No one should pay more than they recover.",
-  },
-  {
-    q: "What is the difference between Starter (3%) and Plus (5%)?",
-    a: "Starter covers full SR&ED automation — AI T661 narratives, GitHub and Jira integration, CPA handoff package, audit vault, and 3 years of evidence retention. Plus adds the Grants module: automatic matching against 9 Canadian innovation funding programs including NRC-IRAP, OITC, NGen, and provincial programs, plus a gap-fill interview and AI section drafting. On a $150K SR&ED credit, Starter costs $4,500 and Plus costs $7,500 — the extra $3,000 gives you access to grant programs that can return $500K–$4M+ in non-dilutive funding.",
+    q: "What does the $999 filing fee cover?",
+    a: "$999 is a flat, one-time fee per fiscal year filing. It covers the complete SR&ED automation package: AI-generated T661 narratives for every qualifying project cluster, GitHub and Jira integration, a CPA-ready handoff PDF, financial schedule, and a 3-year audit vault with chain-of-custody evidence. No percentage is taken from your refund — you keep every dollar CRA sends you.",
   },
   {
     q: 'How is TaxLift different from hiring an SR&ED consultant?',
-    a: "Traditional SR&ED consultants charge 15–25% of your refund as a contingency fee. On a $200K claim that is $30–50K taken from your refund before you see a dollar. TaxLift charges 3% — roughly 5–8× less — and you get a CPA-ready package generated in hours, not weeks. Your CPA stays in the loop; they just skip the heavy documentation grind.",
+    a: "Traditional SR&ED consultants charge 15–25% of your refund as a contingency fee. On a $200K claim that is $30–50K taken before you see a dollar. TaxLift charges $999 flat — on a $200K claim that is 0.5% of your refund, saving you $29,000–$49,000. You get a CPA-ready package in hours, not weeks, and your CPA stays in the loop without doing the heavy documentation grind.",
   },
   {
     q: 'Do I still need a CPA?',
@@ -49,15 +44,19 @@ const FAQS = [
   },
   {
     q: 'How long does it take to get my package ready?',
-    a: 'Most customers complete their first package in 2-4 hours — primarily reviewing and approving the AI-generated T661 narratives. After that, updates are continuous as you commit more code.',
+    a: 'Most customers complete their first package in 2–4 hours — primarily reviewing and approving the AI-generated T661 narratives. After that, your audit vault updates continuously as you commit more code.',
   },
   {
     q: 'What if CRA audits my claim?',
-    a: 'TaxLift generates an audit-ready evidence chain of custody — every qualifying commit is timestamped and linked to its CRA activity category. Annual plan subscribers have their vault updated continuously, so responding to a CRA information request takes hours, not weeks.',
+    a: 'TaxLift generates an audit-ready evidence chain of custody — every qualifying commit is timestamped and linked to its CRA activity category. Your vault is updated continuously throughout the year, so responding to a CRA information request takes hours, not weeks.',
   },
   {
     q: 'Can I claim for previous tax years?',
-    a: 'Yes. CRA allows SR&ED claims for up to 18 months after fiscal year-end. The Plus annual plan includes a prior-years catch-up analysis.',
+    a: 'Yes. CRA allows SR&ED claims for up to 18 months after fiscal year-end. For December 31 companies, the June 30 deadline is the hard cutoff for the prior fiscal year. TaxLift can scan historical commit data for catch-up filings.',
+  },
+  {
+    q: 'What is the CPA Partner Seat?',
+    a: 'The $4,800/year CPA Partner Seat is for accounting firms and independent CPAs who want to offer SR&ED automation to their clients. It gives one CPA unlimited client workspaces, a white-label handoff experience, and a $300 referral commission for each net-new client they bring to TaxLift. It is the fastest way for a CPA to add SR&ED as a service without hiring an in-house specialist.',
   },
 ]
 
@@ -84,11 +83,11 @@ function FaqItem({ q, a }) {
 }
 
 const TRUST_MARKS = [
-  { label: 'CRA Compliant',         icon: ShieldCheck },
-  { label: '14-day free trial',     icon: Clock       },
-  { label: '3% vs. 15–25% consult', icon: Lock        },
-  { label: 'CPA-ready package',     icon: Star        },
-  { label: 'Pay on results',        icon: BadgeCheck  },
+  { label: 'CRA Compliant',              icon: ShieldCheck },
+  { label: '$999 flat — no % taken',     icon: Lock        },
+  { label: 'CPA-ready package',          icon: Star        },
+  { label: 'Free scan included',         icon: Sparkles    },
+  { label: 'Audit vault included',       icon: BadgeCheck  },
 ]
 
 // SR&ED credit multipliers by industry (% of payroll that qualifies as R&D × 35% ITC rate)
@@ -120,14 +119,12 @@ function RoiCalculator({ defaultCredit = 0 }) {
   ))
 
   const consultantFee     = Math.round(c * 0.20)
-  const taxliftStarter    = Math.round(c * 0.03)
-  const taxliftPlus       = Math.round(c * 0.05)
-  const savings1yr        = Math.max(0, consultantFee - taxliftStarter)
-  const roi               = taxliftStarter > 0 ? Math.round((savings1yr / taxliftStarter) * 100) : 0
+  const taxliftFlatFee    = 999   // flat per fiscal year
+  const savings1yr        = Math.max(0, consultantFee - taxliftFlatFee)
+  const roi               = taxliftFlatFee > 0 ? Math.round((savings1yr / taxliftFlatFee) * 100) : 0
 
-  // Multi-year: consultant fee stays proportional; TaxLift = fee + $299/yr subscription
-  const starterSubYr  = 299 * 12
-  const savings3yr    = Math.max(0, consultantFee * years - (taxliftStarter * years + starterSubYr * Math.max(0, years - 1)))
+  // Multi-year: consultant fee repeats; TaxLift is $999 × years
+  const savings3yr    = Math.max(0, consultantFee * years - taxliftFlatFee * years)
 
   const sliderPct = mode === 'credit'
     ? ((credit - 50000) / (2000000 - 50000)) * 100
@@ -255,25 +252,25 @@ function RoiCalculator({ defaultCredit = 0 }) {
               bad:   true,
             },
             {
-              label: 'TaxLift Starter',
-              sub:   `3% + ${years > 1 ? '$299/yr sub' : 'subscription'}`,
-              value: fmtK(taxliftStarter * years + (years > 1 ? starterSubYr * (years - 1) : 0)),
-              note:  `vs consultant over ${years} yr${years > 1 ? 's' : ''}`,
+              label: 'TaxLift',
+              sub:   `$999 flat${years > 1 ? ' × ' + years + ' yrs' : '/yr'}`,
+              value: fmtK(taxliftFlatFee * years),
+              note:  'flat fee, keep your refund',
               bad:   false,
             },
             {
-              label: 'TaxLift Plus',
-              sub:   `5% (incl. grants)`,
-              value: fmtK(taxliftPlus * years),
-              note:  'incl. grant matching',
-              bad:   false,
-            },
-            {
-              label: years > 1 ? `${years}-yr savings` : 'You save',
-              sub:   `${roi}× ROI on TaxLift`,
+              label: `${roi}× ROI`,
+              sub:   `on your $${(taxliftFlatFee * years).toLocaleString()} investment`,
               value: fmtK(years > 1 ? savings3yr : savings1yr),
-              note:  'back in your pocket',
+              note:  'saved vs consultant',
               highlight: true,
+            },
+            {
+              label: 'SR&ED credit',
+              sub:   mode === 'employees' ? `${employees} devs × ${INDUSTRY_RATES[industry].rdPct * 100}% R&D` : 'your estimate',
+              value: fmtK(c),
+              note:  'estimated refundable ITC',
+              bad:   false,
             },
           ].map(({ label, sub, value, note, bad, highlight }) => (
             <div key={label} className={`rounded-xl p-4 text-center ${
@@ -304,7 +301,7 @@ function RoiCalculator({ defaultCredit = 0 }) {
         </div>
 
         <p className="text-indigo-600 text-[10px] text-center mt-3">
-          Estimates use $105K avg R&amp;D salary and CRA's 35% ITC rate. Consultant fee at 20% midpoint (range: 15–25%). Actual results vary.
+          Estimates use $105K avg R&D salary and CRA's 35% ITC rate. Consultant fee at 20% midpoint (range: 15–25%). TaxLift fee is $999 flat per fiscal year. Actual results vary.
         </p>
       </div>
     </div>
@@ -316,8 +313,8 @@ function YearRoundValue() {
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 mb-16">
       <div className="text-center mb-8">
         <p className="text-indigo-600 text-xs font-semibold uppercase tracking-widest mb-2">What you get between filings</p>
-        <h2 className="text-xl font-bold text-gray-900 mb-2">SR&amp;ED is not just an annual event — and your subscription should not feel like one either</h2>
-        <p className="text-gray-500 text-sm max-w-xl mx-auto">Annual plan subscribers get year-round value that compounds. By the time you file, most of the work is already done.</p>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">SR&amp;ED is not just an annual event — your $999 covers the whole year</h2>
+        <p className="text-gray-500 text-sm max-w-xl mx-auto">Your filing package includes continuous year-round tracking. By the time you're ready to file, most of the work is already done.</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-6">
         {[
@@ -343,7 +340,7 @@ function YearRoundValue() {
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
         <AlertCircle size={15} className="text-amber-600 flex-shrink-0 mt-0.5" />
         <p className="text-xs text-amber-800 leading-relaxed">
-          <strong>A note on Pay-per-Claim:</strong> You get a great T661 package — but no ongoing audit vault, no mid-year tracking, and no head start on next year's claim. That is fine for a first filing. For companies with continuous R&D programs, an annual plan pays for itself in the time saved on year two.
+          <strong>Why continuous tracking matters:</strong> Companies that document SR&ED year-round — not just at filing time — consistently recover more. Commits documented in January are easy to categorize. Commits from eighteen months ago require guesswork. TaxLift keeps your vault current so you never leave credits on the table.
         </p>
       </div>
     </div>
@@ -583,7 +580,7 @@ function LeadCaptureGate({ onUnlock }) {
 export default function PricingPage() {
   usePageMeta({
     title:       'Pricing — TaxLift SR&ED Tax Credit Platform',
-    description: 'TaxLift charges 3% of your SR&ED credit — not 15–25% like consultants. CPA-ready T661 package from your GitHub and Jira data. 14-day free trial.',
+    description: 'TaxLift charges $999 flat — not 15–25% like consultants. Get a CPA-ready T661 package from your GitHub and Jira data, and keep every dollar of your SR&ED refund.',
     path:        '/pricing',
     breadcrumb:  [{ name: 'Home', path: '/' }, { name: 'Pricing', path: '/pricing' }],
   })
@@ -601,26 +598,19 @@ export default function PricingPage() {
       offers: [
         {
           '@type':       'Offer',
-          name:          'Starter',
-          price:         '299',
+          name:          'SR&ED Filing Package',
+          price:         '999',
           priceCurrency: 'CAD',
-          priceSpecification: { '@type': 'UnitPriceSpecification', price: '299', priceCurrency: 'CAD', unitText: 'MONTH' },
-          description:   '3% of SR&ED credit + $299/mo subscription. Includes AI T661 narratives, GitHub and Jira integration, CPA handoff package.',
+          priceSpecification: { '@type': 'UnitPriceSpecification', price: '999', priceCurrency: 'CAD', unitText: 'ANN' },
+          description:   '$999 flat fee per fiscal year. Includes AI T661 narratives, GitHub and Jira integration, CPA-ready handoff package, and 3-year audit vault. No percentage taken from your refund.',
         },
         {
           '@type':       'Offer',
-          name:          'Plus',
-          price:         '499',
+          name:          'CPA Partner Seat',
+          price:         '4800',
           priceCurrency: 'CAD',
-          priceSpecification: { '@type': 'UnitPriceSpecification', price: '499', priceCurrency: 'CAD', unitText: 'MONTH' },
-          description:   '5% of SR&ED credit + $499/mo subscription. Everything in Starter plus grants module: NRC-IRAP, SDTC, Mitacs and 6 more programs.',
-        },
-        {
-          '@type':       'Offer',
-          name:          'Pay-per-Claim',
-          price:         '1997',
-          priceCurrency: 'CAD',
-          description:   'One-time $1,997 per fiscal year. No subscription. Full SR&ED package for one filing.',
+          priceSpecification: { '@type': 'UnitPriceSpecification', price: '4800', priceCurrency: 'CAD', unitText: 'ANN' },
+          description:   '$4,800/year for CPA firms. Unlimited client workspaces, white-label CPA handoff experience, and $300 referral commission per net-new client.',
         },
       ],
       aggregateRating: {
@@ -663,13 +653,15 @@ export default function PricingPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
-  const [checkoutLoading, setCheckoutLoading] = useState(null)
-  const [waitlistOpen,    setWaitlistOpen]    = useState(false)
-  const [waitlistPlan,    setWaitlistPlan]    = useState('')
-  const [waitlistSource,  setWaitlistSource]  = useState('pricing')
-  const [estimate,        setEstimate]        = useState(null)
-  const [clusterCount,    setClusterCount]    = useState(null)
-  const [gateCleared,     setGateCleared]     = useState(false)
+  const [checkoutLoading,   setCheckoutLoading]   = useState(null)
+  const [waitlistOpen,      setWaitlistOpen]      = useState(false)
+  const [waitlistPlan,      setWaitlistPlan]      = useState('')
+  const [waitlistSource,    setWaitlistSource]    = useState('pricing')
+  const [estimate,          setEstimate]          = useState(null)
+  const [clusterCount,      setClusterCount]      = useState(null)
+  const [gateCleared,       setGateCleared]       = useState(false)
+  const [referralModalOpen, setReferralModalOpen] = useState(false)
+  const [referralCode,      setReferralCode]      = useState('')
 
   // Auto-unlock: ?estimate= param, existing scan results, or returning visitor (same session)
   useEffect(() => {
@@ -712,13 +704,11 @@ export default function PricingPage() {
 
   const creditLow     = estimate ? Math.round(estimate * 0.65) : null
   const creditHigh    = estimate ? Math.round(estimate * 1.35) : null
-  const taxliftFeeLow  = estimate ? Math.round(estimate * 0.03) : null   // Starter (3%)
-  const taxliftFeeHigh = estimate ? Math.round(estimate * 0.05) : null   // Plus (5%)
-  const taxliftFee     = taxliftFeeLow  // used in comparison vs consultant (Starter baseline)
+  const taxliftFee    = 999   // flat fee — no percentage of credit
   const consultantLow  = estimate ? Math.round(estimate * 0.15) : null
   const consultantHigh = estimate ? Math.round(estimate * 0.25) : null
-  const savingsLow     = consultantLow  && taxliftFeeHigh ? Math.max(0, consultantLow  - taxliftFeeHigh) : null
-  const savingsHigh    = consultantHigh && taxliftFeeLow  ? Math.max(0, consultantHigh - taxliftFeeLow)  : null
+  const savingsLow     = consultantLow  ? Math.max(0, consultantLow  - taxliftFee) : null
+  const savingsHigh    = consultantHigh ? Math.max(0, consultantHigh - taxliftFee) : null
   const highlightedPlan = searchParams.get('plan') || null
 
   const annualPlans = Object.values(PLANS).map(p => {
@@ -734,7 +724,7 @@ export default function PricingPage() {
       setWaitlistPlan('enterprise'); setWaitlistSource('pricing_enterprise'); setWaitlistOpen(true); return
     }
     setCheckoutLoading(planId)
-    // Pass the credit estimate so server can compute the exact fee (3% or 5%)
+    // Pass the credit estimate for personalisation (flat $999 fee, but estimate drives comparison UI)
     const result = await redirectToCheckout(planId, estimate ?? 0)
     setCheckoutLoading(null)
     if (!result.ok) {
@@ -817,12 +807,12 @@ export default function PricingPage() {
                 <div className="bg-white/10 border border-white/20 rounded-xl px-4 py-3 space-y-2.5">
                   <p className="text-indigo-200 text-xs font-semibold uppercase tracking-wider">vs. SR&amp;ED consultant</p>
                   <div className="flex items-center justify-between gap-4"><span className="text-indigo-300 text-xs">Consultant (15–25%)</span><span className="text-white/70 font-mono text-xs line-through">{fmtK(consultantLow)}–{fmtK(consultantHigh)}</span></div>
-                  <div className="flex items-center justify-between gap-4"><span className="text-indigo-300 text-xs">TaxLift (3–5% fee)</span><span className="text-white font-mono text-xs font-semibold">{fmtK(taxliftFeeLow)}–{fmtK(taxliftFeeHigh)}</span></div>
+                  <div className="flex items-center justify-between gap-4"><span className="text-indigo-300 text-xs">TaxLift ($999 flat)</span><span className="text-white font-mono text-xs font-semibold">$999</span></div>
                   <div className="border-t border-white/20 pt-2 flex items-center justify-between">
                     <span className="text-xs font-bold text-emerald-300">You save</span>
                     <span className="text-emerald-300 font-bold font-mono text-sm">{fmtK(savingsLow)}–{fmtK(savingsHigh)}</span>
                   </div>
-                  <p className="text-indigo-300 text-[10px] leading-snug text-center">Pick a plan below to unlock your full package ↓</p>
+                  <p className="text-indigo-300 text-[10px] leading-snug text-center">Get started below for $999 flat ↓</p>
                 </div>
               </div>
             </div>
@@ -832,10 +822,10 @@ export default function PricingPage() {
         <div className="text-center mb-10">
           <p className="text-indigo-600 text-sm font-semibold uppercase tracking-widest mb-2">Pricing</p>
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">
-            {creditLow ? 'Claim your ' + fmtK(creditHigh) + ' — pay just 3%' : 'SR&ED automation — 3% of your credit, not 15–25%'}
+            {creditLow ? 'Claim your ' + fmtK(creditHigh) + ' — pay $999 flat' : 'SR&ED automation — $999 flat, not 15–25% of your refund'}
           </h1>
           <p className="text-gray-500 max-w-xl mx-auto text-sm sm:text-base leading-relaxed">
-            Consultants charge 15–25% contingency. TaxLift charges 3% of your estimated SR&amp;ED credit — a CPA-ready T661 package from your GitHub and Jira data, for a fraction of the cost. 14-day free trial included.
+            Consultants take 15–25% of your SR&amp;ED refund before you see a dollar. TaxLift charges $999 flat — a CPA-ready T661 package built from your GitHub and Jira data. You keep the rest.
           </p>
         </div>
 
@@ -849,9 +839,11 @@ export default function PricingPage() {
 
         <div className="text-center mb-8">
           <p className="text-sm text-gray-500 max-w-xl mx-auto">
-            Starter is <strong className="text-gray-700">3%</strong> of your SR&amp;ED credit estimate, paid annually.
-            Plus is <strong className="text-gray-700">5%</strong> and adds the Grants module — unlocking up to $4M+ in additional Canadian funding.
-            {estimate ? <>{' '}Your fee: <strong className="text-indigo-600">{fmtK(taxliftFeeLow)}</strong> (Starter) or <strong className="text-indigo-600">{fmtK(taxliftFeeHigh)}</strong> (Plus).</> : null}
+            One flat fee: <strong className="text-gray-700">$999</strong> per fiscal year filing.
+            No percentage of your refund. No subscription.{' '}
+            {estimate
+              ? <>On your estimated{' '}<strong className="text-indigo-600">{fmtK(creditHigh)}</strong> credit, a consultant would charge{' '}<strong className="text-red-500">{fmtK(consultantLow)}–{fmtK(consultantHigh)}</strong>. TaxLift charges <strong className="text-indigo-600">$999</strong>.</>
+              : 'Get your CPA-ready SR\u0026ED package from your GitHub and Jira data.'}
           </p>
         </div>
 
@@ -863,7 +855,7 @@ export default function PricingPage() {
 
         <div className="text-center mb-12">
           <p className="text-xs text-gray-400">
-            Prices in CAD · {estimate ? `your fee = ${fmtK(estimate)} estimate × 3% or 5%` : '3% or 5% of your SR&ED credit estimate'} · paid once per fiscal year · processed via Stripe
+            Prices in CAD · $999 flat per fiscal year filing · no percentage of your refund · processed via Stripe
           </p>
         </div>
 
@@ -877,7 +869,7 @@ export default function PricingPage() {
               <div className="flex-1 text-center sm:text-left">
                 <h3 className="text-base font-bold mb-1">Want a number specific to your codebase?</h3>
                 <p className="text-indigo-200 text-sm leading-relaxed max-w-lg">
-                  Connect GitHub and TaxLift scans every commit in ~60 seconds — you'll see your personalised SR&amp;ED credit estimate and your exact 3%/5% fee before you choose a plan.
+                  Connect GitHub and TaxLift scans every commit in ~60 seconds — you'll see your personalised SR&amp;ED credit estimate and how much you'd save vs. a traditional consultant, before you pay anything.
                 </p>
                 <div className="flex flex-wrap gap-4 mt-3 justify-center sm:justify-start">
                   {[
@@ -903,52 +895,77 @@ export default function PricingPage() {
           </div>
         )}
 
-        {/* ── CPA Referral Pricing ─────────────────────────────────────────────── */}
+        {/* ── CPA Partner Seat ─────────────────────────────────────────────────── */}
         <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-7 mb-12">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
             <div className="w-12 h-12 bg-emerald-100 border border-emerald-200 rounded-2xl flex items-center justify-center flex-shrink-0">
-              <BadgeCheck size={22} className="text-emerald-600" />
+              <Building2 size={22} className="text-emerald-600" />
             </div>
             <div className="flex-1">
               <div className="flex flex-wrap items-center gap-2 mb-1">
-                <h3 className="text-base font-bold text-gray-900">Referred by your CPA?</h3>
-                <span className="text-[10px] bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-full px-2.5 py-0.5 font-semibold uppercase tracking-wide">CPA Referral Pricing</span>
+                <h3 className="text-base font-bold text-gray-900">Are you a CPA or accounting firm?</h3>
+                <span className="text-[10px] bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-full px-2.5 py-0.5 font-semibold uppercase tracking-wide">CPA Partner Seat — $4,800/yr</span>
               </div>
               <p className="text-sm text-gray-600 leading-relaxed max-w-2xl">
-                If your accountant or CPA firm sent you here, you qualify for a special one-time engagement fee:{' '}
-                <strong className="text-gray-900">3% of your recovered SR&ED credits</strong>, with nothing due until CRA pays you.
-                No subscription, no upfront payment — we succeed when you do.
+                The CPA Partner Seat gives you unlimited client workspaces, a white-label handoff experience, and{' '}
+                <strong className="text-gray-900">$300 referral commission</strong> for every net-new client you bring to TaxLift.
+                Add SR&ED as a service without hiring an in-house specialist.
               </p>
               <div className="flex flex-wrap gap-4 mt-3">
                 <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                  <Check size={12} className="text-emerald-500" /> No payment until CRA refund received
+                  <Check size={12} className="text-emerald-500" /> Unlimited client workspaces
                 </div>
                 <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                  <Check size={12} className="text-emerald-500" /> One-time fee — no ongoing subscription
+                  <Check size={12} className="text-emerald-500" /> $300 commission per referred client
                 </div>
                 <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                  <Check size={12} className="text-emerald-500" /> Full T661 package + audit vault included
+                  <Check size={12} className="text-emerald-500" /> White-label CPA handoff package
                 </div>
                 <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                  <Check size={12} className="text-emerald-500" /> CPA keeps their relationship with the client
+                  <Check size={12} className="text-emerald-500" /> You keep your client relationship
                 </div>
               </div>
-              {estimate && (
-                <div className="mt-3 inline-flex items-center gap-2 bg-white border border-emerald-200 rounded-xl px-4 py-2 text-sm">
-                  <TrendingUp size={14} className="text-emerald-600" />
-                  <span className="text-gray-500">Your estimated 3% fee:</span>
-                  <span className="font-bold text-gray-900">{fmtK(estimate * 0.03)}</span>
-                  <span className="text-gray-400 text-xs">on {fmtK(estimate)} credit estimate</span>
-                </div>
-              )}
+              <div className="mt-3 inline-flex items-center gap-2 bg-white border border-emerald-200 rounded-xl px-4 py-2 text-sm">
+                <TrendingUp size={14} className="text-emerald-600" />
+                <span className="text-gray-500">Break-even at</span>
+                <span className="font-bold text-gray-900">16 referrals/yr</span>
+                <span className="text-gray-400 text-xs">· then pure upside at $300 each</span>
+              </div>
             </div>
             <div className="flex-shrink-0">
-              <a
-                href="mailto:hello@taxlift.ai?subject=CPA%20Referral%20Pricing%20Inquiry"
+              <button
+                onClick={() => setReferralModalOpen(true)}
                 className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors shadow-sm whitespace-nowrap"
               >
-                Get referral pricing <ArrowRight size={14} />
-              </a>
+                Become a partner <ArrowRight size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Other grants teaser ─────────────────────────────────────────────── */}
+        <div className="bg-gradient-to-br from-violet-50 to-indigo-50 border border-violet-200 rounded-2xl p-6 mb-12">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="w-10 h-10 bg-violet-100 border border-violet-200 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Sparkles size={18} className="text-violet-600" />
+            </div>
+            <div className="flex-1">
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <h3 className="text-sm font-bold text-gray-900">More Canadian grants — coming soon</h3>
+                <span className="text-[10px] bg-violet-100 text-violet-700 border border-violet-200 rounded-full px-2.5 py-0.5 font-semibold uppercase tracking-wide">Early access</span>
+              </div>
+              <p className="text-xs text-gray-600 leading-relaxed max-w-2xl">
+                SR&amp;ED is TaxLift's focus today. Next up: NRC-IRAP, SDTC, OITC, Mitacs, and provincial innovation programs — all matchable from the same GitHub and Jira data you've already connected.
+                SR&amp;ED qualifiers typically unlock <strong className="text-gray-800">2–4 additional programs</strong> worth $500K–$4M+ in non-dilutive funding.
+              </p>
+            </div>
+            <div className="flex-shrink-0">
+              <button
+                onClick={() => { setWaitlistPlan('grants'); setWaitlistSource('pricing_grants_teaser'); setWaitlistOpen(true) }}
+                className="inline-flex items-center gap-2 text-xs font-semibold text-violet-700 bg-violet-100 hover:bg-violet-200 border border-violet-200 rounded-xl px-4 py-2 transition-colors whitespace-nowrap"
+              >
+                Get early access <ArrowRight size={12} />
+              </button>
             </div>
           </div>
         </div>
@@ -989,16 +1006,16 @@ export default function PricingPage() {
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
             {creditLow ? 'Ready to claim your ' + fmtK(creditHigh) + '?' : 'Ready to start your first SR&ED claim?'}
           </h2>
-          <p className="text-gray-500 text-sm mb-6 max-w-md mx-auto">14-day free trial. No credit card required. Get your CPA-ready package in as little as 2 hours.</p>
+          <p className="text-gray-500 text-sm mb-6 max-w-md mx-auto">$999 flat fee. Get your CPA-ready T661 package in as little as 2 hours — and keep your full refund.</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <button
-              onClick={() => handlePricingCta('plus')} disabled={checkoutLoading === 'plus'}
+              onClick={() => handlePricingCta('starter')} disabled={checkoutLoading === 'starter'}
               className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white font-semibold text-sm px-6 py-3 rounded-xl transition-colors shadow-lg shadow-indigo-900/20"
             >
-              {checkoutLoading === 'plus' ? <><Loader2 size={15} className="animate-spin" /> Starting trial…</> : <>Start free trial <ArrowRight size={14} /></>}
+              {checkoutLoading === 'starter' ? <><Loader2 size={15} className="animate-spin" /> Loading…</> : <>Get started — $999 <ArrowRight size={14} /></>}
             </button>
             <button onClick={() => window.open('https://calendly.com/taxlift/free-review', '_blank')} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors">
-              <ExternalLink size={13} /> Talk to a specialist first
+              <ExternalLink size={13} /> Book a free demo first
             </button>
           </div>
           {!fromScan && (
@@ -1009,6 +1026,93 @@ export default function PricingPage() {
       </div>
 
       <WaitlistModal isOpen={waitlistOpen} onClose={() => setWaitlistOpen(false)} defaultPlan={waitlistPlan} source={waitlistSource} />
+
+      {/* ── CPA Referral Modal ──────────────────────────────────────────────── */}
+      {referralModalOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm"
+            onClick={() => setReferralModalOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl p-8">
+              <button
+                onClick={() => setReferralModalOpen(false)}
+                className="absolute right-4 top-4 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                aria-label="Close"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center mb-4">
+                <Building2 size={22} className="text-emerald-600" />
+              </div>
+
+              <h2 className="text-xl font-bold text-slate-900 mb-1">CPA Partner Seat</h2>
+              <p className="text-slate-500 text-sm leading-relaxed mb-6">
+                Join TaxLift as a CPA partner for{' '}
+                <strong className="text-slate-800">$4,800/year</strong> — get unlimited client
+                workspaces and earn <strong className="text-slate-800">$300 per referred client</strong>.
+                Add SR&amp;ED as a service without hiring a specialist.
+              </p>
+
+              <div className="mb-4">
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Your firm name <span className="text-slate-400 font-normal">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={referralCode}
+                  onChange={e => setReferralCode(e.target.value.trim())}
+                  placeholder="e.g. Hartwell CPA Group"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                />
+                <p className="mt-1.5 text-[11px] text-slate-400">
+                  We'll set up your partner workspace and send onboarding instructions within one business day.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <button
+                  onClick={() => {
+                    setReferralModalOpen(false)
+                    const params = new URLSearchParams({ plan: 'cpa' })
+                    if (referralCode) params.set('firm', referralCode)
+                    navigate('/signup?' + params.toString())
+                  }}
+                  className="flex items-center justify-center gap-2 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 rounded-xl transition-colors"
+                >
+                  Apply for partner seat
+                  <ArrowRight size={15} />
+                </button>
+                <button
+                  onClick={() => {
+                    setReferralModalOpen(false)
+                    window.open('https://calendly.com/taxlift/free-review', '_blank')
+                  }}
+                  className="flex items-center justify-center w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium py-3 rounded-xl transition-colors text-sm"
+                >
+                  Book a partner demo first
+                </button>
+              </div>
+
+              <div className="mt-5 pt-4 border-t border-gray-100 flex flex-wrap gap-x-4 gap-y-1.5">
+                {[
+                  'Unlimited client workspaces',
+                  '$300 commission per referral',
+                  'White-label handoff package',
+                ].map(f => (
+                  <div key={f} className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                    <Check size={10} className="text-emerald-500" />
+                    {f}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }
