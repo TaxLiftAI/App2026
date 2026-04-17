@@ -18,8 +18,7 @@ import {
   TrendingUp, Calendar, RefreshCw, AlertCircle, BadgeCheck,
   Github, DollarSign, X, Building2,
 } from 'lucide-react'
-import PricingCard from '../components/PricingCard'
-import { PLANS, redirectToCheckout, getPlanForBilling } from '../lib/stripe'
+import { redirectToCheckout } from '../lib/stripe'
 import WaitlistModal from '../components/WaitlistModal'
 
 function fmtK(n) {
@@ -709,16 +708,6 @@ export default function PricingPage() {
   const consultantHigh = estimate ? Math.round(estimate * 0.25) : null
   const savingsLow     = consultantLow  ? Math.max(0, consultantLow  - taxliftFee) : null
   const savingsHigh    = consultantHigh ? Math.max(0, consultantHigh - taxliftFee) : null
-  const highlightedPlan = searchParams.get('plan') || null
-
-  const annualPlans = Object.values(PLANS).map(p => {
-    const resolved = getPlanForBilling(p, 'annual')
-    return {
-      ...resolved,
-      highlighted: highlightedPlan ? p.id === highlightedPlan : p.highlighted,
-    }
-  })
-
   async function handlePricingCta(planId) {
     if (planId === 'enterprise') {
       setWaitlistPlan('enterprise'); setWaitlistSource('pricing_enterprise'); setWaitlistOpen(true); return
@@ -837,25 +826,117 @@ export default function PricingPage() {
           ))}
         </div>
 
-        <div className="text-center mb-8">
-          <p className="text-sm text-gray-500 max-w-xl mx-auto">
-            One flat fee: <strong className="text-gray-700">$999</strong> per fiscal year filing.
-            No percentage of your refund. No subscription.{' '}
-            {estimate
-              ? <>On your estimated{' '}<strong className="text-indigo-600">{fmtK(creditHigh)}</strong> credit, a consultant would charge{' '}<strong className="text-red-500">{fmtK(consultantLow)}–{fmtK(consultantHigh)}</strong>. TaxLift charges <strong className="text-indigo-600">$999</strong>.</>
-              : 'Get your CPA-ready SR\u0026ED package from your GitHub and Jira data.'}
+        {/* ── Two-track pricing ──────────────────────────────────────────────── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4 items-start">
+
+          {/* Track 1 — Startups & Founders */}
+          <div className="relative flex flex-col rounded-2xl border-2 border-indigo-500 bg-indigo-600 text-white shadow-2xl shadow-indigo-500/30 p-8">
+            <div className="absolute -top-3.5 left-6">
+              <span className="rounded-full bg-gradient-to-r from-amber-400 to-orange-400 px-4 py-1 text-xs font-bold text-white shadow">Flat fee</span>
+            </div>
+            <div className="mb-1">
+              <p className="text-indigo-300 text-xs font-semibold uppercase tracking-widest mb-3">For startups &amp; founders</p>
+              <h3 className="font-bold text-xl text-white">SR&amp;ED Filing Package</h3>
+              <p className="mt-1 text-sm text-indigo-200">Everything you need to file SR&amp;ED — flat fee, keep your full refund.</p>
+            </div>
+            <div className="my-5 pb-5 border-b border-indigo-500">
+              <span className="font-extrabold text-4xl tracking-tight text-white">$999</span>
+              <span className="ml-2 text-sm font-medium text-indigo-200">per fiscal year</span>
+              <p className="text-xs text-indigo-300 mt-1.5">One-time flat fee — no percentage of your refund</p>
+            </div>
+            <ul className="flex-1 space-y-3 mb-7">
+              {[
+                'Unlimited SR&ED clusters',
+                'AI T661 narrative generation',
+                'GitHub & Jira integrations',
+                'CPA-ready handoff package PDF',
+                'SHA-256 commit evidence chain',
+                'Audit vault — 3 years retained',
+                'Prior-year catch-up (18 months)',
+                'Email support',
+              ].map(f => (
+                <li key={f} className="flex items-start gap-2 text-sm">
+                  <Check size={16} className="mt-0.5 shrink-0 text-indigo-200" />
+                  <span className="text-indigo-100">{f}</span>
+                </li>
+              ))}
+            </ul>
+            <button
+              onClick={() => handlePricingCta('starter')}
+              disabled={checkoutLoading === 'starter'}
+              className="w-full rounded-xl py-3 text-sm font-semibold bg-white text-indigo-600 hover:bg-indigo-50 shadow transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+            >
+              {checkoutLoading === 'starter' ? <Loader2 size={16} className="animate-spin" /> : null}
+              Get started — $999
+            </button>
+          </div>
+
+          {/* Track 2 — CPA Firms */}
+          <div className="relative flex flex-col rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 text-slate-900 shadow-sm hover:shadow-md transition-shadow p-8">
+            <div className="absolute -top-3.5 left-6">
+              <span className="rounded-full bg-emerald-600 px-4 py-1 text-xs font-bold text-white shadow">CPA Partners</span>
+            </div>
+            <div className="mb-1">
+              <p className="text-emerald-700 text-xs font-semibold uppercase tracking-widest mb-3">For CPA firms</p>
+              <h3 className="font-bold text-xl text-slate-900">CPA Partner Seat</h3>
+              <p className="mt-1 text-sm text-slate-600">Add SR&amp;ED as a service and earn $300 per client you refer.</p>
+            </div>
+            <div className="my-5 pb-5 border-b border-emerald-200">
+              <span className="font-extrabold text-4xl tracking-tight text-slate-900">$4,800</span>
+              <span className="ml-2 text-sm font-medium text-slate-500">per year</span>
+              <div className="mt-2.5 inline-flex items-center gap-2 bg-emerald-100 border border-emerald-200 rounded-lg px-3 py-1.5">
+                <TrendingUp size={13} className="text-emerald-600 flex-shrink-0" />
+                <span className="text-xs font-semibold text-emerald-800">+ $300 referral commission per client</span>
+              </div>
+            </div>
+            <ul className="flex-1 space-y-3 mb-5">
+              {[
+                'Unlimited client workspaces',
+                'White-label CPA handoff experience',
+                '$300 commission per referred client',
+                'Co-branded intake link',
+                'Client pipeline dashboard',
+                'Priority support & onboarding',
+              ].map(f => (
+                <li key={f} className="flex items-start gap-2 text-sm">
+                  <Check size={16} className="mt-0.5 shrink-0 text-emerald-500" />
+                  <span className="text-slate-600">{f}</span>
+                </li>
+              ))}
+              <li className="flex items-start gap-2 text-sm">
+                <span className="mt-0.5 shrink-0 font-bold text-xs text-violet-500">✦</span>
+                <span className="text-violet-700 font-medium">More grants coming soon: NRC-IRAP, SDTC, OITC, Mitacs</span>
+              </li>
+            </ul>
+            <div className="bg-white border border-emerald-200 rounded-xl px-4 py-3 mb-5 flex items-center gap-3">
+              <TrendingUp size={15} className="text-emerald-600 flex-shrink-0" />
+              <div>
+                <p className="text-xs font-semibold text-slate-800">Break-even at 16 referrals/yr</p>
+                <p className="text-[11px] text-slate-500">Refer 30/yr → $9,000 net commission on top of your filing fees</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setReferralModalOpen(true)}
+              className="w-full rounded-xl py-3 text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-500 shadow-sm transition-all flex items-center justify-center gap-2"
+            >
+              Apply for partner seat <ArrowRight size={14} />
+            </button>
+          </div>
+        </div>
+
+        {/* Enterprise footnote */}
+        <div className="text-center mb-10">
+          <p className="text-xs text-gray-400 mb-1">
+            Prices in CAD · $999 flat per fiscal year · $4,800/yr CPA seat · no percentage of your refund · processed via Stripe
           </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start mb-4">
-          {annualPlans.map(plan => (
-            <PricingCard key={plan.id} plan={plan} ctaLoading={checkoutLoading === plan.id} onCta={() => handlePricingCta(plan.id)} />
-          ))}
-        </div>
-
-        <div className="text-center mb-12">
-          <p className="text-xs text-gray-400">
-            Prices in CAD · $999 flat per fiscal year filing · no percentage of your refund · processed via Stripe
+          <p className="text-xs text-gray-500">
+            Need white-label deployment, API access, or a dedicated account manager?{' '}
+            <button
+              onClick={() => handlePricingCta('enterprise')}
+              className="text-indigo-600 hover:underline font-medium"
+            >
+              Contact us for Enterprise →
+            </button>
           </p>
         </div>
 
@@ -895,53 +976,6 @@ export default function PricingPage() {
           </div>
         )}
 
-        {/* ── CPA Partner Seat ─────────────────────────────────────────────────── */}
-        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-7 mb-12">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
-            <div className="w-12 h-12 bg-emerald-100 border border-emerald-200 rounded-2xl flex items-center justify-center flex-shrink-0">
-              <Building2 size={22} className="text-emerald-600" />
-            </div>
-            <div className="flex-1">
-              <div className="flex flex-wrap items-center gap-2 mb-1">
-                <h3 className="text-base font-bold text-gray-900">Are you a CPA or accounting firm?</h3>
-                <span className="text-[10px] bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-full px-2.5 py-0.5 font-semibold uppercase tracking-wide">CPA Partner Seat — $4,800/yr</span>
-              </div>
-              <p className="text-sm text-gray-600 leading-relaxed max-w-2xl">
-                The CPA Partner Seat gives you unlimited client workspaces, a white-label handoff experience, and{' '}
-                <strong className="text-gray-900">$300 referral commission</strong> for every net-new client you bring to TaxLift.
-                Add SR&ED as a service without hiring an in-house specialist.
-              </p>
-              <div className="flex flex-wrap gap-4 mt-3">
-                <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                  <Check size={12} className="text-emerald-500" /> Unlimited client workspaces
-                </div>
-                <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                  <Check size={12} className="text-emerald-500" /> $300 commission per referred client
-                </div>
-                <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                  <Check size={12} className="text-emerald-500" /> White-label CPA handoff package
-                </div>
-                <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                  <Check size={12} className="text-emerald-500" /> You keep your client relationship
-                </div>
-              </div>
-              <div className="mt-3 inline-flex items-center gap-2 bg-white border border-emerald-200 rounded-xl px-4 py-2 text-sm">
-                <TrendingUp size={14} className="text-emerald-600" />
-                <span className="text-gray-500">Break-even at</span>
-                <span className="font-bold text-gray-900">16 referrals/yr</span>
-                <span className="text-gray-400 text-xs">· then pure upside at $300 each</span>
-              </div>
-            </div>
-            <div className="flex-shrink-0">
-              <button
-                onClick={() => setReferralModalOpen(true)}
-                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors shadow-sm whitespace-nowrap"
-              >
-                Become a partner <ArrowRight size={14} />
-              </button>
-            </div>
-          </div>
-        </div>
 
         {/* ── Other grants teaser ─────────────────────────────────────────────── */}
         <div className="bg-gradient-to-br from-violet-50 to-indigo-50 border border-violet-200 rounded-2xl p-6 mb-12">
