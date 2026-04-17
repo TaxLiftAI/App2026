@@ -19,11 +19,11 @@ import { useAuth } from '../context/AuthContext'
 
 // ── What CPAs see on the left panel ───────────────────────────────────────────
 const PARTNER_PERKS = [
-  { icon: Users,        text: 'Single dashboard across all referred clients'                        },
-  { icon: ShieldCheck,  text: 'Per-cluster qualification scores — know exactly why each project qualifies before you sign' },
-  { icon: FileText,     text: 'Inline narrative editor with 80-word CRA threshold guidance'         },
-  { icon: DollarSign,   text: '$300 flat referral commission per client — paid at package delivery' },
-  { icon: CheckCircle2, text: 'Approve, flag, or edit every cluster before PDF export'             },
+  { icon: Users,        text: 'Single dashboard across all referred clients'                                    },
+  { icon: ShieldCheck,  text: 'Per-cluster qualification scores — know exactly why each project qualifies'      },
+  { icon: FileText,     text: 'Your firm name & logo on every T661 PDF — "Powered by TaxLift" in footer only'  },
+  { icon: DollarSign,   text: '$300 flat referral commission per client — paid at package delivery'             },
+  { icon: CheckCircle2, text: 'Approve, flag, or edit every cluster before anything reaches your client'       },
 ]
 
 export default function CpaLoginPage() {

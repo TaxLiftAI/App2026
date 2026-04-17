@@ -40,7 +40,7 @@ const WHY_TAXLIFT = [
     icon: Users,
     color: 'text-indigo-600', bg: 'bg-indigo-50',
     title: 'Your client relationship stays yours',
-    body: 'Traditional SR&ED consultants go direct — and eventually cut the CPA out. TaxLift is structurally different: you have your own login, annotation rights, and your firm name appears on every deliverable. Clients see TaxLift as an extension of your practice, not a competitor.',
+    body: 'Traditional SR&ED consultants go direct — and eventually cut the CPA out. TaxLift is structurally different: you have your own login, annotation rights, and your firm name on every client-facing document. Your clients never see a TaxLift sales page, sign-up flow, or pricing. The tool is yours to offer.',
   },
   {
     icon: Clock,
@@ -94,7 +94,7 @@ const STEPS = [
   {
     n: '04', icon: Pencil, color: 'text-green-600', bg: 'bg-green-50',
     title: 'You review, annotate & approve',
-    body: 'Flag clusters, add notes, request revisions — all inside TaxLift. Your firm name appears on the final co-branded package.',
+    body: 'Flag clusters, add notes, request revisions — all inside your partner portal. The final package PDF shows your firm name and logo. "Powered by TaxLift" is a footer note — your client sees your firm\'s deliverable.',
   },
   {
     n: '05', icon: DollarSign, color: 'text-amber-600', bg: 'bg-amber-50',
@@ -107,7 +107,7 @@ const STEPS = [
 const CPA_GETS = [
   { icon: Lock,       title: 'Independent login',       body: 'One set of CPA firm credentials — not shared with clients. See all your referred clients in a single multi-client dashboard.'   },
   { icon: Pencil,     title: 'Annotation rights',       body: 'Flag narratives, request revisions, and add notes per cluster. Nothing goes to the client until you approve it.'              },
-  { icon: FileText,   title: 'Co-branded packages',     body: 'Every handoff PDF carries your firm logo and name alongside TaxLift. The deliverable looks like it came from your practice.'  },
+  { icon: FileText,   title: 'Your-firm-branded deliverables', body: 'Your firm name and logo are front and centre on every handoff PDF and T661 package. "Powered by TaxLift" appears only in the footer — your clients receive a document that looks like it came entirely from you.' },
   { icon: BookOpen,   title: 'Methodology on file',     body: "TaxLift's published SR&ED methodology (IC86-4R3 aligned) is available at taxlift.ai/methodology — cite it in any audit."     },
   { icon: ShieldCheck,title: 'Liability is clear',      body: 'TaxLift is a preparatory tool. The signing CPA retains responsibility for the claim. Our terms spell this out explicitly.'    },
   { icon: BarChart2,  title: 'Commission dashboard',    body: 'Real-time view of every referred client: credit pipeline, commission accrued, and payout history — all in one place.'        },
@@ -136,8 +136,8 @@ const FAQS = [
     a: 'Referral commissions are $300 flat per client — no tiers, no caps, no true-up. Payment is by EFT at T661 package delivery — before CRA even receives the claim, so you\'re not waiting 12–18 months for CRA to process. The commission is not contingent on the CRA assessment outcome.',
   },
   {
-    q: 'Can I white-label TaxLift for my clients?',
-    a: 'The CPA Partner Seat ($4,800/yr) includes co-branded output: your firm logo and name appear on the CPA handoff PDF, the shareable review link, and the exported T661 package. Full white-labelling (custom domain) is available under Enterprise agreements.',
+    q: 'Will my clients know they\'re using TaxLift, or does it look like my firm\'s service?',
+    a: 'Your clients receive a document that looks like it came entirely from your practice. Your firm name and logo are the primary branding on every handoff PDF and T661 export. "Powered by TaxLift" appears only as a small footer attribution — similar to how audit software appears in notes. Your clients do not interact with TaxLift\'s sign-up flow, pricing pages, or marketing. The CPA portal is a separate, partner-only environment your clients never see. For full custom-domain white-labelling (your own URL, no TaxLift footer), contact us about an Enterprise agreement.',
   },
 ]
 
@@ -470,6 +470,85 @@ export default function PartnersPage() {
                 <p className="text-xs text-gray-500 leading-relaxed">{body}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── White-label clarity section ── */}
+      <section className="py-14 px-6 bg-indigo-950">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center gap-2 bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-xs font-semibold px-4 py-1.5 rounded-full mb-4">
+              <FileText size={12} /> What your clients actually see
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-3">
+              Your firm's name on every deliverable.
+              <span className="text-indigo-400"> Not TaxLift's.</span>
+            </h2>
+            <p className="text-slate-400 text-sm max-w-xl mx-auto">
+              "Powered by TaxLift" appears only as a small footer note — the way audit software is
+              credited in financial statements. Your clients expect your firm's work product, and
+              that's exactly what they get.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+            {/* What clients see */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+              <p className="text-xs font-semibold text-emerald-400 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+                <CheckCircle2 size={12} /> What your clients see
+              </p>
+              <ul className="space-y-3">
+                {[
+                  'Your firm name & logo on the T661 handoff PDF cover page',
+                  'Your name as the reviewing practitioner on each narrative',
+                  'Your firm\'s email and contact in the package footer',
+                  'A shareable review link sent from your branded portal',
+                  'No TaxLift pricing pages, sign-up flows, or sales emails to your client',
+                ].map(item => (
+                  <li key={item} className="flex items-start gap-2.5 text-sm text-slate-300">
+                    <CheckCircle2 size={14} className="text-emerald-400 flex-shrink-0 mt-0.5" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* What clients don't see */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+                <Lock size={12} className="text-slate-500" /> What your clients don't see
+              </p>
+              <ul className="space-y-3">
+                {[
+                  'TaxLift\'s sign-up or login screens',
+                  'Our pricing pages or commission structure',
+                  'Any marketing or upsell communication from TaxLift',
+                  'Your partner portal or commission dashboard',
+                  'Anything that positions TaxLift as a direct competitor to your firm',
+                ].map(item => (
+                  <li key={item} className="flex items-start gap-2.5 text-sm text-slate-400">
+                    <span className="w-3.5 h-3.5 rounded-full border border-slate-600 flex-shrink-0 mt-0.5 flex items-center justify-center">
+                      <span className="w-1 h-1 rounded-full bg-slate-500" />
+                    </span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <div className="bg-white/5 border border-indigo-500/30 rounded-2xl px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="w-9 h-9 bg-indigo-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Zap size={16} className="text-indigo-400" />
+            </div>
+            <div className="flex-1">
+              <p className="text-white text-sm font-semibold mb-0.5">Need a fully custom-branded experience?</p>
+              <p className="text-slate-400 text-xs leading-relaxed">
+                Enterprise agreements include custom domain, fully suppressed TaxLift branding, and a
+                white-label onboarding flow for your clients. <a href="mailto:hello@taxlift.ai" className="text-indigo-400 hover:text-indigo-300 underline">Contact us</a> to discuss.
+              </p>
+            </div>
           </div>
         </div>
       </section>

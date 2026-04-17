@@ -988,7 +988,7 @@ export default function MarketingPage() {
                 icon: Pencil,
                 color: 'text-teal-400', bg: 'bg-teal-500/10 border-teal-500/20',
                 title: 'Your name on every deliverable',
-                body: 'Independent CPA login, annotation rights, and your firm logo on the co-branded handoff PDF. Clients see TaxLift as an extension of your practice — not a competitor.',
+                body: 'Independent CPA login, annotation rights, and your firm name front-and-centre on every T661 PDF. Your clients receive a deliverable that looks like it came from you — TaxLift is a footer note, not the headline.',
               },
               {
                 icon: DollarSign,
@@ -1317,7 +1317,7 @@ export default function MarketingPage() {
                 </span>
               </h2>
               <p className="text-slate-300 text-base leading-relaxed mb-8">
-                Refer your tech clients to TaxLift and earn a <strong className="text-white">$300 flat commission</strong> per client — paid when the T661 package is delivered, not when CRA processes the claim. Independent CPA login, annotation rights, co-branded packages, and a published methodology you can cite in any CRA audit.
+                Refer your tech clients to TaxLift and earn a <strong className="text-white">$300 flat commission</strong> per client — paid when the T661 package is delivered, not when CRA processes the claim. Your firm's name on every deliverable, independent CPA login, annotation rights, and a published methodology you can cite in any CRA audit.
               </p>
 
               <div className="space-y-4 mb-8">
