@@ -7,7 +7,7 @@
  *   ✓ Partner application flow
  *   ✓ Liability + methodology links
  *   ✓ CPA annotation rights
- *   ✓ Tiered flat referral fee ($750 → $9,000 by credit size)
+ *   ✓ Flat $300 referral commission per client (no tiers)
  */
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -29,8 +29,8 @@ const HEARD_OPTIONS = [
 
 // ── Commission stats ───────────────────────────────────────────────────────────
 const COMMISSION_STATS = [
-  { label: 'Referral fee range',             value: '$750–$9K', sub: 'flat fee by client credit size'       },
-  { label: 'Typical mid-market client',      value: '$5,500',   sub: '$300K–$600K credit estimate'          },
+  { label: 'Referral commission',            value: '$300',     sub: 'flat per client — no tiers'           },
+  { label: 'Break-even',                     value: '16',       sub: 'referrals/yr to cover seat cost'      },
   { label: 'Paid at package delivery',       value: 'Day 0',    sub: 'not when CRA processes — no wait'     },
 ]
 
@@ -133,11 +133,11 @@ const FAQS = [
   },
   {
     q: 'When and how are referral fees paid?',
-    a: 'Referral fees are paid by EFT at T661 package delivery — before CRA even receives the claim, so you\'re not waiting 12–18 months for CRA to process. The fee is a flat amount determined by the client\'s TaxLift scan estimate of their SR&ED credit: $750 for credits up to $75K, $1,500 up to $150K, $3,000 up to $300K, $5,500 up to $600K, and $9,000 for $600K+. An additional $750 applies if the client is on the Plus plan. The fee is not contingent on the CRA assessment outcome and is not subject to true-up.',
+    a: 'Referral commissions are $300 flat per client — no tiers, no caps, no true-up. Payment is by EFT at T661 package delivery — before CRA even receives the claim, so you\'re not waiting 12–18 months for CRA to process. The commission is not contingent on the CRA assessment outcome.',
   },
   {
     q: 'Can I white-label TaxLift for my clients?',
-    a: 'The Growth and Enterprise partner tiers include co-branded output: your firm logo and name appear on the CPA handoff PDF, the shareable review link, and the exported T661 package. Full white-labelling (custom domain) is available under Enterprise agreements.',
+    a: 'The CPA Partner Seat ($4,800/yr) includes co-branded output: your firm logo and name appear on the CPA handoff PDF, the shareable review link, and the exported T661 package. Full white-labelling (custom domain) is available under Enterprise agreements.',
   },
 ]
 
@@ -345,7 +345,7 @@ export default function PartnersPage() {
   const navigate = useNavigate()
   usePageMeta({
     title:       'CPA Partner Program — TaxLift',
-    description: 'Refer clients to TaxLift and earn $750–$9,000 per successful SR&ED claim. White-label ready, CPA-controlled, zero liability.',
+    description: 'Refer clients to TaxLift and earn $300 per SR&ED client — flat, no tiers, no caps. White-label ready, CPA-controlled, zero liability.',
     path:        '/partners',
     breadcrumb:  [{ name: 'Home', path: '/' }, { name: 'CPA Partners', path: '/partners' }],
   })
@@ -394,19 +394,19 @@ export default function PartnersPage() {
             CPA Partner Program — Verified Firms Only
           </div>
           <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight mb-5">
-            Earn $750–$9,000 flat<br />for every SR&amp;ED client you refer
+            Earn $300 per SR&amp;ED client<br />you refer — no tiers, no caps
           </h1>
           <p className="text-slate-300 text-lg leading-relaxed max-w-2xl mx-auto mb-8">
             TaxLift prepares the complete T661 package from your client's GitHub and Jira.
             You review, annotate, and file. No documentation burden. Full professional control.
-            Flat referral fee paid at package delivery — not contingent on CRA outcome.
+            Flat $300 commission per client, paid at package delivery — not contingent on CRA outcome.
           </p>
 
           {/* Hero stats */}
           <div className="grid grid-cols-3 gap-4 max-w-lg mx-auto mb-8">
             {[
-              { v: '$750–$9K', l: 'Flat referral fee / client'  },
-              { v: '$5,500',   l: 'Typical mid-market client'    },
+              { v: '$300',     l: 'Flat commission / client'     },
+              { v: '$4,800',   l: 'CPA Partner Seat / year'      },
               { v: '1 day',    l: 'Partner verification'         },
             ].map(({ v, l }) => (
               <div key={l} className="bg-white/10 rounded-xl py-3 px-2">
@@ -502,7 +502,7 @@ export default function PartnersPage() {
         <div className="max-w-3xl mx-auto">
           <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">Commission structure</h2>
           <p className="text-gray-500 text-sm text-center mb-10">
-            Flat fee by credit size · Paid at T661 package delivery · No CRA outcome dependency
+            Flat $300 per client · Paid at T661 package delivery · No tiers · No caps · No CRA outcome dependency
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
             {COMMISSION_STATS.map(({ label, value, sub }) => (
@@ -514,37 +514,37 @@ export default function PartnersPage() {
             ))}
           </div>
 
-          {/* Tier table */}
+          {/* Partner economics */}
           <div className="bg-white border border-gray-200 rounded-xl overflow-hidden mb-5">
             <div className="px-5 py-3 bg-gray-50 border-b border-gray-200">
-              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Referral fee schedule (CAD) — paid at package delivery</p>
+              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Partner economics — CPA seat $4,800/yr</p>
             </div>
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider border-b border-gray-100">
-                  <th className="text-left px-5 py-2.5">Client credit estimate</th>
-                  <th className="text-right px-5 py-2.5">Starter plan</th>
-                  <th className="text-right px-5 py-2.5">Plus plan</th>
+                  <th className="text-left px-5 py-2.5">Referrals / year</th>
+                  <th className="text-right px-5 py-2.5">Commission earned</th>
+                  <th className="text-right px-5 py-2.5">Net (after seat)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {[
-                  { range: 'Up to $75,000',          starter: '$750',   plus: '$1,500'  },
-                  { range: '$75,001 – $150,000',      starter: '$1,500', plus: '$2,250'  },
-                  { range: '$150,001 – $300,000',     starter: '$3,000', plus: '$3,750'  },
-                  { range: '$300,001 – $600,000',     starter: '$5,500', plus: '$6,250'  },
-                  { range: '$600,001+',               starter: '$9,000', plus: '$9,750'  },
-                ].map(({ range, starter, plus }) => (
-                  <tr key={range} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-5 py-3 text-gray-700 font-medium">{range}</td>
-                    <td className="px-5 py-3 text-right text-gray-800 font-semibold">{starter}</td>
-                    <td className="px-5 py-3 text-right text-indigo-600 font-bold">{plus}</td>
+                  { refs: '10 clients', earned: '$3,000',  net: '−$1,800'  },
+                  { refs: '16 clients', earned: '$4,800',  net: '$0 (break-even)' },
+                  { refs: '20 clients', earned: '$6,000',  net: '+$1,200'  },
+                  { refs: '30 clients', earned: '$9,000',  net: '+$4,200'  },
+                  { refs: '50 clients', earned: '$15,000', net: '+$10,200' },
+                ].map(({ refs, earned, net }) => (
+                  <tr key={refs} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-5 py-3 text-gray-700 font-medium">{refs}</td>
+                    <td className="px-5 py-3 text-right text-emerald-600 font-semibold">{earned}</td>
+                    <td className={`px-5 py-3 text-right font-bold ${net.startsWith('+') ? 'text-emerald-700' : net.startsWith('$0') ? 'text-gray-500' : 'text-red-500'}`}>{net}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <div className="px-5 py-3 bg-indigo-50 border-t border-indigo-100 text-[11px] text-indigo-700">
-              Plus plan bonus (+$750) reflects the higher 5% TaxLift fee on Plus — SR&ED + Grants module.
+            <div className="px-5 py-3 bg-emerald-50 border-t border-emerald-100 text-[11px] text-emerald-700">
+              $300 flat per client · paid by EFT at T661 package delivery · no cap · no CRA outcome dependency
             </div>
           </div>
 
@@ -557,12 +557,12 @@ export default function PartnersPage() {
               <span className="text-gray-500">Ontario ITC (8%)</span><span className="font-semibold text-gray-800 text-right">$77,299</span>
               <span className="text-gray-700 font-semibold">Total estimated credit</span><span className="font-bold text-gray-900 text-right">$415,483</span>
             </div>
-            <div className="bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-2.5 inline-flex items-center gap-2">
-              <DollarSign size={15} className="text-indigo-600" />
-              <span className="text-sm font-bold text-indigo-700">Your flat referral fee: $5,500 (Starter) or $6,250 (Plus)</span>
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2.5 inline-flex items-center gap-2">
+              <DollarSign size={15} className="text-emerald-600" />
+              <span className="text-sm font-bold text-emerald-700">Your referral commission: $300 flat</span>
             </div>
             <p className="text-[11px] text-gray-400 mt-3">
-              Paid by EFT at T661 package delivery. $415K credit falls in the $300K–$600K tier.
+              Paid by EFT at T661 package delivery — regardless of the credit size.
             </p>
           </div>
         </div>
