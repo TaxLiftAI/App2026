@@ -1142,42 +1142,36 @@ export default function MarketingPage() {
           <div className="text-center mb-14">
             <div className="inline-flex items-center gap-2 bg-violet-500/10 border border-violet-500/20 text-violet-300 text-xs font-semibold px-4 py-1.5 rounded-full mb-5">
               <Sparkles size={11} />
-              Available on Plus &amp; Enterprise
+              Coming soon — SR&amp;ED is just the start
             </div>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-4">
-              Beyond SR&amp;ED — unlock every Canadian grant you qualify for
+              Up to $4.2M in additional Canadian funding — matched automatically
             </h2>
             <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-              Powered by your existing SR&amp;ED data — no double work. TaxLift cross-references
-              7 federal and provincial programs and drafts your application sections automatically.
+              TaxLift will cross-reference your existing SR&amp;ED data against 7+ federal and provincial programs
+              and draft your application sections automatically. No double work.
             </p>
           </div>
 
           {/* Grant program tiles */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-10">
             {[
-              { name: 'NRC-IRAP',          amount: 'Up to $500K',  flag: '🇨🇦', color: 'border-indigo-500/30 bg-indigo-500/5',   badge: 'Federal'    },
-              { name: 'ISED SDTC',         amount: 'Intake paused', flag: '🇨🇦', color: 'border-gray-600/20  bg-gray-600/5',     badge: 'Federal', paused: true },
-              { name: 'Ontario ITC',       amount: 'Up to $200K',  flag: '🏛',  color: 'border-blue-500/30   bg-blue-500/5',     badge: 'Provincial' },
-              { name: 'NGen',              amount: 'Up to $250K',  flag: '🇨🇦', color: 'border-cyan-500/30   bg-cyan-500/5',     badge: 'Federal'    },
-              { name: 'BC Ignite',         amount: 'Up to $100K',  flag: '🏛',  color: 'border-teal-500/30   bg-teal-500/5',     badge: 'Provincial' },
-              { name: 'Alberta Innovates', amount: 'Up to $150K',  flag: '🏛',  color: 'border-amber-500/30  bg-amber-500/5',    badge: 'Provincial' },
-              { name: 'QC CRSNG',          amount: 'Up to $500K',  flag: '🏛',  color: 'border-rose-500/30   bg-rose-500/5',     badge: 'Provincial' },
-              { name: '+ more programs',   amount: 'Coming soon',  flag: '✦',   color: 'border-slate-600/30  bg-slate-600/5',    badge: ''           },
+              { name: 'NRC-IRAP',          amount: 'Up to $500K',  flag: '🇨🇦', color: 'border-indigo-500/30 bg-indigo-500/5',  badge: 'Federal'    },
+              { name: 'SDTC',              amount: 'Up to $2M',    flag: '🇨🇦', color: 'border-violet-500/30 bg-violet-500/5',  badge: 'Federal'    },
+              { name: 'OITC',              amount: 'Up to $200K',  flag: '🏛',  color: 'border-blue-500/30   bg-blue-500/5',    badge: 'Provincial' },
+              { name: 'Mitacs',            amount: 'Up to $250K',  flag: '🇨🇦', color: 'border-cyan-500/30   bg-cyan-500/5',    badge: 'Federal'    },
+              { name: 'BC Ignite',         amount: 'Up to $100K',  flag: '🏛',  color: 'border-teal-500/30   bg-teal-500/5',    badge: 'Provincial' },
+              { name: 'Alberta Innovates', amount: 'Up to $150K',  flag: '🏛',  color: 'border-amber-500/30  bg-amber-500/5',   badge: 'Provincial' },
+              { name: 'QC CDAE-IA',        amount: 'Up to $500K',  flag: '🏛',  color: 'border-rose-500/30   bg-rose-500/5',    badge: 'Provincial' },
+              { name: '+ more programs',   amount: 'In roadmap',   flag: '✦',   color: 'border-slate-600/30  bg-slate-600/5',   badge: ''           },
             ].map(g => (
-              <div
-                key={g.name}
-                className={`rounded-2xl border p-4 flex flex-col gap-2 ${g.color} ${g.paused ? 'opacity-50' : ''}`}
-              >
+              <div key={g.name} className={`rounded-2xl border p-4 flex flex-col gap-2 opacity-75 ${g.color}`}>
                 <div className="flex items-center justify-between">
                   <span className="text-lg">{g.flag}</span>
-                  {g.paused
-                    ? <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider bg-gray-700/30 rounded px-1.5 py-0.5">Paused</span>
-                    : g.badge && <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{g.badge}</span>
-                  }
+                  {g.badge && <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{g.badge}</span>}
                 </div>
-                <p className={`font-semibold text-sm leading-snug ${g.paused ? 'text-gray-400' : 'text-white'}`}>{g.name}</p>
-                <p className={`text-xs font-medium ${g.paused ? 'text-gray-500 italic' : 'text-slate-400'}`}>{g.amount}</p>
+                <p className="font-semibold text-sm leading-snug text-white">{g.name}</p>
+                <p className="text-xs font-medium text-slate-400">{g.amount}</p>
               </div>
             ))}
           </div>
@@ -1189,29 +1183,27 @@ export default function MarketingPage() {
             </div>
             <div>
               <p className="text-white font-semibold text-base mb-0.5">
-                Powered by your existing SR&amp;ED data — no double work
+                Powered by your SR&amp;ED data — no double work
               </p>
               <p className="text-slate-400 text-sm leading-relaxed">
-                TaxLift reuses the technical narratives, developer hours, and evidence you've already
-                generated for SR&amp;ED to pre-fill grant applications. One source of truth, many programs covered.
+                The technical narratives, developer hours, and evidence you've already generated for SR&amp;ED
+                will pre-fill grant applications automatically. One source of truth, many programs covered.
               </p>
             </div>
           </div>
 
-          {/* Total potential + CTA */}
+          {/* CTA */}
           <div className="text-center">
-            <p className="text-slate-400 text-sm mb-2">Combined Canadian innovation funding potential</p>
-            <p className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400 mb-6">
-              Up to $4.2M
-            </p>
+            <p className="text-slate-400 text-sm mb-2">SR&amp;ED qualifiers typically unlock 2–4 additional programs worth $500K–$4M+</p>
             <button
-              onClick={() => openWaitlist('plus', 'grants_section')}
-              className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-7 py-3.5 rounded-xl transition-colors shadow-lg shadow-indigo-900/40"
+              onClick={() => openWaitlist('grants', 'grants_section')}
+              className="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white font-bold px-7 py-3.5 rounded-xl transition-colors shadow-lg shadow-violet-900/40"
             >
-              Unlock the Grants module
+              <Sparkles size={15} />
+              Get early access
               <ArrowRight size={16} />
             </button>
-            <p className="text-slate-500 text-xs mt-3">Included in the SR&amp;ED Filing Package · $999 flat fee</p>
+            <p className="text-slate-500 text-xs mt-3">SR&amp;ED is live today · Grants matching coming soon</p>
           </div>
         </div>
       </section>
