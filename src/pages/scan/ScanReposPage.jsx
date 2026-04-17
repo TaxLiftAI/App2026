@@ -14,15 +14,6 @@ import { getStoredToken, LS_KEYS } from '../../lib/oauthConfig'
 
 const MAX_REPOS = 3
 
-// Demo repos for when GitHub token is unavailable
-const DEMO_REPOS = [
-  { id: 1,   full_name: 'acme/ml-platform',       name: 'ml-platform',       language: 'Python',     stargazers_count: 12, private: true,  pushed_at: '2026-03-10T14:32:00Z', description: 'Internal ML training & inference platform' },
-  { id: 2,   full_name: 'acme/backend-api',        name: 'backend-api',       language: 'TypeScript', stargazers_count:  4, private: true,  pushed_at: '2026-03-18T09:15:00Z', description: 'Core API server with custom query engine' },
-  { id: 3,   full_name: 'acme/perf-benchmarks',   name: 'perf-benchmarks',   language: 'Go',         stargazers_count:  2, private: true,  pushed_at: '2026-02-28T16:44:00Z', description: 'Benchmarking suite for latency optimization' },
-  { id: 4,   full_name: 'acme/data-pipeline',     name: 'data-pipeline',     language: 'Python',     stargazers_count:  1, private: true,  pushed_at: '2026-01-15T11:00:00Z', description: 'ETL + feature extraction pipeline' },
-  { id: 5,   full_name: 'acme/docs-site',         name: 'docs-site',         language: 'MDX',        stargazers_count:  0, private: false, pushed_at: '2025-12-01T08:00:00Z', description: 'Public documentation website' },
-  { id: 6,   full_name: 'acme/mobile-app',        name: 'mobile-app',        language: 'Swift',      stargazers_count:  3, private: true,  pushed_at: '2026-03-05T13:20:00Z', description: 'iOS app' },
-]
 
 function timeAgo(iso) {
   const diff = Date.now() - new Date(iso).getTime()
@@ -48,7 +39,6 @@ export default function ScanReposPage() {
   const [error,     setError]     = useState(null)
   const [query,     setQuery]     = useState('')
   const [selected,  setSelected]  = useState([])   // array of full_name strings
-  const [isDemoMode, setIsDemoMode] = useState(false)
 
   useEffect(() => {
     loadRepos()
@@ -59,10 +49,9 @@ export default function ScanReposPage() {
     const token = getStoredToken('github')
 
     if (!token) {
-      // Demo mode
-      setIsDemoMode(true)
-      setRepos(DEMO_REPOS)
-      setLoading(false)
+      // No token in memory — session expired or user landed here directly.
+      // Send them back to the scan landing page to re-authorise with GitHub.
+      navigate('/scan', { replace: true })
       return
     }
 
@@ -74,9 +63,8 @@ export default function ScanReposPage() {
       const data = await res.json()
       setRepos(data)
     } catch (err) {
-      console.warn('[ScanReposPage] GitHub API failed, falling back to demo:', err.message)
-      setIsDemoMode(true)
-      setRepos(DEMO_REPOS)
+      console.warn('[ScanReposPage] GitHub API failed:', err.message)
+      setError(err.message)
     } finally {
       setLoading(false)
     }
@@ -121,11 +109,6 @@ export default function ScanReposPage() {
             <span className="text-sm text-gray-500">Select repos to scan</span>
           </div>
           <div className="flex items-center gap-2">
-            {isDemoMode && (
-              <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-2 py-0.5 font-medium">
-                Demo mode
-              </span>
-            )}
             <span className="text-[11px] text-gray-400">
               {selected.length}/{MAX_REPOS} selected
             </span>
