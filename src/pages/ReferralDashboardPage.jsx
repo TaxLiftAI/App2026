@@ -4,14 +4,9 @@
  * CPA firm's referral hub. Turns the CPA firm from a passive document recipient
  * into an active pipeline source with a financial incentive to refer clients.
  *
- * Fee model (flat referral fees — CPA Canada Rule 205 compliant):
- *   Paid at T661 package delivery, not contingent on CRA assessment.
- *   Credit ≤ $75K   → $750
- *   Credit ≤ $150K  → $1,500
- *   Credit ≤ $300K  → $3,000
- *   Credit ≤ $600K  → $5,500
- *   Credit > $600K  → $9,000
- *   Plus plan adds  → $750
+ * Fee model (flat $300 commission — CPA Canada Rule 205 compliant):
+ *   $300 flat per client, paid at T661 package delivery.
+ *   Not contingent on CRA assessment. No tiers. No caps.
  */
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate }                  from 'react-router-dom'
@@ -26,32 +21,25 @@ import { useAuth }              from '../context/AuthContext'
 import { referrals as referralsApi, ApiError } from '../lib/api'
 import { formatCurrency }       from '../lib/utils'
 
-// ── Flat referral fee schedule (CPA Canada Rule 205 compliant) ───────────────
+// ── Flat $300 commission (CPA Canada Rule 205 compliant) ─────────────────────
 // Paid at T661 package delivery — not contingent on CRA assessment.
-const FEE_TIERS = [
-  { maxCredit: 75_000,   fee: 750,   label: 'Up to $75K credit'   },
-  { maxCredit: 150_000,  fee: 1_500, label: 'Up to $150K credit'  },
-  { maxCredit: 300_000,  fee: 3_000, label: 'Up to $300K credit'  },
-  { maxCredit: 600_000,  fee: 5_500, label: 'Up to $600K credit'  },
-  { maxCredit: Infinity, fee: 9_000, label: 'Over $600K credit'   },
-]
-const PLUS_BONUS = 750
-function getFeeForCredit(creditAmount) {
-  return FEE_TIERS.find(t => creditAmount <= t.maxCredit) ?? FEE_TIERS.at(-1)
+const COMMISSION_FLAT = 300
+function getFeeForCredit(_creditAmount) {
+  return { fee: COMMISSION_FLAT, label: 'Flat $300' }
 }
 
 // ── Mock data used when the API is unavailable (demo mode) ───────────────────
 const MOCK_REFERRALS = [
-  { id: 'ref-001', company_name: 'Zenith Biotech Ltd.',  industry: 'Life Sciences',    fiscal_year: 'FY2025', referral_status: 'package_ready', commission_status: 'confirmed', estimated_credit_cad: 248_000, commission_cad: 3_000, date_referred: '2025-09-12', ref_code: 'HWL-001' },
-  { id: 'ref-002', company_name: 'Pulse Commerce Inc.',  industry: 'E-Commerce Tech',  fiscal_year: 'FY2025', referral_status: 'filed',         commission_status: 'paid',      estimated_credit_cad: 142_000, commission_cad: 1_500, date_referred: '2025-07-03', ref_code: 'HWL-002' },
-  { id: 'ref-003', company_name: 'Atlas Network',        industry: 'Network Infra',    fiscal_year: 'FY2024', referral_status: 'filed',         commission_status: 'paid',      estimated_credit_cad:  58_000, commission_cad:   750, date_referred: '2025-03-21', ref_code: 'HWL-003' },
-  { id: 'ref-004', company_name: 'Vertex Labs',          industry: 'SaaS / AI Tools',  fiscal_year: 'FY2025', referral_status: 'in_review',     commission_status: 'pending',   estimated_credit_cad: 190_000, commission_cad:     0, date_referred: '2026-02-08', ref_code: 'HWL-004' },
+  { id: 'ref-001', company_name: 'Zenith Biotech Ltd.',  industry: 'Life Sciences',    fiscal_year: 'FY2025', referral_status: 'package_ready', commission_status: 'confirmed', estimated_credit_cad: 248_000, commission_cad: 300, date_referred: '2025-09-12', ref_code: 'HWL-001' },
+  { id: 'ref-002', company_name: 'Pulse Commerce Inc.',  industry: 'E-Commerce Tech',  fiscal_year: 'FY2025', referral_status: 'filed',         commission_status: 'paid',      estimated_credit_cad: 142_000, commission_cad: 300, date_referred: '2025-07-03', ref_code: 'HWL-002' },
+  { id: 'ref-003', company_name: 'Atlas Network',        industry: 'Network Infra',    fiscal_year: 'FY2024', referral_status: 'filed',         commission_status: 'paid',      estimated_credit_cad:  58_000, commission_cad: 300, date_referred: '2025-03-21', ref_code: 'HWL-003' },
+  { id: 'ref-004', company_name: 'Vertex Labs',          industry: 'SaaS / AI Tools',  fiscal_year: 'FY2025', referral_status: 'in_review',     commission_status: 'pending',   estimated_credit_cad: 190_000, commission_cad:   0, date_referred: '2026-02-08', ref_code: 'HWL-004' },
 ]
 const MOCK_STATS = {
   totalReferred:         4,
   totalPipelineCredit:   638_000,
-  totalCommissionEarned: 2_250,   // ref-002 + ref-003 paid
-  pendingPayout:         3_000,   // ref-001 confirmed
+  totalCommissionEarned: 600,    // ref-002 + ref-003 paid
+  pendingPayout:         300,    // ref-001 confirmed
   pendingCount:   1, pendingCredit:   190_000,
   confirmedCount: 1, confirmedCredit: 248_000,
   paidCount:      2, paidCredit:      200_000,
@@ -112,8 +100,8 @@ const MOCK_PAYOUTS = [
     clients:      ['Pulse Commerce Inc.'],
     eft_ref:      'EFT-TXL-20260122-002',
     fiscal_year:  'FY2025',
-    tier:         '≤ $150K credit',
-    rate:         'Flat $1,500',
+    tier:         'Flat commission',
+    rate:         'Flat $300',
     credit_base:  142_000,
     status:       'paid',
     note:         null,
@@ -121,12 +109,12 @@ const MOCK_PAYOUTS = [
   {
     id:           'PAY-2025-001',
     paid_date:    '2025-10-08',
-    amount_cad:   750,
+    amount_cad:   300,
     clients:      ['Atlas Network'],
     eft_ref:      'EFT-TXL-20251008-001',
     fiscal_year:  'FY2024',
-    tier:         '≤ $75K credit',
-    rate:         'Flat $750',
+    tier:         'Flat commission',
+    rate:         'Flat $300',
     credit_base:  58_000,
     status:       'paid',
     note:         null,
@@ -349,8 +337,8 @@ function ReferClientModal({ open, onClose, intakeUrl, firmName, partnerName }) {
         <div className="flex items-start gap-2.5 bg-green-50 border border-green-200 rounded-xl px-3.5 py-3">
           <Gift size={14} className="text-green-600 flex-shrink-0 mt-0.5" />
           <p className="text-xs text-green-800">
-            You earn a <strong>flat referral fee</strong> for every client who files — from $750 to $9,000 depending on credit size.
-            On a $200K claim that's <strong>$3,000</strong>, paid when the T661 package is delivered to you.
+            You earn a <strong>$300 flat commission</strong> for every client who files — no tiers, no caps.
+            Paid when the T661 package is delivered to you, regardless of credit size.
           </p>
         </div>
 
@@ -698,7 +686,7 @@ export default function ReferralDashboardPage() {
           <div>
             <p className="text-white font-bold text-base">Earn a flat referral fee for every SR&ED client you refer</p>
             <p className="text-indigo-200 text-sm mt-1 max-w-lg">
-              From $750 to $9,000 per claim depending on credit size. No percentages — a fixed flat fee
+              $300 flat per client — no tiers, no caps, no percentages
               paid when the T661 package is ready, not contingent on CRA.
             </p>
           </div>
@@ -731,7 +719,7 @@ export default function ReferralDashboardPage() {
           </div>
           <div className="flex items-center gap-1.5 text-[11px] text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
             <BarChart3 size={11} className="text-gray-400" />
-            $750 · $1,500 · $3,000 · $5,500 · $9,000 flat fee by credit size
+            $300 flat commission per client · no tiers · no caps
           </div>
         </div>
         <CommissionTracker referrals={referrals} stats={stats} />
@@ -779,7 +767,7 @@ export default function ReferralDashboardPage() {
         </div>
         <p className="text-[11px] text-gray-400 mt-4 border-t border-slate-200 pt-3">
           Referral fees are flat — not a percentage of credit — so there is no independence concern under CPA Canada Rule 205.
-          Fee schedule: ≤$75K → $750 · ≤$150K → $1,500 · ≤$300K → $3,000 · ≤$600K → $5,500 · &gt;$600K → $9,000 (Plus plan adds $750).
+          Commission: $300 flat per client · paid at T661 package delivery · not contingent on CRA assessment.
           Fees are paid at T661 package delivery, not contingent on CRA assessment. Paid by EFT within 30 days.
         </p>
       </div>

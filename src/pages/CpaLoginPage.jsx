@@ -13,16 +13,17 @@ import { useState, useEffect } from 'react'
 import { useNavigate, Link, useSearchParams }   from 'react-router-dom'
 import {
   Building2, Loader2, AlertCircle, ArrowRight,
-  ShieldCheck, Users, DollarSign, CheckCircle2,
+  ShieldCheck, Users, DollarSign, CheckCircle2, FileText,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 // ── What CPAs see on the left panel ───────────────────────────────────────────
 const PARTNER_PERKS = [
-  { icon: Users,        text: 'Single dashboard across all referred clients'         },
-  { icon: ShieldCheck,  text: 'Audit-ready T661 packages — no prep work required'   },
-  { icon: DollarSign,   text: 'Flat referral fee $750–$9,000 per client — paid at package delivery' },
-  { icon: CheckCircle2, text: 'Co-branded packages under your firm name'            },
+  { icon: Users,        text: 'Single dashboard across all referred clients'                        },
+  { icon: ShieldCheck,  text: 'Per-cluster qualification scores — know exactly why each project qualifies before you sign' },
+  { icon: FileText,     text: 'Inline narrative editor with 80-word CRA threshold guidance'         },
+  { icon: DollarSign,   text: '$300 flat referral commission per client — paid at package delivery' },
+  { icon: CheckCircle2, text: 'Approve, flag, or edit every cluster before PDF export'             },
 ]
 
 export default function CpaLoginPage() {
@@ -81,7 +82,8 @@ export default function CpaLoginPage() {
           One login.<br />All your SR&amp;ED clients.
         </h2>
         <p className="text-slate-300 text-sm leading-relaxed mb-10 max-w-xs">
-          TaxLift prepares the complete T661 package. You review, sign, and file.
+          TaxLift prepares the complete T661 package. You review each cluster's
+          qualification score, edit narratives inline, approve the package, and file.
           No more chasing engineers for documentation.
         </p>
 
@@ -207,10 +209,23 @@ export default function CpaLoginPage() {
             {mode === 'demo' && (
               <div className="space-y-4">
                 <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
-                  <p className="text-xs font-semibold text-indigo-800 mb-1">Demo: Hartwell & Associates CPA</p>
-                  <p className="text-[11px] text-indigo-600 leading-relaxed">
-                    3 referred clients · $247K credit pipeline · $5,500 referral fee earned
+                  <p className="text-xs font-semibold text-indigo-800 mb-2">Demo: Hartwell &amp; Associates CPA</p>
+                  <p className="text-[11px] text-indigo-600 leading-relaxed mb-2">
+                    3 referred clients · $247K credit pipeline · $900 commission earned
                   </p>
+                  <div className="space-y-1 border-t border-indigo-100 pt-2">
+                    {[
+                      'Review & edit T661 narratives per cluster',
+                      'Per-cluster CRA qualification scores',
+                      'Approve / flag clusters before export',
+                      'Download finalized audit PDF package',
+                    ].map(f => (
+                      <div key={f} className="flex items-center gap-1.5">
+                        <CheckCircle2 size={10} className="text-indigo-400 flex-shrink-0" />
+                        <span className="text-[10px] text-indigo-700">{f}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 <button
                   onClick={handleDemoLogin}

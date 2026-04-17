@@ -104,15 +104,7 @@ export default function TermsPage() {
           </Section>
 
           <Section title="7. CPA Partner Referral Fees">
-            <p><strong>Flat Referral Fee.</strong> TaxLift pays verified CPA partners a flat referral fee for each client they refer who completes a paid T661 package. The fee is determined by the TaxLift scan estimate of the client's SR&ED credit at the time of package delivery, according to the following schedule:</p>
-            <ul className="list-disc list-inside space-y-1 ml-2">
-              <li>Credit estimate up to $75,000 — $750 CAD</li>
-              <li>Credit estimate $75,001–$150,000 — $1,500 CAD</li>
-              <li>Credit estimate $150,001–$300,000 — $3,000 CAD</li>
-              <li>Credit estimate $300,001–$600,000 — $5,500 CAD</li>
-              <li>Credit estimate over $600,000 — $9,000 CAD</li>
-            </ul>
-            <p>An additional $750 CAD applies when the referred client is on the Plus plan. The current fee schedule is available at {WEBSITE}/partners and is subject to change with 30 days' notice to enrolled partners.</p>
+            <p><strong>Flat Referral Commission.</strong> TaxLift pays verified CPA partners a flat referral commission of <strong>$300 CAD</strong> for each client they refer who completes a paid T661 package. The commission is the same regardless of the client's SR&ED credit size — no tiers, no caps. The current commission rate is available at {WEBSITE}/partners and is subject to change with 30 days' notice to enrolled partners.</p>
             <p><strong>Payment Timing.</strong> Referral fees are paid by electronic funds transfer (EFT) at the time the client's T661 package is delivered and the TaxLift platform fee is collected. Payment is not contingent on CRA review or approval of the claim and is not subject to true-up based on the final Notice of Assessment.</p>
             <p><strong>Independence.</strong> Referral fees are structured as flat compensation for client introduction services and are not calculated as a percentage of the SR&ED credit or CRA assessment. CPA partners are responsible for ensuring their participation in the TaxLift partner program complies with their applicable professional rules of conduct, including CPA Canada Rule 205 and any provincial equivalent.</p>
             <p><strong>Eligibility.</strong> Referral fees are payable only to CPA partners whose credentials have been verified by TaxLift and who have executed a Partner Agreement. Fees are forfeited for referrals involving fraudulent, ineligible, or improperly filed claims.</p>

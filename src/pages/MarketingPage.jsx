@@ -894,7 +894,7 @@ export default function MarketingPage() {
                 </div>
                 <div className="text-left">
                   <p className="text-emerald-300 text-xs font-semibold leading-none mb-0.5">Are you a CPA or accountant?</p>
-                  <p className="text-emerald-400/70 text-xs leading-none">Earn $750–$9K per client referral · Partner program →</p>
+                  <p className="text-emerald-400/70 text-xs leading-none">Earn $300 flat per client referral · Partner program →</p>
                 </div>
                 <ArrowRight size={13} className="text-emerald-500 group-hover:translate-x-0.5 transition-transform ml-1" />
               </Link>
@@ -973,7 +973,7 @@ export default function MarketingPage() {
             <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3">
               Add SR&amp;ED to your practice.<br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400">
-                Earn $750–$9,000 per client referral.
+                Earn $300 flat per client referral.
               </span>
             </h2>
             <p className="text-slate-400 max-w-xl mx-auto text-sm leading-relaxed">
@@ -1001,7 +1001,7 @@ export default function MarketingPage() {
                 icon: DollarSign,
                 color: 'text-indigo-400', bg: 'bg-indigo-500/10 border-indigo-500/20',
                 title: 'Flat fee, paid at delivery',
-                body: 'Referral fees from $750 to $9,000 per client based on credit size. Paid by EFT when the T661 package is delivered — no waiting 12–18 months for CRA to process.',
+                body: '$300 flat commission per client — no tiers, no caps. Paid by EFT when the T661 package is delivered, not contingent on CRA assessment.',
               },
             ].map(({ icon: Icon, color, bg, title, body }) => (
               <div key={title} className={`bg-white/5 border rounded-2xl p-6 ${bg}`}>
@@ -1019,11 +1019,11 @@ export default function MarketingPage() {
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4 text-center">Referral fee schedule — paid at T661 package delivery</p>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               {[
-                { range: 'Up to $75K',       fee: '$750'   },
-                { range: '$75K – $150K',      fee: '$1,500' },
-                { range: '$150K – $300K',     fee: '$3,000' },
-                { range: '$300K – $600K',     fee: '$5,500' },
-                { range: '$600K+',            fee: '$9,000' },
+                { range: 'Any credit size',    fee: '$300'   },
+                { range: 'No tiers',          fee: 'Flat'   },
+                { range: 'No caps',           fee: 'Always $300' },
+                { range: 'Break-even',        fee: '16 clients/yr' },
+                { range: '30 clients/yr',     fee: '$9,000 net' },
               ].map(({ range, fee }) => (
                 <div key={range} className="text-center bg-white/5 rounded-xl py-3 px-2">
                   <p className="text-lg font-extrabold text-emerald-400 mb-0.5">{fee}</p>
@@ -1332,13 +1332,13 @@ export default function MarketingPage() {
                 </span>
               </h2>
               <p className="text-slate-300 text-base leading-relaxed mb-8">
-                Refer your tech clients to TaxLift and earn a <strong className="text-white">flat referral fee of $750–$9,000</strong> per client — paid when the T661 package is delivered, not when CRA processes the claim. Independent CPA login, annotation rights, co-branded packages, and a published methodology you can cite in any CRA audit.
+                Refer your tech clients to TaxLift and earn a <strong className="text-white">$300 flat commission</strong> per client — paid when the T661 package is delivered, not when CRA processes the claim. Independent CPA login, annotation rights, co-branded packages, and a published methodology you can cite in any CRA audit.
               </p>
 
               <div className="space-y-4 mb-8">
                 {[
                   { icon: Link2,      text: 'Your own CPA login — see all referred clients in one dashboard' },
-                  { icon: DollarSign, text: 'Flat referral fee $750–$9K by credit size — paid at T661 delivery, not CRA processing' },
+                  { icon: DollarSign, text: '$300 flat commission per client — paid at T661 delivery, not CRA processing' },
                   { icon: Package,    text: 'Annotate, approve, or flag narratives before anything is filed' },
                   { icon: BarChart2,  text: 'Published SR&ED methodology (IC86-4R3 aligned) to defend any audit' },
                 ].map(item => {
@@ -1379,10 +1379,10 @@ export default function MarketingPage() {
 
                 <div className="space-y-3">
                   {[
-                    { company: 'Zenith Biotech',  credit: '$312,000', fee: '$9,000', status: 'Paid',      statusColor: 'text-green-400 bg-green-400/10' },
-                    { company: 'Pulse Commerce',  credit: '$142,000', fee: '$1,500', status: 'Paid',      statusColor: 'text-green-400 bg-green-400/10' },
-                    { company: 'Atlas Network',   credit: '$67,000',  fee: '$750',   status: 'Confirmed', statusColor: 'text-blue-400  bg-blue-400/10'  },
-                    { company: 'Axiom Robotics',  credit: '$89,000',  fee: '$750',   status: 'Pending',   statusColor: 'text-amber-400 bg-amber-400/10' },
+                    { company: 'Zenith Biotech',  credit: '$312,000', fee: '$300', status: 'Paid',      statusColor: 'text-green-400 bg-green-400/10' },
+                    { company: 'Pulse Commerce',  credit: '$142,000', fee: '$300', status: 'Paid',      statusColor: 'text-green-400 bg-green-400/10' },
+                    { company: 'Atlas Network',   credit: '$67,000',  fee: '$300', status: 'Confirmed', statusColor: 'text-blue-400  bg-blue-400/10'  },
+                    { company: 'Axiom Robotics',  credit: '$89,000',  fee: '$300', status: 'Pending',   statusColor: 'text-amber-400 bg-amber-400/10' },
                   ].map(row => (
                     <div key={row.company} className="flex items-center gap-3 bg-slate-900/60 rounded-xl px-4 py-3">
                       <Building2 size={14} className="text-slate-500 flex-shrink-0" />

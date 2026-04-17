@@ -13,25 +13,14 @@ const PROVINCES = [
   'AB','BC','MB','NB','NL','NS','NT','NU','ON','PE','QC','SK','YT',
 ]
 
-// ── CPA referral flat-fee tiers (mirrors stripe.js CPA_REFERRAL_TIERS) ────────
+// ── Commission model: flat $300 per client ────────────────────────────────────
 // Flat fee avoids CPA Canada Rule 205 independence concerns with % contingency.
 // Fee is paid when the CPA-ready T661 package is delivered to the CPA.
-const CPA_TIERS = [
-  { maxCredit:   75_000, label: '$0 – $75K credit',    fee:   750 },
-  { maxCredit:  150_000, label: '$75K – $150K credit', fee: 1_500 },
-  { maxCredit:  300_000, label: '$150K – $300K credit',fee: 3_000 },
-  { maxCredit:  600_000, label: '$300K – $600K credit',fee: 5_500 },
-  { maxCredit: Infinity, label: '$600K+ credit',       fee: 9_000 },
-]
-const CPA_PLUS_BONUS = 750  // additional if client is on Plus plan
+const COMMISSION_PER_CLIENT = 300
 
 // ── Commission calculator ─────────────────────────────────────────────────────
-function calc(clients, tierIndex = 1) {
-  const tier       = CPA_TIERS[tierIndex]
-  const perClient  = tier.fee
-  const total      = clients * perClient
-  const withPlus   = clients * (perClient + CPA_PLUS_BONUS)
-  return { perClient, total, withPlus }
+function calc(clients) {
+  return { perClient: COMMISSION_PER_CLIENT, total: clients * COMMISSION_PER_CLIENT }
 }
 
 // ── Stat box ──────────────────────────────────────────────────────────────────
@@ -63,7 +52,7 @@ function ConfirmedView({ refCode, refUrl, name }) {
         <h1 className="text-2xl font-bold text-gray-900 mb-2">You're in, {name?.split(' ')[0]}!</h1>
         <p className="text-gray-500 mb-8">
           Welcome to the TaxLift Partner Program. Your referral link is ready — share it with clients
-          to earn a flat referral fee ($750–$9,000) when each T661 package is delivered.
+          to earn a $300 flat referral commission when each T661 package is delivered.
         </p>
 
         <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-6 mb-6 text-left">
@@ -116,9 +105,8 @@ export default function CPAPartnerSignupPage() {
   const [error,     setError]     = useState(null)
   const [confirmed, setConfirmed] = useState(null)   // { refCode, refUrl }
   const [clients,    setClients]    = useState(3)   // commission calculator
-  const [tierIndex,  setTierIndex]  = useState(1)   // which credit tier
 
-  const commission = calc(clients, tierIndex)
+  const commission = calc(clients)
 
   function handleChange(e) {
     setForm(f => ({ ...f, [e.target.name]: e.target.value }))
@@ -165,7 +153,7 @@ export default function CPAPartnerSignupPage() {
         </div>
         <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight mb-4">
           Refer clients to TaxLift.<br />
-          <span className="text-indigo-600">Earn $750 – $9,000 per referral.</span>
+          <span className="text-indigo-600">Earn $300 flat per referral — no tiers, no caps.</span>
         </h1>
         <p className="text-lg text-gray-500 max-w-2xl mx-auto mb-10">
           TaxLift automates SR&ED documentation for your software clients — saving 40+ hours of back-and-forth
@@ -174,7 +162,7 @@ export default function CPAPartnerSignupPage() {
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-8 max-w-xl mx-auto mb-12">
-          <Stat value="$750–$9K" label="flat fee per referral" />
+          <Stat value="$300" label="flat commission per referral" />
           <Stat value="$175K" label="avg SR&ED credit filed" />
           <Stat value="40 hrs" label="saved per client claim" />
         </div>
@@ -201,7 +189,7 @@ export default function CPAPartnerSignupPage() {
               {
                 icon: DollarSign,
                 title: 'You earn a flat referral fee per client',
-                body: 'Fees range from $750 to $9,000 per referral based on the client\'s SR&ED credit size. Paid when TaxLift delivers the CPA-ready T661 package — not contingent on CRA assessment, so there are no Rule 205 independence issues.',
+                body: '$300 flat commission per client — no tiers, no caps. Paid when TaxLift delivers the CPA-ready T661 package, not contingent on CRA assessment, so there are no Rule 205 independence issues.',
               },
               {
                 icon: Shield,
@@ -223,59 +211,35 @@ export default function CPAPartnerSignupPage() {
 
           {/* Commission calculator */}
           <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-6">
-            <p className="text-sm font-semibold text-gray-800 mb-4">Referral fee calculator</p>
+            <p className="text-sm font-semibold text-gray-800 mb-4">Commission calculator</p>
 
-            {/* Tier picker */}
-            <div className="mb-4">
-              <label className="text-xs font-medium text-gray-600 block mb-2">Client's estimated SR&amp;ED credit</label>
-              <div className="grid grid-cols-1 gap-1">
-                {CPA_TIERS.map((tier, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => setTierIndex(i)}
-                    className={`flex items-center justify-between text-xs px-3 py-2 rounded-lg transition-colors ${
-                      tierIndex === i
-                        ? 'bg-indigo-600 text-white font-semibold'
-                        : 'bg-white border border-indigo-100 text-gray-600 hover:border-indigo-300'
-                    }`}
-                  >
-                    <span>{tier.label}</span>
-                    <span className={tierIndex === i ? 'text-indigo-200' : 'text-indigo-600 font-semibold'}>
-                      ${tier.fee.toLocaleString('en-CA')} fee
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Client count */}
-            <div className="flex items-center gap-4 mb-4">
-              <label className="text-xs text-gray-600 whitespace-nowrap">Clients at this tier:</label>
+            {/* Client count slider */}
+            <div className="flex items-center gap-4 mb-5">
+              <label className="text-xs text-gray-600 whitespace-nowrap">Clients referred / year:</label>
               <input
-                type="range" min={1} max={20} value={clients}
+                type="range" min={1} max={50} value={clients}
                 onChange={e => setClients(Number(e.target.value))}
                 className="flex-1 accent-indigo-600"
               />
-              <span className="text-sm font-bold text-indigo-700 w-6 text-right">{clients}</span>
+              <span className="text-sm font-bold text-indigo-700 w-8 text-right">{clients}</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 mb-3">
               <div className="bg-white rounded-lg p-4 text-center border border-indigo-100">
                 <p className="text-2xl font-extrabold text-indigo-700">
                   ${commission.total.toLocaleString('en-CA')}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">Starter clients</p>
+                <p className="text-xs text-gray-500 mt-1">Commission earned</p>
               </div>
               <div className="bg-white rounded-lg p-4 text-center border border-indigo-100">
-                <p className="text-2xl font-extrabold text-gray-900">
-                  ${commission.withPlus.toLocaleString('en-CA')}
+                <p className="text-2xl font-extrabold text-emerald-600">
+                  ${Math.max(0, commission.total - 4800).toLocaleString('en-CA')}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">Plus clients (+$750 each)</p>
+                <p className="text-xs text-gray-500 mt-1">Net after seat ($4,800/yr)</p>
               </div>
             </div>
-            <p className="text-xs text-gray-400 mt-3 text-center">
-              Flat fee paid per client when their T661 package is delivered · no % contingency
+            <p className="text-xs text-gray-400 text-center">
+              $300 flat per client · break-even at 16 referrals · no % contingency
             </p>
           </div>
         </div>
@@ -403,7 +367,7 @@ export default function CPAPartnerSignupPage() {
           <div className="space-y-6">
             {[
               ['When do I get paid?', 'Your referral fee is paid within 14 days of the T661 package being delivered to the client\'s CPA. We use e-Transfer for Canadian partners or wire transfer for international.'],
-              ['How much can I earn per referral?', 'Flat fees range from $750 (client credit under $75K) to $9,000 (credit over $600K). Plus clients add an extra $750. The fee is based on TaxLift\'s conservative scan estimate, not the final CRA assessment.'],
+              ['How much can I earn per referral?', '$300 flat per client — no tiers, no caps. Paid by EFT when TaxLift delivers the CPA-ready T661 package, not contingent on the CRA assessment outcome.'],
               ['Does this conflict with CPA Canada Rule 205?', 'No — specifically because it\'s a flat fee, not a percentage of the credit claimed. The fee is paid at T661 delivery, before CRA processes the claim, so there\'s no financial stake in the outcome. We recommend disclosing the arrangement to clients as you would any referral relationship.'],
               ['What if my client is already using TaxLift?', 'If they signed up without a referral code, email us at partners@taxlift.ai and we\'ll sort it out manually.'],
               ['Do I need to be a licensed CPA?', 'The program is open to CPAs, CMAs, CGAs, and tax consultants actively advising Canadian businesses. We may ask for your CPA registration number.'],
