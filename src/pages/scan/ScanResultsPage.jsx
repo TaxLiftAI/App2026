@@ -246,11 +246,6 @@ export default function ScanResultsPage() {
   const [rdDevCount,     setRdDevCount]     = useState(3)
   const [rdAvgSalary,    setRdAvgSalary]    = useState(110000)
   const [rdPct,          setRdPct]          = useState(40)
-  // Payroll-based credit = headcount × salary × rd% × combined ITC rate
-  const payrollSpend    = rdDevCount * rdAvgSalary * (rdPct / 100)
-  const payrollCredit   = Math.round(payrollSpend * totalRate)
-  const payrollLow      = Math.round(payrollCredit * 0.65)
-  const payrollHigh     = Math.round(payrollCredit * 1.35)
 
   // ── Feature 1: Payroll rate override ─────────────────────────────────────
   const [showPayroll,    setShowPayroll]    = useState(false)
@@ -351,6 +346,12 @@ export default function ScanResultsPage() {
   const federalRate = isCcpc ? 0.35 : 0.15
   const provRate    = PROV_RATES[province] ?? 0.08
   const totalRate   = federalRate + provRate
+
+  // Payroll-based credit = headcount × salary × rd% × combined ITC rate
+  const payrollSpend    = rdDevCount * rdAvgSalary * (rdPct / 100)
+  const payrollCredit   = Math.round(payrollSpend * totalRate)
+  const payrollLow      = Math.round(payrollCredit * 0.65)
+  const payrollHigh     = Math.round(payrollCredit * 1.35)
 
   // Rebase the raw credit on current rates (scan used 0.35 federal by default)
   const baseCredit  = results?.estimated_credit ?? 0
