@@ -724,7 +724,7 @@ router.get('/eligibility', async (req, res) => {
     res.json({ ...result, cached: false, cached_at: now })
   } catch (err) {
     console.error('[grants] eligibility error:', err)
-    res.status(500).json({ message: 'Failed to run eligibility matching', detail: err.message })
+    res.status(500).json({ message: 'Failed to run eligibility matching', ...(process.env.NODE_ENV !== 'production' && { detail: err.message }) })
   }
 })
 
@@ -1086,7 +1086,7 @@ router.get('/sred-context', (req, res) => {
     const ctx = buildSREDContext(req.user.id)
     res.json(ctx)
   } catch (err) {
-    res.status(500).json({ message: 'Failed to build SR&ED context', detail: err.message })
+    res.status(500).json({ message: 'Failed to build SR&ED context', ...(process.env.NODE_ENV !== 'production' && { detail: err.message }) })
   }
 })
 

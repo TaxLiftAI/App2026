@@ -164,7 +164,7 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
 
   } catch (err) {
     console.error('[billing] create-checkout-session error:', err.message)
-    res.status(502).json({ message: err.message })
+    res.status(502).json({ message: process.env.NODE_ENV !== 'production' ? err.message : 'Service unavailable' })
   }
 })
 
@@ -177,14 +177,16 @@ router.post('/webhook', async (req, res) => {
   const secret = process.env.STRIPE_WEBHOOK_SECRET
 
   if (!secret) {
-    console.warn('[billing/webhook] STRIPE_WEBHOOK_SECRET not set — skipping signature verification')
+    console.error('[billing/webhook] STRIPE_WEBHOOK_SECRET not configured — rejecting webhook')
+    return res.status(500).json({ message: 'Webhook endpoint not configured' })
+  }
+  if (!sig) {
+    return res.status(400).json({ message: 'Missing stripe-signature header' })
   }
 
   let event
   try {
-    event = secret && sig
-      ? s.webhooks.constructEvent(req.rawBody ?? req.body, sig, secret)
-      : (typeof req.body === 'object' ? req.body : JSON.parse(req.body))
+    event = s.webhooks.constructEvent(req.rawBody ?? req.body, sig, secret)
   } catch (err) {
     console.error('[billing/webhook] signature verification failed:', err.message)
     return res.status(400).json({ message: `Webhook signature error: ${err.message}` })
@@ -195,7 +197,7 @@ router.post('/webhook', async (req, res) => {
     res.json({ received: true })
   } catch (err) {
     console.error('[billing/webhook] handler error:', err.message)
-    res.status(500).json({ message: err.message })
+    res.status(500).json({ message: process.env.NODE_ENV !== 'production' ? err.message : 'Webhook handler error' })
   }
 })
 
@@ -284,7 +286,7 @@ router.post('/portal', requireAuth, async (req, res) => {
     res.json({ url: session.url })
   } catch (err) {
     console.error('[billing/portal] error:', err.message)
-    res.status(502).json({ message: err.message })
+    res.status(502).json({ message: process.env.NODE_ENV !== 'production' ? err.message : 'Service unavailable' })
   }
 })
 

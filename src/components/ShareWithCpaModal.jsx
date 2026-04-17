@@ -19,7 +19,7 @@
  *
  *  OR pass `clientData` (CPA_CLIENTS row) to generate from CPA portal.
  */
-import { useState, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import {
   X, Copy, Check, Link2, Mail, Clock, Shield,
   FileText, Users, ShieldCheck, ChevronDown, ChevronUp,
@@ -116,99 +116,113 @@ export default function ShareWithCpaModal({
   const [sending,       setSending]       = useState(false)
   const [sendResult,    setSendResult]    = useState(null) // { ok, message }
 
-  // ── Build token payload ──────────────────────────────────────────────────
-  const { link, emailDraft } = useMemo(() => {
-    const expiresAt   = makeExpiresAt()
-    const generatedAt = new Date().toISOString()
+  // ── Build token payload (async — encodeCpaToken may POST to API) ────────────
+  const [link,       setLink]       = useState(null)
+  const [emailDraft, setEmailDraft] = useState('')
 
-    let payload
+  useEffect(() => {
+    if (!open) return          // don't regenerate while closed
+    let cancelled = false
 
-    if (clientData) {
-      // Coming from CPA Portal — use client summary data
-      payload = {
-        companyName:    clientData.company_name,
-        fiscalYear:     new Date(clientData.filing_deadline).getFullYear().toString(),
-        filingDeadline: clientData.filing_deadline,
-        auditScore:     clientData.avg_readiness_score,
-        totalCredit:    clientData.estimated_credit_cad,
-        totalHours:     null,
-        sharedBy,
-        sharedByEmail,
-        generatedAt,
-        expiresAt,
-        t661: null,
-        clusters: Array.from({ length: clientData.clusters_approved }, (_, i) => ({
-          id:                  `cluster-${i + 1}`,
-          name:                `SR&ED Project ${i + 1}`,
-          status:              'Approved',
-          hours:               null,
-          creditCAD:           Math.round(clientData.estimated_credit_cad / Math.max(1, clientData.clusters_approved)),
-          riskScore:           null,
-          narrative:           null,
-          narrativeApproved:   false,
-          evidenceSnapshotId:  null,
-        })),
-        clusterTotals: {
-          total:    clientData.clusters_total,
-          approved: clientData.clusters_approved,
-          pending:  clientData.clusters_pending_review,
-        },
-      }
-    } else if (report) {
-      // Coming from Reports page — use full report data
-      const t661     = buildT661FromReport(report, devBreakdown)
-      const clusters = (report.approved_list ?? []).map(c => {
-        const narrativeText = getNarrativeText(c)
-        return {
-          id:                 c.id,
-          name:               c.business_component ?? 'Unnamed Cluster',
-          status:             c.status,
-          hours:              c.aggregate_time_hours,
-          creditCAD:          c.estimated_credit_cad,
-          riskScore:          c.risk_score,
-          narrative:          narrativeText,
-          narrativeApproved:  !!(narrativeText),
-          evidenceSnapshotId: c.evidence_snapshot_id ?? null,
+    async function generate() {
+      const expiresAt   = makeExpiresAt()
+      const generatedAt = new Date().toISOString()
+
+      let payload
+
+      if (clientData) {
+        // Coming from CPA Portal — use client summary data
+        payload = {
+          companyName:    clientData.company_name,
+          fiscalYear:     new Date(clientData.filing_deadline).getFullYear().toString(),
+          filingDeadline: clientData.filing_deadline,
+          auditScore:     clientData.avg_readiness_score,
+          totalCredit:    clientData.estimated_credit_cad,
+          totalHours:     null,
+          sharedBy,
+          sharedByEmail,
+          generatedAt,
+          expiresAt,
+          t661: null,
+          clusters: Array.from({ length: clientData.clusters_approved }, (_, i) => ({
+            id:                  `cluster-${i + 1}`,
+            name:                `SR&ED Project ${i + 1}`,
+            status:              'Approved',
+            hours:               null,
+            creditCAD:           Math.round(clientData.estimated_credit_cad / Math.max(1, clientData.clusters_approved)),
+            riskScore:           null,
+            narrative:           null,
+            narrativeApproved:   false,
+            evidenceSnapshotId:  null,
+          })),
+          clusterTotals: {
+            total:    clientData.clusters_total,
+            approved: clientData.clusters_approved,
+            pending:  clientData.clusters_pending_review,
+          },
         }
-      })
+      } else if (report) {
+        // Coming from Reports page — use full report data
+        const t661     = buildT661FromReport(report, devBreakdown)
+        const clusters = (report.approved_list ?? []).map(c => {
+          const narrativeText = getNarrativeText(c)
+          return {
+            id:                 c.id,
+            name:               c.business_component ?? 'Unnamed Cluster',
+            status:             c.status,
+            hours:              c.aggregate_time_hours,
+            creditCAD:          c.estimated_credit_cad,
+            riskScore:          c.risk_score,
+            narrative:          narrativeText,
+            narrativeApproved:  !!(narrativeText),
+            evidenceSnapshotId: c.evidence_snapshot_id ?? null,
+          }
+        })
 
-      payload = {
-        companyName,
-        fiscalYear,
-        filingDeadline,
-        auditScore,
-        totalCredit:  report.total_credit_cad ?? 0,
-        totalHours:   report.total_eligible_hours ?? 0,
-        sharedBy,
-        sharedByEmail,
-        generatedAt,
-        expiresAt,
-        t661,
-        clusters,
-        clusterTotals: {
-          total:    report.total_clusters ?? 0,
-          approved: report.approved_clusters ?? 0,
-          pending:  (report.total_clusters ?? 0) - (report.approved_clusters ?? 0),
-        },
+        payload = {
+          companyName,
+          fiscalYear,
+          filingDeadline,
+          auditScore,
+          totalCredit:  report.total_credit_cad ?? 0,
+          totalHours:   report.total_eligible_hours ?? 0,
+          sharedBy,
+          sharedByEmail,
+          generatedAt,
+          expiresAt,
+          t661,
+          clusters,
+          clusterTotals: {
+            total:    report.total_clusters ?? 0,
+            approved: report.approved_clusters ?? 0,
+            pending:  (report.total_clusters ?? 0) - (report.approved_clusters ?? 0),
+          },
+        }
+      } else {
+        // No data source — leave link null
+        return
       }
-    } else {
-      return { link: null, emailDraft: '' }
-    }
 
-    const token      = await encodeCpaToken(payload)
-    const origin     = window.location.origin
-    const reviewLink = `${origin}/cpa-review/${token}?annotate=1`
+      const token      = await encodeCpaToken(payload)
+      if (cancelled) return
+      const origin     = window.location.origin
+      const reviewLink = `${origin}/cpa-review/${token}?annotate=1`
 
-    return {
-      link: reviewLink,
-      emailDraft: buildEmailDraft({
+      setLink(reviewLink)
+      setEmailDraft(buildEmailDraft({
         companyName:  payload.companyName,
         fiscalYear:   payload.fiscalYear,
         sharedBy,
         link:         reviewLink,
         expiresAt,
-      }),
+      }))
     }
+
+    // Reset on each open so "Generating…" shows briefly while the token is built
+    setLink(null)
+    setEmailDraft('')
+    generate()
+    return () => { cancelled = true }
   }, [open]) // Regenerate on each open so timestamp is fresh
 
   function handleCopyLink() {
