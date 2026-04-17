@@ -9,6 +9,8 @@ import Card from '../components/ui/Card'
 import Modal from '../components/ui/Modal'
 import Button from '../components/ui/Button'
 import { useAuth } from '../context/AuthContext'
+import { QualificationBadges, qualifyCluster } from '../components/SREDQualificationPanel'
+import { EVIDENCE_SNAPSHOTS } from '../data/mockData'
 
 const PLAN_LIMITS = { free: 3, starter: 25, plus: Infinity, enterprise: Infinity }
 
@@ -202,9 +204,17 @@ export default function ClustersPage() {
 
       {/* Demo mode banner */}
       {usingMock && (
-        <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700">
-          <FlaskConical size={13} />
-          <span>Using demo data — backend not connected. Changes are local only.</span>
+        <div className="flex items-center justify-between gap-4 px-4 py-3 bg-indigo-600 rounded-xl text-xs text-white">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <FlaskConical size={13} className="text-indigo-200 flex-shrink-0" />
+            <span className="font-medium">This is a demo — connect a data source to see your real R&amp;D clusters.</span>
+          </div>
+          <button
+            onClick={() => navigate('/quick-connect')}
+            className="flex-shrink-0 bg-white text-indigo-700 font-semibold px-3 py-1 rounded-lg hover:bg-indigo-50 transition-colors whitespace-nowrap"
+          >
+            Connect now
+          </button>
         </div>
       )}
 
@@ -384,7 +394,7 @@ export default function ClustersPage() {
                       </td>
                     )}
                     <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 mb-1">
                         <span className={`text-sm font-medium transition-colors ${isSelected ? 'text-indigo-700' : 'text-gray-900 group-hover:text-indigo-700'}`}>
                           {cluster.business_component ?? <span className="italic text-gray-400">Unnamed</span>}
                         </span>
@@ -395,6 +405,11 @@ export default function ClustersPage() {
                           <span className="px-1.5 py-0.5 bg-blue-100 text-blue-600 text-[10px] font-semibold rounded" title={`Proxy time estimate · Confidence: ${cluster.proxy_confidence}`}>PROXY</span>
                         )}
                       </div>
+                      <QualificationBadges
+                        cluster={cluster}
+                        commits={EVIDENCE_SNAPSHOTS[cluster.evidence_snapshot_id]?.git_commits ?? []}
+                        onClick={e => { e.stopPropagation(); navigate(`/clusters/${cluster.id}`) }}
+                      />
                     </td>
                     <td className="px-5 py-3.5"><StatusBadge status={cluster.status} /></td>
                     <td className="px-5 py-3.5"><RiskScore score={cluster.risk_score} /></td>

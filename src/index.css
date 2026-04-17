@@ -5,6 +5,11 @@
 @layer base {
   body {
     @apply bg-gray-50 text-gray-900 antialiased;
+    overflow-x: hidden;
+  }
+  /* Ensure touch targets are large enough on mobile */
+  button, a {
+    -webkit-tap-highlight-color: transparent;
   }
 }
 

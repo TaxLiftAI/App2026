@@ -161,7 +161,7 @@ export default function CPAPartnerSignupPage() {
         </p>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-8 max-w-xl mx-auto mb-12">
+        <div className="grid grid-cols-3 gap-3 max-w-xl mx-auto mb-12">
           <Stat value="$300" label="flat commission per referral" />
           <Stat value="$175K" label="avg SR&ED credit filed" />
           <Stat value="40 hrs" label="saved per client claim" />
@@ -283,7 +283,7 @@ export default function CPAPartnerSignupPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Province</label>
                   <select

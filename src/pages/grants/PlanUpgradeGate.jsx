@@ -10,7 +10,7 @@ import { grants as grantsApi } from '../../lib/api'
 import { redirectToCheckout } from '../../lib/stripe'
 
 const FEATURES = [
-  { icon: TrendingUp, text: 'AI eligibility matching against 7 Canadian grant programs' },
+  { icon: TrendingUp, text: 'AI eligibility matching for Canadian grant programs' },
   { icon: Zap,        text: 'Full application generation in <45 minutes using your SR&ED data' },
   { icon: Award,      text: '4-question gap fill interview — answers reused forever' },
   { icon: CheckCircle2, text: 'Section-by-section review with AI regeneration' },

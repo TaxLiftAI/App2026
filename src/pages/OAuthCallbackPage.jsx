@@ -86,7 +86,7 @@ export default function OAuthCallbackPage() {
 
         // ⚠️ Token exchange requires backend proxy — see oauthConfig.js for details.
         // Returns null when /api/oauth/github/exchange is unavailable.
-        const token = await exchangeGitHubCode(code)
+        const token = await exchangeGitHubCode(code, state)
 
         if (!cancelled) {
           if (token) {

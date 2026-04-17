@@ -236,7 +236,7 @@ function PartnerContactSection({ navigate }) {
           <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 text-left">
             <h3 className="text-base font-semibold text-white mb-4">Tell us about your practice</h3>
             <form onSubmit={handleSubmit} className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-indigo-100 mb-1">Full name *</label>
                   <input
@@ -257,7 +257,7 @@ function PartnerContactSection({ navigate }) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-indigo-100 mb-1">CPA designation *</label>
                   <input
@@ -280,7 +280,7 @@ function PartnerContactSection({ navigate }) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-indigo-100 mb-1">SR&amp;ED clients today</label>
                   <select
@@ -403,7 +403,7 @@ export default function PartnersPage() {
           </p>
 
           {/* Hero stats */}
-          <div className="grid grid-cols-3 gap-4 max-w-lg mx-auto mb-8">
+          <div className="grid grid-cols-3 gap-2 max-w-lg mx-auto mb-8">
             {[
               { v: '$300',     l: 'Flat commission / client'     },
               { v: '$4,800',   l: 'CPA Partner Seat / year'      },

@@ -32,6 +32,7 @@ import {
   DollarSign, AlertTriangle, Ticket, Hammer, ExternalLink,
   User, RefreshCw, FlaskConical, ChevronDown, ChevronUp, Info,
   Star, Lock, Search, GitCommit, Plus, X, TrendingUp, Package,
+  FileSpreadsheet, Download, Upload,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { formatCurrency, formatHours } from '../lib/utils'
@@ -875,6 +876,42 @@ export default function QuickConnectPage() {
           </div>
 
           <PrivacyBanner />
+
+          {/* ── Alternative: manual activity log ── */}
+          <div className="mt-6">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex-1 h-px bg-gray-200" />
+              <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Or upload manually</span>
+              <div className="flex-1 h-px bg-gray-200" />
+            </div>
+            <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center flex-shrink-0">
+                <FileSpreadsheet size={18} className="text-violet-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-900">Activity Log Spreadsheet</p>
+                <p className="text-[11px] text-gray-400 mt-0.5">
+                  No Git access? Log R&amp;D hours in our Excel template and upload for an instant SR&amp;ED estimate.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <a
+                  href="/templates/SRED_Activity_Log_Template.xlsx"
+                  download
+                  onClick={e => e.stopPropagation()}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-violet-600 hover:text-violet-800 px-3 py-1.5 bg-violet-50 hover:bg-violet-100 rounded-lg transition-colors whitespace-nowrap"
+                >
+                  <Download size={12} /> Template
+                </a>
+                <button
+                  onClick={() => navigate('/dashboard#activity-log')}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-white bg-violet-600 hover:bg-violet-700 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                >
+                  <Upload size={12} /> Upload
+                </button>
+              </div>
+            </div>
+          </div>
 
           <p className="text-center mt-5 text-xs text-gray-400">
             Already connected?{' '}

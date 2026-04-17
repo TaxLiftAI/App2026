@@ -101,6 +101,7 @@ const AdminSalesPage     = lazy(() => import('./pages/AdminSalesPage'))
 const CPAPortalPage          = lazy(() => import('./pages/CPAPortalPage'))
 const ReferralDashboardPage  = lazy(() => import('./pages/ReferralDashboardPage'))
 const CpaPackageReportPage   = lazy(() => import('./pages/CpaPackageReportPage'))
+const CPAOversightPage       = lazy(() => import('./pages/CPAOversightPage'))
 
 // Dev / config
 const RateCardPage         = lazy(() => import('./pages/RateCardPage'))
@@ -329,6 +330,12 @@ function AppRoutes() {
       <Route path="/cpa-portal/report/:clientId" element={
         <ProtectedRoute action="viewCPAPortal">
           <Layout><CpaPackageReportPage /></Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/cpa-portal/oversight/:clientId" element={
+        <ProtectedRoute action="viewCPAPortal">
+          <CPAOversightPage />
         </ProtectedRoute>
       } />
 

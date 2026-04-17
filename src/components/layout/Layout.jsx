@@ -193,7 +193,7 @@ export default function Layout({ children }) {
   })
   const [paletteOpen,   setPaletteOpen]   = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
-  const { data: integrationsData } = useIntegrations()
+  const { data: integrationsData, usingMock: intUsingMock } = useIntegrations()
   const integrations = integrationsData ?? []   // useApiData initialises data as null, not undefined
   const { currentUser } = useAuth()
 
@@ -220,7 +220,8 @@ export default function Layout({ children }) {
   const isUnverified    = currentUser && currentUser.email_verified === false
   const [verifyBannerDismissed, setVerifyBannerDismissed] = useState(false)
 
-  const showIntBanner    = hasDegraded && !intBannerDismissed
+  // Don't show integration warnings during demo mode — mock data includes fake degraded integrations
+  const showIntBanner    = hasDegraded && !intBannerDismissed && !intUsingMock
   const showTrialBanner  = isFreeUser && !trialBannerDismissed && !!currentUser?.created_at
   const showVerifyBanner = isUnverified && !verifyBannerDismissed
 

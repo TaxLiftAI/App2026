@@ -856,13 +856,6 @@ export default function MarketingPage() {
                   <span className="text-slate-400 text-xs ml-1">combined grants potential</span>
                 </span>
               </div>
-              <div className="inline-flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-5 py-2.5">
-                <Package size={16} className="text-indigo-400 flex-shrink-0" />
-                <span className="text-white text-sm font-medium">
-                  <span className="text-indigo-400 font-extrabold">7</span>
-                  <span className="text-slate-400 text-xs ml-1">grant programs matched automatically</span>
-                </span>
-              </div>
             </div>
 
             {/* CTAs */}
@@ -1396,7 +1389,7 @@ export default function MarketingPage() {
                   <span className="text-slate-400 text-xs">Total referral fees</span>
                   <span className="text-white font-extrabold text-lg">$12,000</span>
                 </div>
-                <p className="text-slate-500 text-[10px] mt-1">4 referrals · flat fee by credit size · paid at T661 delivery</p>
+                <p className="text-slate-500 text-[10px] mt-1">4 referrals · flat $300 per client · paid at T661 delivery</p>
               </div>
             </div>
           </div>
@@ -1524,8 +1517,8 @@ export default function MarketingPage() {
             Find every dollar of Canadian innovation funding you qualify for
           </h2>
           <p className="text-indigo-100 text-lg mb-8 max-w-xl mx-auto">
-            SR&amp;ED credits + 7 grant programs, matched automatically from your
-            existing engineering data. See your estimate in 5 minutes — no signup required.
+            Automate your SR&amp;ED claim from your existing engineering data.
+            See your estimate in 5 minutes — no signup required.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <button

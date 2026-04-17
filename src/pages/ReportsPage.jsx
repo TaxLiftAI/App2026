@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts'
@@ -507,6 +508,7 @@ const PRESETS = [
 
 // ── Main page ──────────────────────────────────────────────────────────────────
 export default function ReportsPage() {
+  const navigate               = useNavigate()
   const { currentUser }       = useAuth()
   const [preset, setPreset]   = useState(0)
   const [start, setStart]     = useState(PRESETS[0].start)
@@ -591,9 +593,17 @@ export default function ReportsPage() {
 
       {/* Demo mode banner */}
       {usingMock && (
-        <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700">
-          <FlaskConical size={13} />
-          <span>Using demo data — backend not connected.</span>
+        <div className="flex items-center justify-between gap-4 px-4 py-3 bg-indigo-600 rounded-xl text-xs text-white">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <FlaskConical size={13} className="text-indigo-200 flex-shrink-0" />
+            <span className="font-medium">This is a demo — connect a data source to generate your real SR&amp;ED report.</span>
+          </div>
+          <button
+            onClick={() => navigate('/quick-connect')}
+            className="flex-shrink-0 bg-white text-indigo-700 font-semibold px-3 py-1 rounded-lg hover:bg-indigo-50 transition-colors whitespace-nowrap"
+          >
+            Connect now
+          </button>
         </div>
       )}
 

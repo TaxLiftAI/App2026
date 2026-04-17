@@ -21,7 +21,7 @@ const PLAN_FEATURES = {
   ],
   plus: [
     { icon: CheckCircle2, text: 'Everything in Starter' },
-    { icon: Award,        text: 'Canadian grant matching across 7 federal programs' },
+    { icon: Award,        text: 'Canadian grant matching for federal programs' },
     { icon: FileText,     text: 'Full grant application generation in under 45 minutes' },
     { icon: Share2,       text: 'Application tracker with funding outcome history' },
   ],
