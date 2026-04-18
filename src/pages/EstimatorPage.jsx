@@ -1313,7 +1313,7 @@ export default function EstimatorPage() {
                   <div className="rounded-xl border-2 border-indigo-500 bg-indigo-50 p-4">
                     <div className="flex items-center gap-1.5 mb-2">
                       <ShieldCheck size={14} className="text-indigo-600" />
-                      <p className="text-xs font-bold text-indigo-900">TaxLift {taxliftPlan === 'plus' ? 'Plus' : 'Starter'}</p>
+                      <p className="text-xs font-bold text-indigo-900">TaxLift SR&ED Filing Package</p>
                       <span className="text-[9px] bg-indigo-600 text-white rounded px-1.5 py-0.5 font-medium">Recommended</span>
                     </div>
                     <p className="text-2xl font-bold text-indigo-700 tabular-nums">{fmtK(netWithTaxlift)}</p>
