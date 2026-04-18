@@ -21,7 +21,7 @@ import {
   GitBranch, FileText, Shield, Package, BarChart2, Calculator,
   CheckCircle2, AlertTriangle, Clock, Zap, Users, Lock,
   Star, DollarSign, TrendingUp, Link2, Sparkles, Search,
-  Building2, Mail, ExternalLink, BadgeCheck, Pencil, FlaskConical,
+  Building2, Mail, ExternalLink, BadgeCheck, ShieldCheck, Pencil, FlaskConical,
 } from 'lucide-react'
 import WaitlistModal  from '../components/WaitlistModal'
 import CalendlyEmbed  from '../components/CalendlyEmbed'
