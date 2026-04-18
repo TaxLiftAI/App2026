@@ -1,16 +1,20 @@
 /**
- * Billing routes — Stripe Checkout (one-time annual payment)
+ * Billing routes — Stripe Checkout (flat-fee pricing)
  *
- * Pricing model: performance-based, annual
- *   Starter = 3% of customer's verified credit estimate (CAD)
- *   Plus    = 5% of customer's verified credit estimate (CAD)
+ * Pricing model:
+ *   starter (end users)   — $999 CAD one-time per fiscal year
+ *   plus    (CPA seat)    — $4,800 CAD/year white-label partner seat
+ *
+ * CPA referral commission:
+ *   When a consumer (starter) pays and metadata includes referred_by_cpa_id,
+ *   a $300 CAD commission is recorded in the referrals table for that CPA.
  *
  * Flow:
- *   1. Frontend sends POST /api/billing/create-checkout-session with { plan, creditEstimate }
- *   2. Server verifies estimate is within reasonable bounds, creates Stripe Checkout
- *      session in `payment` mode with a dynamic price_data amount
+ *   1. Frontend sends POST /api/billing/create-checkout-session with { plan }
+ *   2. Server creates Stripe Checkout session with fixed price_data amount
  *   3. Stripe redirects to /success — checkout.session.completed webhook fires
  *   4. Webhook sets subscription_tier + paid_until (1 year) on the user record
+ *   5. If referred by CPA, records $300 commission in referrals table
  *
  * Endpoints:
  *   POST /api/billing/create-checkout-session
@@ -21,8 +25,9 @@ const router = require('express').Router()
 const db     = require('../db')
 const { requireAuth } = require('../middleware/auth')
 
-// ── DB migration: add paid_until column ───────────────────────────────────────
-try { db.exec('ALTER TABLE users ADD COLUMN paid_until TEXT') } catch { /* already exists */ }
+// ── DB migrations ─────────────────────────────────────────────────────────────
+try { db.exec('ALTER TABLE users ADD COLUMN paid_until TEXT') }    catch { /* exists */ }
+try { db.exec('ALTER TABLE users ADD COLUMN referred_by TEXT') }   catch { /* exists */ }
 
 // ── Stripe setup ──────────────────────────────────────────────────────────────
 let stripe = null
@@ -34,46 +39,13 @@ function getStripe() {
   return stripe
 }
 
-// ── Performance fee rates ─────────────────────────────────────────────────────
-const RATES = { starter: 0.03, plus: 0.05 }
-const PLAN_NAMES = {
-  starter: 'TaxLift Starter — SR&ED claim package',
-  plus:    'TaxLift Plus — SR&ED + Grants package',
+// ── Flat pricing ──────────────────────────────────────────────────────────────
+const PLAN_PRICES = {
+  starter: { amountCAD: 999,   label: 'SR&ED Filing Package — $999 flat fee',       description: 'One-time flat fee per fiscal year. Keep your full refund.' },
+  plus:    { amountCAD: 4_800, label: 'CPA Partner Seat — $4,800/year',             description: 'White-label SR&ED automation for your client portfolio. Earn $300 per referred client.' },
 }
 
-// Fee bounds in CAD
-const MIN_FEE_CAD =    500
-const MAX_FEE_CAD = 75_000
-
-function fmtCAD(n) {
-  return '$' + Math.round(n).toLocaleString('en-CA')
-}
-
-/**
- * Resolve the best credit estimate we have for this user from the DB.
- * Precedence: (1) most recent free scan, (2) company profile calculation.
- */
-function resolveServerCreditEstimate(userId, userEmail) {
-  try {
-    const scan = db.prepare(`
-      SELECT estimated_credit FROM free_scans
-      WHERE email = ? AND estimated_credit > 0
-      ORDER BY created_at DESC LIMIT 1
-    `).get(userEmail)
-    if (scan?.estimated_credit) return scan.estimated_credit
-
-    const profile = db.prepare(`
-      SELECT employee_count, industry_domain FROM company_profiles WHERE user_id = ?
-    `).get(userId)
-    if (profile?.employee_count) {
-      const rdPcts = { software: 0.40, ai_ml: 0.45, biotech: 0.50, cleantech: 0.40,
-                       fintech: 0.35, medtech: 0.40, other: 0.20 }
-      const rdPct = rdPcts[profile.industry_domain] ?? 0.25
-      return Math.round(profile.employee_count * 105_000 * rdPct * 0.35)
-    }
-  } catch { /* ignore */ }
-  return null
-}
+const CPA_REFERRAL_COMMISSION_CAD = 300  // flat commission per paying consumer referral
 
 // ── POST /api/billing/create-checkout-session ─────────────────────────────────
 router.post('/create-checkout-session', requireAuth, async (req, res) => {
@@ -85,39 +57,17 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
     })
   }
 
-  const { plan, creditEstimate: clientEstimate } = req.body ?? {}
+  const { plan } = req.body ?? {}
 
-  if (!plan || !RATES[plan]) {
-    return res.status(400).json({ message: `Invalid plan. Choose: ${Object.keys(RATES).join(', ')}` })
+  if (!plan || !PLAN_PRICES[plan]) {
+    return res.status(400).json({ message: `Invalid plan. Choose: ${Object.keys(PLAN_PRICES).join(', ')}` })
   }
 
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id)
   if (!user) return res.status(404).json({ message: 'User not found' })
 
-  // ── Resolve credit estimate ───────────────────────────────────────────────
-  // Accept client-supplied estimate but cap it against server-side data so
-  // users can't inflate the estimate above what TaxLift has on file.
-  const serverEstimate = resolveServerCreditEstimate(user.id, user.email)
-  let creditEstimate
-
-  if (serverEstimate && clientEstimate) {
-    // Allow up to 20% above server estimate (CRA sometimes exceeds scan estimate)
-    creditEstimate = Math.min(Number(clientEstimate), serverEstimate * 1.20)
-  } else {
-    creditEstimate = serverEstimate ?? Number(clientEstimate) ?? 0
-  }
-
-  if (!creditEstimate || creditEstimate < 10_000) {
-    return res.status(400).json({
-      message: 'A credit estimate is required to calculate your fee. Please run a free scan first.',
-      action: 'run_scan',
-    })
-  }
-
-  // ── Calculate fee ─────────────────────────────────────────────────────────
-  const rate     = RATES[plan]
-  const feeCAD   = Math.max(MIN_FEE_CAD, Math.min(MAX_FEE_CAD, Math.round(creditEstimate * rate)))
-  const feeCents = feeCAD * 100   // Stripe uses smallest currency unit (cents)
+  const { amountCAD, label, description } = PLAN_PRICES[plan]
+  const amountCents = amountCAD * 100  // Stripe uses cents
 
   try {
     const origin = req.headers.origin ?? 'https://taxlift.ai'
@@ -128,12 +78,9 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
 
       line_items: [{
         price_data: {
-          currency:    'cad',
-          unit_amount: feeCents,
-          product_data: {
-            name:        PLAN_NAMES[plan],
-            description: `${Math.round(rate * 100)}% of ${fmtCAD(creditEstimate)} credit estimate · valid 12 months from payment`,
-          },
+          currency:     'cad',
+          unit_amount:  amountCents,
+          product_data: { name: label, description },
         },
         quantity: 1,
       }],
@@ -145,22 +92,16 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
       metadata: {
         plan,
         user_id:         user.id,
-        credit_estimate: String(Math.round(creditEstimate)),
-        fee_cad:         String(feeCAD),
-      },
-
-      custom_text: {
-        submit: {
-          message: `${Math.round(rate * 100)}% of your ${fmtCAD(creditEstimate)} SR&ED estimate = ${fmtCAD(feeCAD)} CAD · covers this fiscal year's claim`,
-        },
+        fee_cad:         String(amountCAD),
+        referred_by:     user.referred_by ?? '',   // CPA user id, if any
       },
 
       success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}&plan=${plan}`,
       cancel_url:  `${origin}/cancel?plan=${plan}`,
     })
 
-    console.log(`[billing] Checkout created — user=${user.email} plan=${plan} credit=${Math.round(creditEstimate)} fee=${feeCAD}`)
-    res.json({ url: session.url, sessionId: session.id, feeCAD, creditEstimate: Math.round(creditEstimate) })
+    console.log(`[billing] Checkout created — user=${user.email} plan=${plan} amount=$${amountCAD}`)
+    res.json({ url: session.url, sessionId: session.id, amountCAD })
 
   } catch (err) {
     console.error('[billing] create-checkout-session error:', err.message)
@@ -204,21 +145,22 @@ router.post('/webhook', async (req, res) => {
 async function handleWebhookEvent(event) {
   switch (event.type) {
 
-    // ── Primary: one-time payment checkout completed ──────────────────────
+    // ── Primary: flat-fee checkout completed ─────────────────────────────
     case 'checkout.session.completed': {
       const session = event.data.object
       if (session.payment_status !== 'paid') break
 
-      const userId = session.client_reference_id ?? session.metadata?.user_id
-      const plan   = session.metadata?.plan ?? 'starter'
-      const custId = session.customer
+      const userId      = session.client_reference_id ?? session.metadata?.user_id
+      const plan        = session.metadata?.plan ?? 'starter'
+      const custId      = session.customer
+      const referredBy  = session.metadata?.referred_by || null   // CPA user id
 
       if (!userId) {
         console.warn('[billing/webhook] checkout.session.completed missing user_id in metadata')
         break
       }
 
-      // Annual model: access valid for 12 months from payment date
+      // Access valid for 12 months from payment date (both consumer and CPA seat)
       const paidUntil = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
 
       db.prepare(`
@@ -231,27 +173,37 @@ async function handleWebhookEvent(event) {
       `).run(plan, custId, new Date().toISOString(), paidUntil, userId)
 
       console.log(`[billing] ✓ Payment complete — user=${userId} plan=${plan} valid until ${paidUntil.slice(0, 10)}`)
-      break
-    }
 
-    // ── Legacy: subscription cancelled (for any existing monthly subs) ────
-    case 'customer.subscription.deleted': {
-      const custId = event.data.object.customer
-      if (custId) {
-        db.prepare(`
-          UPDATE users SET subscription_tier = 'free', paid_until = NULL
-          WHERE stripe_customer_id = ?
-        `).run(custId)
-        console.log(`[billing] Legacy subscription cancelled for customer ${custId}`)
-      }
-      break
-    }
+      // ── CPA referral commission — $300 flat per paying consumer ──────────
+      // Only fires when a consumer (starter) pays and was referred by a CPA.
+      if (plan === 'starter' && referredBy) {
+        try {
+          const { randomUUID } = require('crypto')
+          const paidUser = db.prepare('SELECT email, full_name FROM users WHERE id = ?').get(userId)
 
-    case 'customer.subscription.updated': {
-      const sub = event.data.object
-      if (sub.status === 'past_due') {
-        console.warn(`[billing] Legacy subscription past_due for customer ${sub.customer}`)
+          db.prepare(`
+            INSERT OR IGNORE INTO referrals
+              (id, referrer_user_id, ref_code, company_name, status,
+               commission_cad, commission_amount, commission_status, commission_confirmed,
+               date_referred, created_at)
+            VALUES (?, ?, '', ?, 'converted', ?, ?, 'pending', 0, ?, ?)
+          `).run(
+            randomUUID(),
+            referredBy,
+            paidUser?.full_name ?? paidUser?.email ?? 'Unknown',
+            CPA_REFERRAL_COMMISSION_CAD,
+            CPA_REFERRAL_COMMISSION_CAD,
+            new Date().toISOString(),
+            new Date().toISOString(),
+          )
+
+          console.log(`[billing] ✓ $${CPA_REFERRAL_COMMISSION_CAD} commission recorded for CPA ${referredBy} → client ${userId}`)
+        } catch (err) {
+          // Commission recording failure must never break the payment confirmation
+          console.error('[billing] Commission recording failed (non-fatal):', err.message)
+        }
       }
+
       break
     }
 

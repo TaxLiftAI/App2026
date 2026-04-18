@@ -6,10 +6,12 @@
  *
  * Plans:
  *   free     — 3 clusters max, read-only reports (no export/download),
- *              no grants module, no CPA portal, no audit-readiness export
- *   starter  — 25 clusters, report export, no grants module
- *   plus     — unlimited clusters, all features
- *   (any other value treated as free)
+ *              no grants module, no CPA portal
+ *   starter  — SR&ED Filing Package ($999/yr) — unlimited clusters, full report export
+ *   plus     — CPA Partner Seat ($4,800/yr) — unlimited clusters, all features, grants module
+ *   enterprise — custom, all features
+ *
+ * Access expires when paid_until is in the past — live DB check on every gated request.
  *
  * Usage in routes:
  *   const { requirePlan, requireClusterQuota } = require('../middleware/planLimits')
@@ -29,7 +31,9 @@ function planRank(tier) {
 }
 
 // ── Cluster limits per plan ───────────────────────────────────────────────────
-const CLUSTER_LIMITS = { free: 3, starter: 25, plus: Infinity, enterprise: Infinity }
+// starter = consumer SR&ED package ($999) — unlimited clusters (no cap needed at flat fee)
+// plus    = CPA Partner Seat ($4,800)     — unlimited client workspaces
+const CLUSTER_LIMITS = { free: 3, starter: Infinity, plus: Infinity, enterprise: Infinity }
 
 function clusterLimit(tier) {
   return CLUSTER_LIMITS[tier] ?? 3

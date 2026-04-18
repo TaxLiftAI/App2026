@@ -255,8 +255,8 @@ export const referrals = {
 
 // ── Billing / Stripe ──────────────────────────────────────────────────────────
 export const billing = {
-  createCheckoutSession: (plan, successUrl, cancelUrl, creditEstimate) =>
-    post('/api/v1/billing/create-checkout-session', { body: { plan, successUrl, cancelUrl, creditEstimate } }),
+  createCheckoutSession: (plan) =>
+    post('/api/v1/billing/create-checkout-session', { body: { plan } }),
   subscription: () => get('/api/v1/billing/subscription'),
   portal:       () => post('/api/v1/billing/portal'),
 }

@@ -22,8 +22,8 @@ import { useAuth } from '../context/AuthContext'
 import { integrations as intApi, clusters as clusterApi } from '../lib/api'
 
 const PLAN_LABELS = {
-  starter:    'Starter',
-  plus:       'Plus',
+  starter:    'SR&ED Filing Package',
+  plus:       'CPA Partner Seat',
   enterprise: 'Enterprise',
 }
 

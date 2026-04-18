@@ -167,25 +167,17 @@ export function calcFee(_creditEstimate, _planId = 'starter') {
 }
 
 /**
- * redirectToCheckout — sends the user to Stripe Checkout for annual payment.
+ * redirectToCheckout — sends the user to Stripe Checkout.
  *
- * @param {string} planId         — 'starter' | 'plus'
- * @param {number} creditEstimate — customer's SR&ED credit estimate in CAD
- *                                  Server calculates fee = estimate × rate
- *                                  and validates against DB-stored scan data.
+ * @param {string} planId — 'starter' ($999 one-time) | 'plus' ($4,800/yr CPA seat)
  */
-export async function redirectToCheckout(planId, creditEstimate = 0) {
+export async function redirectToCheckout(planId) {
   if (!PLANS[planId] || planId === 'enterprise') {
     return { ok: false, message: 'Invalid plan' }
   }
 
   try {
-    const data = await billing.createCheckoutSession(
-      planId,
-      `${window.location.origin}/success?plan=${planId}`,
-      `${window.location.origin}/cancel?plan=${planId}`,
-      creditEstimate,
-    )
+    const data = await billing.createCheckoutSession(planId)
 
     if (data?.url) {
       window.location.href = data.url
