@@ -183,10 +183,8 @@ const FAQS = [
   },
 ]
 
-const TRUSTED_LOGOS = [
-  'Axiom Robotics', 'Meridian Analytics', 'Pulse Commerce',
-  'Zenith Biotech', 'Atlas Network', 'Orbit Labs',
-]
+// Real customer logos added here as they're onboarded
+const TRUSTED_LOGOS = []
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Animated counter hook
@@ -834,9 +832,15 @@ export default function MarketingPage() {
             </h1>
 
             {/* Sub-headline */}
-            <p className="text-lg sm:text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed mb-8">
-              From SR&ED to NRC-IRAP — TaxLift recovers every dollar of Canadian innovation
-              funding you've earned. Connect your tools, we handle the documentation.
+            <p className="text-lg sm:text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed mb-3">
+              For Canadian tech founders and the CPAs who serve them — TaxLift turns your
+              GitHub and Jira activity into a CRA-ready SR&ED package. Connect your tools,
+              we handle the documentation.
+            </p>
+
+            {/* Pricing trust line */}
+            <p className="text-sm text-indigo-300 font-medium mb-8">
+              $999 flat fee · no % of your refund taken · keep every dollar CRA sends you
             </p>
 
             {/* Stat strip */}
@@ -844,16 +848,16 @@ export default function MarketingPage() {
               <div className="inline-flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-5 py-2.5">
                 <TrendingUp size={16} className="text-green-400 flex-shrink-0" />
                 <span className="text-white text-sm font-medium">
-                  Average SR&ED:{' '}
+                  Average SR&ED refund:{' '}
                   <span className="text-green-400 font-extrabold">${creditCount}K</span>
-                  <span className="text-slate-400 text-xs ml-1">/ yr</span>
+                  <span className="text-slate-400 text-xs ml-1">/ yr for a 10-person team</span>
                 </span>
               </div>
               <div className="inline-flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-5 py-2.5">
                 <Sparkles size={16} className="text-violet-400 flex-shrink-0" />
                 <span className="text-white text-sm font-medium">
                   <span className="text-violet-400 font-extrabold">$4.2M+</span>
-                  <span className="text-slate-400 text-xs ml-1">combined grants potential</span>
+                  <span className="text-slate-400 text-xs ml-1">SR&ED + NRC-IRAP + SDTC potential</span>
                 </span>
               </div>
             </div>
@@ -903,16 +907,21 @@ export default function MarketingPage() {
             {/* Dashboard mockup */}
             <DashboardMockup />
 
-            {/* Trusted by */}
-            <div className="mt-14">
-              <p className="text-slate-500 text-xs font-medium uppercase tracking-widest mb-4">
-                Trusted by engineering teams at
-              </p>
-              <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
-                {TRUSTED_LOGOS.map(name => (
-                  <span key={name} className="text-slate-400 font-semibold text-sm opacity-60 hover:opacity-100 transition-opacity">
-                    {name}
-                  </span>
+            {/* Founder trust signal */}
+            <div className="mt-14 inline-flex flex-col sm:flex-row items-center justify-center gap-6 bg-white/5 border border-white/10 rounded-2xl px-8 py-5">
+              <div className="text-left">
+                <p className="text-white text-sm font-semibold mb-0.5">Built by founders, for founders</p>
+                <p className="text-slate-400 text-xs leading-relaxed max-w-sm">
+                  We're a small Canadian team frustrated by how much SR&ED money gets left on the table.
+                  Questions? Email us directly at{' '}
+                  <a href="mailto:hello@taxlift.ai" className="text-indigo-400 hover:underline">hello@taxlift.ai</a>
+                </p>
+              </div>
+              <div className="flex-shrink-0 flex gap-2">
+                {['P', 'S'].map((initial, i) => (
+                  <div key={i} className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm ${i === 0 ? 'bg-indigo-600' : 'bg-violet-600'}`}>
+                    {initial}
+                  </div>
                 ))}
               </div>
             </div>
@@ -1202,51 +1211,42 @@ export default function MarketingPage() {
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════════
-          7. TESTIMONIALS
+          7. EARLY ADOPTER SECTION (replaces fake testimonials)
       ══════════════════════════════════════════════════════════════════════ */}
       <section className="py-20 bg-slate-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
-            <p className="text-indigo-600 text-sm font-semibold uppercase tracking-widest mb-2">Social proof</p>
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
-              Founders who stopped leaving money on the table
-            </h2>
-          </div>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <p className="text-indigo-600 text-sm font-semibold uppercase tracking-widest mb-3">Early access</p>
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+            Be among the first 50 Canadian startups
+          </h2>
+          <p className="text-gray-500 text-base max-w-xl mx-auto mb-10 leading-relaxed">
+            We're onboarding a small cohort of Canadian tech companies before our full launch.
+            Early adopters get hands-on support, locked-in pricing, and a direct line to the founding team.
+          </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {TESTIMONIALS.map(t => (
-              <div key={t.name} className="bg-white rounded-2xl border border-gray-100 p-7 shadow-sm flex flex-col">
-                {/* Company logo badge + credit recovered */}
-                <div className="flex items-center justify-between mb-5">
-                  <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl ring-1 ${t.logo.bg} ${t.logo.ring}`}>
-                    <span className={`text-xs font-extrabold tracking-wider ${t.logo.text}`}>{t.logo.abbr}</span>
-                    <span className={`text-[10px] font-semibold ${t.logo.text} opacity-70`}>{t.role.split(', ')[1]}</span>
-                  </div>
-                  <span className="text-xs font-bold text-green-600 bg-green-50 border border-green-100 px-2.5 py-1 rounded-full">
-                    {t.credit}
-                  </span>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+            {[
+              { icon: Lock,         title: 'Locked-in $999',       body: 'Price guaranteed for your first 3 fiscal years. No increases.' },
+              { icon: Users,        title: 'Founding team access',  body: 'Direct Slack channel with the team. Your feedback shapes the roadmap.' },
+              { icon: ShieldCheck,  title: 'White-glove onboarding', body: 'We help you connect GitHub, run your first scan, and review clusters together.' },
+            ].map(({ icon: Icon, title, body }) => (
+              <div key={title} className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm text-left">
+                <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center mb-4">
+                  <Icon size={18} className="text-indigo-600" />
                 </div>
-                {/* Stars */}
-                <div className="flex gap-0.5 mb-3">
-                  {Array(5).fill(0).map((_, i) => (
-                    <Star key={i} size={13} className="text-amber-400 fill-amber-400" />
-                  ))}
-                </div>
-                <p className="text-gray-700 text-sm leading-relaxed flex-1 mb-5">
-                  "{t.quote}"
-                </p>
-                <div className="flex items-center gap-3 border-t border-gray-50 pt-4">
-                  <div className={`w-8 h-8 ${t.color} rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>
-                    {t.initial}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-semibold text-gray-900 text-sm">{t.name}</p>
-                    <p className="text-xs text-gray-400">{t.role.split(', ')[0]}</p>
-                  </div>
-                </div>
+                <p className="font-bold text-gray-900 text-sm mb-1">{title}</p>
+                <p className="text-xs text-gray-500 leading-relaxed">{body}</p>
               </div>
             ))}
           </div>
+
+          <button
+            onClick={() => openWaitlist('starter', 'early-adopter')}
+            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-8 py-3.5 rounded-xl transition-colors shadow-lg shadow-indigo-200"
+          >
+            Apply for early access <ArrowRight size={16} />
+          </button>
+          <p className="text-xs text-gray-400 mt-3">Free scan included · No credit card until you're ready to file</p>
         </div>
       </section>
 
