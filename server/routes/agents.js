@@ -82,42 +82,50 @@ router.post('/narratives', async (req, res) => {
   try {
     const narratives = {}
 
-    // Process in batches of 4 to stay within rate limits
+    // Process in batches of 4 to stay within rate limits.
+    // Per-cluster errors are caught individually so a single failure never
+    // discards already-generated narratives from earlier batches.
+    const errors = []
     for (let i = 0; i < clusters.length; i += 4) {
       const batch = clusters.slice(i, i + 4)
       await Promise.all(batch.map(async (cluster) => {
-        const resp = await fetch('https://api.anthropic.com/v1/messages', {
-          method:  'POST',
-          headers: {
-            'x-api-key':         API_KEY,
-            'anthropic-version': '2023-06-01',
-            'content-type':      'application/json',
-          },
-          body: JSON.stringify({
-            model:      MODEL,
-            max_tokens: 700,
-            system:     'You are a precise, audit-focused Canadian SR&ED tax specialist. You write T661 narratives that pass CRA review.',
-            messages:   [{ role: 'user', content: buildPrompt(cluster) }],
-          }),
-        })
-        if (!resp.ok) {
-          const err = await resp.text()
-          throw new Error(`Anthropic ${resp.status}: ${err}`)
-        }
-        const data = await resp.json()
-        narratives[cluster.id] = {
-          content_text:  data.content[0].text,
-          model:         data.model,
-          generated_at:  new Date().toISOString(),
-          quality_score: 0.85,
-          quality_passed: true,
+        try {
+          const resp = await fetch('https://api.anthropic.com/v1/messages', {
+            method:  'POST',
+            headers: {
+              'x-api-key':         API_KEY,
+              'anthropic-version': '2023-06-01',
+              'content-type':      'application/json',
+            },
+            body: JSON.stringify({
+              model:      MODEL,
+              max_tokens: 700,
+              system:     'You are a precise, audit-focused Canadian SR&ED tax specialist. You write T661 narratives that pass CRA review.',
+              messages:   [{ role: 'user', content: buildPrompt(cluster) }],
+            }),
+          })
+          if (!resp.ok) {
+            const err = await resp.text()
+            throw new Error(`Anthropic ${resp.status}: ${err}`)
+          }
+          const data = await resp.json()
+          narratives[cluster.id] = {
+            content_text:  data.content[0].text,
+            model:         data.model,
+            generated_at:  new Date().toISOString(),
+            quality_score: 0.85,
+            quality_passed: true,
+          }
+        } catch (e) {
+          console.error(`[agents] Cluster ${cluster.id} failed:`, e.message)
+          errors.push({ cluster_id: cluster.id, error: e.message })
         }
       }))
     }
 
-    // Cache result
+    // Cache whatever we generated (partial is better than nothing)
     try {
-      if (scan_id) {
+      if (scan_id && Object.keys(narratives).length > 0) {
         ensureCacheTable()
         db.prepare('INSERT OR REPLACE INTO scan_narratives (scan_id, narratives_json) VALUES (?, ?)')
           .run(scan_id, JSON.stringify(narratives))
@@ -126,7 +134,12 @@ router.post('/narratives', async (req, res) => {
       console.warn('[agents] Cache write failed:', e.message)
     }
 
-    res.json({ narratives })
+    // Return partial results with error info if some clusters failed
+    const partial = errors.length > 0 && Object.keys(narratives).length === 0
+    if (partial) {
+      return res.status(500).json({ error: 'All narrative generations failed', errors })
+    }
+    res.json({ narratives, ...(errors.length ? { partial: true, errors } : {}) })
   } catch (err) {
     console.error('[agents/narratives]', err.message)
     res.status(500).json({ error: 'Narrative generation failed', detail: err.message })

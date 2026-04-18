@@ -172,12 +172,34 @@ function getScanId() {
   } catch { return null }
 }
 
+// Read raw scan clusters from sessionStorage — fallback when backend POST failed
+// and scanId is null but the client-side scan completed successfully
+function getScanClusters() {
+  try {
+    const r = JSON.parse(sessionStorage.getItem('taxlift_scan_results') || '{}')
+    return Array.isArray(r.clusters) && r.clusters.length ? r : null
+  } catch { return null }
+}
+
 export function useReportSummary(start, end) {
-  const scanId = useMemo(getScanId, [])
+  const scanId   = useMemo(getScanId, [])
+  const scanData = useMemo(getScanClusters, [])
   return useApiData(
-    () => api.reports.summary(scanId ? { scan_id: scanId } : { start, end }),
-    // mock fallback: compute from CLUSTERS
+    () => scanId ? api.reports.summary({ scan_id: scanId }) : api.reports.summary({ start, end }),
+    // mock fallback: use real sessionStorage clusters if available, else demo data
     () => {
+      if (scanData) {
+        const clusters = scanData.clusters
+        return {
+          total_clusters:       clusters.length,
+          approved_clusters:    clusters.length,
+          rejected_clusters:    0,
+          pending_clusters:     0,
+          total_eligible_hours: scanData.hours_total || clusters.reduce((s,c) => s + (c.aggregate_time_hours ?? 0), 0),
+          total_credit_cad:     scanData.estimated_credit || 0,
+          total_credit_usd:     Math.round((scanData.estimated_credit || 0) * 0.74),
+        }
+      }
       const s = new Date(start), e = new Date(end)
       const inRange = CLUSTERS.filter(c => {
         const d = new Date(c.created_at); return d >= s && d <= e
@@ -214,10 +236,13 @@ export function useReportDevelopers(start, end) {
 }
 
 export function useReportClusters(start, end) {
-  const scanId = useMemo(getScanId, [])
+  const scanId   = useMemo(getScanId, [])
+  const scanData = useMemo(getScanClusters, [])
   return useApiData(
-    () => api.reports.clusters(scanId ? { scan_id: scanId } : { start, end }),
+    () => scanId ? api.reports.clusters({ scan_id: scanId }) : api.reports.clusters({ start, end }),
+    // fallback: real sessionStorage clusters take priority over demo data
     () => {
+      if (scanData) return scanData.clusters
       const s = new Date(start), e = new Date(end)
       return CLUSTERS.filter(c => {
         const d = new Date(c.created_at); return d >= s && d <= e
@@ -227,29 +252,38 @@ export function useReportClusters(start, end) {
   )
 }
 
-// Auto-generates T661 narratives for real scan clusters, caches in sessionStorage
+// Auto-generates T661 narratives for real scan clusters.
+// Uses a `generated` ref to prevent duplicate API calls regardless of re-renders.
 export function useNarratives(clusters) {
-  const [narratives, setNarratives] = useState({})   // { cluster_id: narrative_obj }
+  const [narratives, setNarratives] = useState({})
   const [generating, setGenerating] = useState(false)
   const [error, setError]           = useState(null)
+  // Ref tracks whether we've already fired for this scanId — survives re-renders
+  const generatedRef = useState(() => ({ scanId: null }))[0]
 
   const scanId = useMemo(getScanId, [])
 
   useEffect(() => {
     if (!clusters?.length || !scanId) return
-    // Already have narratives injected from the backend (cached)
-    if (clusters.every(c => c.narrative_content_text)) return
-    // Only generate for clusters that came from a real scan (have _signals)
+    // Already fired for this scan session — don't re-generate
+    if (generatedRef.scanId === scanId) return
+    // Only generate for clusters from a real scan (have _signals field)
     const realClusters = clusters.filter(c => c._signals?.length)
     if (!realClusters.length) return
 
+    generatedRef.scanId = scanId  // mark as in-progress/done before async call
     let cancelled = false
     setGenerating(true)
     api.agents.generateNarratives(realClusters, scanId)
       .then(({ narratives: map }) => {
         if (!cancelled) setNarratives(map)
       })
-      .catch(err => { if (!cancelled) setError(err.message) })
+      .catch(err => {
+        if (!cancelled) {
+          setError(err.message)
+          generatedRef.scanId = null  // allow retry on error
+        }
+      })
       .finally(() => { if (!cancelled) setGenerating(false) })
 
     return () => { cancelled = true }

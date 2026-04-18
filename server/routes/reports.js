@@ -9,6 +9,19 @@
 const router = require('express').Router()
 const db     = require('../db')
 
+// Ensure the narratives cache table exists regardless of whether agents.js has run
+try {
+  db.prepare(`
+    CREATE TABLE IF NOT EXISTS scan_narratives (
+      scan_id        TEXT PRIMARY KEY,
+      narratives_json TEXT NOT NULL,
+      created_at     TEXT DEFAULT (datetime('now'))
+    )
+  `).run()
+} catch (e) {
+  console.warn('[reports] Could not ensure scan_narratives table:', e.message)
+}
+
 function getClusters(scanId) {
   const scan = db.prepare('SELECT * FROM free_scans WHERE id = ?').get(scanId)
   if (!scan) return null

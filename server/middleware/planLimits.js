@@ -39,7 +39,23 @@ function clusterLimit(tier) {
 
 function getTier(req) {
   // requireAuth must have run first — tier is on req.user
-  return req.user?.subscription_tier ?? 'free'
+  const tier = req.user?.subscription_tier ?? 'free'
+  if (tier === 'free') return 'free'
+
+  // Enforce time-limited access: check paid_until from DB on every plan-gated request.
+  // JWT payload has subscription_tier baked in at login time and won't reflect expiry.
+  try {
+    const row = db.prepare('SELECT paid_until FROM users WHERE id = ?').get(req.user.id)
+    if (row?.paid_until && new Date(row.paid_until) <= new Date()) {
+      // Subscription has expired — treat as free until they renew
+      return 'free'
+    }
+  } catch (err) {
+    console.error('[planLimits] paid_until check failed:', err.message)
+    // Fail open on DB error rather than accidentally locking out a paying customer
+  }
+
+  return tier
 }
 
 function upgradePayload(requiredPlan, currentTier) {

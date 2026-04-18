@@ -223,7 +223,7 @@ export default function ShareWithCpaModal({
     setEmailDraft('')
     generate()
     return () => { cancelled = true }
-  }, [open]) // Regenerate on each open so timestamp is fresh
+  }, [open, report]) // Re-run when narratives finish loading into report
 
   function handleCopyLink() {
     if (!link) return
