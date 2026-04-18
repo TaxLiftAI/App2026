@@ -42,16 +42,18 @@ function getStripe() {
 // ── Plan config ───────────────────────────────────────────────────────────────
 const PLANS = {
   starter: {
-    mode:        'payment',       // one-time
-    amountCAD:   999,
-    label:       'SR&ED Filing Package',
-    description: 'One-time flat fee per fiscal year. Keep your full SR&ED refund.',
+    mode:          'payment',       // one-time
+    amountCAD:     999,
+    label:         'SR&ED Filing Package',
+    description:   'One-time flat fee per fiscal year. Keep your full SR&ED refund.',
+    priceIdEnvKey: 'STRIPE_PRICE_STARTER',
   },
   plus: {
-    mode:        'subscription',  // recurring annual — Stripe handles renewal
-    amountCAD:   4_800,
-    label:       'CPA Partner Seat',
-    description: 'White-label SR&ED automation for your client portfolio. Earn $300 per referred client.',
+    mode:          'subscription',  // recurring annual — Stripe handles renewal
+    amountCAD:     4_800,
+    label:         'CPA Partner Seat',
+    description:   'White-label SR&ED automation for your client portfolio. Earn $300 per referred client.',
+    priceIdEnvKey: 'STRIPE_PRICE_PLUS',
   },
 }
 
@@ -75,21 +77,18 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id)
   if (!user) return res.status(404).json({ message: 'User not found' })
 
-  const { mode, amountCAD, label, description } = PLANS[plan]
+  const { mode, amountCAD, label, description, priceIdEnvKey } = PLANS[plan]
   const origin = req.headers.origin ?? 'https://taxlift.ai'
 
-  // price_data differs between one-time and subscription
-  const priceData = mode === 'subscription'
-    ? {
-        currency:   'cad',
-        unit_amount: amountCAD * 100,
-        recurring:  { interval: 'year' },
-        product_data: { name: label, description },
-      }
+  // Prefer static Stripe price ID (set via env var) — falls back to inline price_data
+  const staticPriceId = process.env[priceIdEnvKey] || null
+  const lineItem = staticPriceId
+    ? { price: staticPriceId, quantity: 1 }
     : {
-        currency:   'cad',
-        unit_amount: amountCAD * 100,
-        product_data: { name: label, description },
+        price_data: mode === 'subscription'
+          ? { currency: 'cad', unit_amount: amountCAD * 100, recurring: { interval: 'year' }, product_data: { name: label, description } }
+          : { currency: 'cad', unit_amount: amountCAD * 100, product_data: { name: label, description } },
+        quantity: 1,
       }
 
   try {
@@ -97,7 +96,7 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
       mode,
       payment_method_types: ['card'],
 
-      line_items: [{ price_data: priceData, quantity: 1 }],
+      line_items: [lineItem],
 
       customer_email: user.stripe_customer_id ? undefined : user.email,
       customer:       user.stripe_customer_id ?? undefined,
