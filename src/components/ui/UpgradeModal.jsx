@@ -27,8 +27,8 @@ const PLAN_FEATURES = {
   ],
 }
 
-const PLAN_LABELS  = { starter: 'Starter', plus: 'Plus' }
-const PLAN_PRICES  = { starter: '3% of credit', plus: '5% of credit' }
+const PLAN_LABELS  = { starter: 'SR&ED Filing Package', plus: 'CPA Partner Seat' }
+const PLAN_PRICES  = { starter: '$999 flat fee', plus: '$4,800/year' }
 
 export default function UpgradeModal({ open, onClose, feature = 'This feature', plan = 'starter' }) {
   const navigate   = useNavigate()
@@ -42,11 +42,7 @@ export default function UpgradeModal({ open, onClose, feature = 'This feature', 
   async function handleUpgrade() {
     setLoading(true)
     try {
-      const result = await billingApi.createCheckoutSession(
-        plan,
-        `${window.location.origin}/settings?tab=billing&upgraded=1`,
-        `${window.location.origin}/settings?tab=billing`
-      )
+      const result = await billingApi.createCheckoutSession(plan)
       if (result?.url) {
         window.location.href = result.url
         return

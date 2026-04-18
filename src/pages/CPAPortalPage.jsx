@@ -836,7 +836,7 @@ export default function CPAPortalPage() {
             </Link>
           </div>
           <p className="text-[11px] text-gray-400 mt-4">
-            Earn 1.5%–2.5% of every SR&ED credit recovered · $500 first-client bonus
+            Earn $300 flat per client you refer · $4,800/year CPA Partner Seat
           </p>
         </div>
       ) : filtered.length === 0 ? (
