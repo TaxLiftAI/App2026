@@ -9,7 +9,7 @@ import ShareWithCpaModal from '../components/ShareWithCpaModal'
 import { useAuth } from '../context/AuthContext'
 import { EVIDENCE_SNAPSHOTS, USERS, RATE_CARDS } from '../data/mockData'
 import { formatCurrency, formatHours, formatPercent, formatDate, formatDateTime } from '../lib/utils'
-import { useReportSummary, useReportClusters } from '../hooks'
+import { useReportSummary, useReportClusters, useNarratives } from '../hooks'
 import { StatusBadge } from '../components/ui/Badge'
 import Card, { CardHeader } from '../components/ui/Card'
 import Button from '../components/ui/Button'
@@ -538,9 +538,19 @@ export default function ReportsPage() {
   const { data: apiSummary, usingMock } = useReportSummary(start, end)
   const { data: apiClusters }           = useReportClusters(start, end)
 
+  // Auto-generate T661 narratives for real scan clusters (no-op for demo/mock)
+  const { narratives: generatedNarratives, generating: generatingNarratives } = useNarratives(apiClusters)
+
   // Build a unified `report` object compatible with the existing components
   const report = useMemo(() => {
-    const clusters    = apiClusters ?? []
+    // Merge AI-generated narratives into cluster objects
+    const clusters = (apiClusters ?? []).map(c => ({
+      ...c,
+      narrative_content_text:
+        c.narrative_content_text ||
+        generatedNarratives[c.id]?.content_text ||
+        null,
+    }))
     const approved    = clusters.filter(c => c.status === 'Approved')
     const rejected    = clusters.filter(c => c.status === 'Rejected')
     const pending     = clusters.filter(c => !['Approved','Rejected'].includes(c.status))
@@ -558,7 +568,7 @@ export default function ReportsPage() {
       clusters,
       approved_list: approved,
     }
-  }, [apiSummary, apiClusters, start, end])
+  }, [apiSummary, apiClusters, generatedNarratives, start, end])
 
   const devBreakdown = useMemo(() => getDevHoursBreakdown(report.approved_list), [report.approved_list])
 
@@ -604,6 +614,17 @@ export default function ReportsPage() {
           >
             Connect now
           </button>
+        </div>
+      )}
+
+      {/* Narrative generation progress banner */}
+      {generatingNarratives && (
+        <div className="flex items-center gap-3 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-xl text-xs text-indigo-700">
+          <svg className="animate-spin h-3.5 w-3.5 text-indigo-500 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+          </svg>
+          <span><strong>Generating T661 narratives</strong> — Claude is writing CRA-ready project descriptions for each cluster&hellip;</span>
         </div>
       )}
 

@@ -6,7 +6,7 @@
  *   import { usePageMeta } from '../hooks/usePageMeta'
  */
 export { usePageMeta } from './usePageMeta'
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useApiData, useMutation } from './useApi'
 import * as api from '../lib/api'
 import {
@@ -164,9 +164,18 @@ export function useVerifyDocument(id) {
 }
 
 // ─── Reports ──────────────────────────────────────────────────────────────────
+// Read scanId from sessionStorage (set by ScanRunningPage after a real scan)
+function getScanId() {
+  try {
+    const r = JSON.parse(sessionStorage.getItem('taxlift_scan_results') || '{}')
+    return r.scanId || null
+  } catch { return null }
+}
+
 export function useReportSummary(start, end) {
+  const scanId = useMemo(getScanId, [])
   return useApiData(
-    () => api.reports.summary({ start, end }),
+    () => api.reports.summary(scanId ? { scan_id: scanId } : { start, end }),
     // mock fallback: compute from CLUSTERS
     () => {
       const s = new Date(start), e = new Date(end)
@@ -184,7 +193,7 @@ export function useReportSummary(start, end) {
         total_credit_usd: approved.reduce((s,c) => s + (c.estimated_credit_usd ?? 0), 0),
       }
     },
-    [start, end],
+    [start, end, scanId],
   )
 }
 
@@ -205,16 +214,48 @@ export function useReportDevelopers(start, end) {
 }
 
 export function useReportClusters(start, end) {
+  const scanId = useMemo(getScanId, [])
   return useApiData(
-    () => api.reports.clusters({ start, end }),
+    () => api.reports.clusters(scanId ? { scan_id: scanId } : { start, end }),
     () => {
       const s = new Date(start), e = new Date(end)
       return CLUSTERS.filter(c => {
         const d = new Date(c.created_at); return d >= s && d <= e
       })
     },
-    [start, end],
+    [start, end, scanId],
   )
+}
+
+// Auto-generates T661 narratives for real scan clusters, caches in sessionStorage
+export function useNarratives(clusters) {
+  const [narratives, setNarratives] = useState({})   // { cluster_id: narrative_obj }
+  const [generating, setGenerating] = useState(false)
+  const [error, setError]           = useState(null)
+
+  const scanId = useMemo(getScanId, [])
+
+  useEffect(() => {
+    if (!clusters?.length || !scanId) return
+    // Already have narratives injected from the backend (cached)
+    if (clusters.every(c => c.narrative_content_text)) return
+    // Only generate for clusters that came from a real scan (have _signals)
+    const realClusters = clusters.filter(c => c._signals?.length)
+    if (!realClusters.length) return
+
+    let cancelled = false
+    setGenerating(true)
+    api.agents.generateNarratives(realClusters, scanId)
+      .then(({ narratives: map }) => {
+        if (!cancelled) setNarratives(map)
+      })
+      .catch(err => { if (!cancelled) setError(err.message) })
+      .finally(() => { if (!cancelled) setGenerating(false) })
+
+    return () => { cancelled = true }
+  }, [scanId, clusters?.length])  // eslint-disable-line
+
+  return { narratives, generating, error }
 }
 
 // ─── Users ────────────────────────────────────────────────────────────────────

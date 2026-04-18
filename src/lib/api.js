@@ -238,6 +238,9 @@ export const users = {
 export const agents = {
   generateNarrative: (clusterId) =>
     post('/api/v1/agents/narrative', { body: { cluster_id: clusterId } }),
+  // Generate T661 narratives for a batch of scan clusters (real scan flow)
+  generateNarratives: (clusters, scanId) =>
+    post('/api/v1/agents/narratives', { body: { clusters, scan_id: scanId } }),
 }
 
 // ── Referrals ─────────────────────────────────────────────────────────────────

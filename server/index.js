@@ -167,6 +167,9 @@ app.use(`${V}/proposals`,    require('./routes/proposals'))
 // Block authenticated PDF export for free tier (the public /pdf/:scanId route inside
 // proposals.js has no auth so it's intentionally exempt — it's for scan leads only)
 app.use(`${V}/reports/export`, requireExportAccess)
+// Real report data from scan results + AI narrative generation (requires ANTHROPIC_API_KEY)
+app.use(`${V}/reports`,  require('./routes/reports'))
+app.use(`${V}/agents`,   require('./routes/agents'))
 
 app.use(`${V}/integrations`, require('./routes/integrations'))
 app.use(`${V}/admin`,        require('./routes/admin'))
