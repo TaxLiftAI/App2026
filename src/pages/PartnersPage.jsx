@@ -404,9 +404,9 @@ export default function PartnersPage() {
           {/* Hero stats */}
           <div className="grid grid-cols-3 gap-2 max-w-lg mx-auto mb-8">
             {[
-              { v: '$300',     l: 'Flat commission / client'     },
-              { v: '$4,800',   l: 'CPA Partner Seat / year'      },
-              { v: '1 day',    l: 'Partner verification'         },
+              { v: '$300',    l: 'Flat commission / client'  },
+              { v: '$9K+',    l: 'Net / yr at 30 referrals'  },
+              { v: '1 day',   l: 'Partner verification'      },
             ].map(({ v, l }) => (
               <div key={l} className="bg-white/10 rounded-xl py-3 px-2">
                 <p className="text-xl font-extrabold text-white">{v}</p>
@@ -595,28 +595,26 @@ export default function PartnersPage() {
           {/* Partner economics */}
           <div className="bg-white border border-gray-200 rounded-xl overflow-hidden mb-5">
             <div className="px-5 py-3 bg-gray-50 border-b border-gray-200">
-              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Partner economics — CPA seat $4,800/yr</p>
+              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Partner economics — referral commission schedule</p>
             </div>
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider border-b border-gray-100">
                   <th className="text-left px-5 py-2.5">Referrals / year</th>
                   <th className="text-right px-5 py-2.5">Commission earned</th>
-                  <th className="text-right px-5 py-2.5">Net (after seat)</th>
+                  <th className="text-right px-5 py-2.5">Commission earned</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {[
-                  { refs: '10 clients', earned: '$3,000',  net: '−$1,800'  },
-                  { refs: '16 clients', earned: '$4,800',  net: '$0 (break-even)' },
-                  { refs: '20 clients', earned: '$6,000',  net: '+$1,200'  },
-                  { refs: '30 clients', earned: '$9,000',  net: '+$4,200'  },
-                  { refs: '50 clients', earned: '$15,000', net: '+$10,200' },
-                ].map(({ refs, earned, net }) => (
+                  { refs: '10 clients', earned: '$3,000'  },
+                  { refs: '20 clients', earned: '$6,000'  },
+                  { refs: '30 clients', earned: '$9,000'  },
+                  { refs: '50 clients', earned: '$15,000' },
+                ].map(({ refs, earned }) => (
                   <tr key={refs} className="hover:bg-gray-50 transition-colors">
                     <td className="px-5 py-3 text-gray-700 font-medium">{refs}</td>
                     <td className="px-5 py-3 text-right text-emerald-600 font-semibold">{earned}</td>
-                    <td className={`px-5 py-3 text-right font-bold ${net.startsWith('+') ? 'text-emerald-700' : net.startsWith('$0') ? 'text-gray-500' : 'text-red-500'}`}>{net}</td>
                   </tr>
                 ))}
               </tbody>

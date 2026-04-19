@@ -882,8 +882,8 @@ export default function PricingPage() {
               <p className="mt-1 text-sm text-slate-600">Add SR&amp;ED as a service and earn $300 per client you refer.</p>
             </div>
             <div className="my-5 pb-5 border-b border-emerald-200">
-              <span className="font-extrabold text-4xl tracking-tight text-slate-900">$4,800</span>
-              <span className="ml-2 text-sm font-medium text-slate-500">per year</span>
+              <span className="font-extrabold text-4xl tracking-tight text-slate-900">Custom</span>
+              <span className="ml-2 text-sm font-medium text-slate-500">pricing</span>
               <div className="mt-2.5 inline-flex items-center gap-2 bg-emerald-100 border border-emerald-200 rounded-lg px-3 py-1.5">
                 <TrendingUp size={13} className="text-emerald-600 flex-shrink-0" />
                 <span className="text-xs font-semibold text-emerald-800">+ $300 referral commission per client</span>
@@ -915,19 +915,21 @@ export default function PricingPage() {
                 <p className="text-[11px] text-slate-500">Refer 30/yr → $9,000 net commission on top of your filing fees</p>
               </div>
             </div>
-            <button
-              onClick={() => setReferralModalOpen(true)}
+            <a
+              href="https://calendly.com/taxlift"
+              target="_blank"
+              rel="noopener noreferrer"
               className="w-full rounded-xl py-3 text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-500 shadow-sm transition-all flex items-center justify-center gap-2"
             >
-              Apply for partner seat <ArrowRight size={14} />
-            </button>
+              Book a 20-min demo to get pricing <ArrowRight size={14} />
+            </a>
           </div>
         </div>
 
         {/* Enterprise footnote */}
         <div className="text-center mb-10">
           <p className="text-xs text-gray-400 mb-1">
-            Prices in CAD · $999 flat per fiscal year · $4,800/yr CPA seat · no percentage of your refund · processed via Stripe
+            Prices in CAD · $999 flat per fiscal year · no percentage of your refund · processed via Stripe
           </p>
           <p className="text-xs text-gray-500">
             Need white-label deployment, API access, or a dedicated account manager?{' '}
