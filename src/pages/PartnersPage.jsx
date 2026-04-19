@@ -330,8 +330,7 @@ function PartnerContactSection({ navigate }) {
         )}
 
         <p className="text-indigo-200 text-xs mt-5">
-          Questions? <Link to="/methodology" className="underline hover:text-white">Read the methodology</Link>
-          {' '}or book a call at{' '}
+          Questions? Book a call at{' '}
           <a href="https://calendly.com/taxlift" className="underline hover:text-white" target="_blank" rel="noopener noreferrer">
             calendly.com/taxlift
           </a>
@@ -365,10 +364,10 @@ export default function PartnersPage() {
           </Link>
           <div className="flex items-center gap-3">
             <Link
-              to="/methodology"
+              to="/cpa/register"
               className="text-xs text-gray-500 hover:text-gray-800 transition-colors hidden sm:block"
             >
-              Methodology
+              Apply now
             </Link>
             <Link
               to="/cpa/login"
@@ -442,12 +441,12 @@ export default function PartnersPage() {
               Professional liability: TaxLift is a preparatory tool. The signing CPA retains responsibility for the filed T661.
             </p>
           </div>
-          <Link
-            to="/methodology"
+          <a
+            href="mailto:hello@taxlift.ai"
             className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 hover:text-amber-900 whitespace-nowrap border border-amber-300 rounded-lg px-3 py-1.5 hover:bg-amber-100 transition-colors"
           >
-            <BookOpen size={12} /> Read full methodology →
-          </Link>
+            <BookOpen size={12} /> Methodology available on request →
+          </a>
         </div>
       </section>
 

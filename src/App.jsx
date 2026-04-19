@@ -72,7 +72,8 @@ const DemoPage           = lazy(() => import('./pages/DemoPage'))
 const CpaLoginPage          = lazy(() => import('./pages/CpaLoginPage'))
 const CpaRegisterPage       = lazy(() => import('./pages/CpaRegisterPage'))
 const PartnersPage          = lazy(() => import('./pages/PartnersPage'))
-const MethodologyPage       = lazy(() => import('./pages/MethodologyPage'))
+// MethodologyPage hidden pending patent filing — re-enable after CIPO provisional is filed
+// const MethodologyPage       = lazy(() => import('./pages/MethodologyPage'))
 const CpaReviewPage         = lazy(() => import('./pages/CpaReviewPage'))
 const ReferralIntakePage    = lazy(() => import('./pages/ReferralIntakePage'))
 const CPAPartnerSignupPage  = lazy(() => import('./pages/CPAPartnerSignupPage'))
@@ -409,7 +410,8 @@ function AppRoutes() {
       <Route path="/cpa/login"           element={<CpaLoginPage />} />
       <Route path="/cpa/register"        element={<CpaRegisterPage />} />
       <Route path="/cpa/partner-signup"  element={<CPAPartnerSignupPage />} />
-      <Route path="/methodology"         element={<MethodologyPage />} />
+      {/* /methodology hidden pending patent filing — re-enable after CIPO provisional filed */}
+      <Route path="/methodology"         element={<Navigate to="/" replace />} />
 
       {/* Public routes — no auth required */}
       <Route path="/demo"     element={<DemoPage />} />

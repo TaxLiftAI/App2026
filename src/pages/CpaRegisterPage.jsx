@@ -279,10 +279,7 @@ export default function CpaRegisterPage() {
                 />
                 <span className="text-xs text-gray-600 leading-relaxed">
                   I understand that TaxLift is a preparatory tool and that the signing CPA
-                  remains professionally responsible for all filed T661 claims. I have read the{' '}
-                  <Link to="/methodology" className="text-indigo-600 hover:underline" target="_blank">
-                    methodology documentation
-                  </Link>.
+                  remains professionally responsible for all filed T661 claims.
                 </span>
               </label>
               {errors.agree_terms && (
@@ -307,7 +304,7 @@ export default function CpaRegisterPage() {
             <p className="text-[10px] text-gray-400 text-center leading-relaxed">
               Your CPA number is used only for verification and is never shared.
               By applying you agree to the{' '}
-              <Link to="/methodology" className="underline">Partner Terms</Link>.
+              <Link to="/terms" className="underline">Partner Terms</Link>.
             </p>
           </form>
         </div>
