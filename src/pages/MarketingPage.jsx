@@ -1328,8 +1328,8 @@ export default function MarketingPage() {
               <h3 className="font-bold text-lg text-gray-900 mb-1">CPA Partner Seat</h3>
               <p className="text-sm text-gray-500 mb-4">Add SR&amp;ED as a service. Earn $300 per client you refer.</p>
               <div className="mb-4">
-                <span className="text-3xl font-extrabold text-gray-900">$4,800</span>
-                <span className="text-sm text-gray-500 ml-2">per year</span>
+                <span className="text-3xl font-extrabold text-gray-900">Custom</span>
+                <span className="text-sm text-gray-500 ml-2">pricing</span>
               </div>
               <ul className="flex-1 space-y-2 mb-5">
                 {['Unlimited client workspaces', 'White-label CPA handoff package', '$300 commission per referred client', 'Client pipeline dashboard', 'Priority support & onboarding'].map(f => (
@@ -1339,9 +1339,9 @@ export default function MarketingPage() {
                   </li>
                 ))}
               </ul>
-              <Link to="/partners" className="w-full text-center rounded-xl py-2.5 text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-500 transition-colors">
-                Apply for partner seat →
-              </Link>
+              <a href="https://calendly.com/taxlift" target="_blank" rel="noopener noreferrer" className="w-full text-center rounded-xl py-2.5 text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-500 transition-colors">
+                Book a demo to get pricing →
+              </a>
             </div>
           </div>
 
