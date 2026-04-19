@@ -32,11 +32,8 @@ import CalendlyEmbed  from '../components/CalendlyEmbed'
 
 const NAV_LINKS = [
   { label: 'How it works', href: '#how-it-works' },
-  { label: 'Features',     href: '#features'     },
-  { label: 'Grants',       href: '#grants'       },
   { label: 'Pricing',      href: '#pricing'      },
   { label: 'For CPAs',     href: '/partners',    isRoute: true, isCpa: true },
-  { label: 'Estimator',    href: '/estimate',    isRoute: true },
 ]
 
 const PAIN_CARDS = [
@@ -521,11 +518,11 @@ function SrEdCalculator({ openWaitlist, navigate }) {
               {/* CTA */}
               <div className="space-y-3">
                 <button
-                  onClick={() => openWaitlist('', 'calculator')}
+                  onClick={() => navigate('/scan')}
                   className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm"
                 >
-                  Get your full estimate free
-                  <ChevronRight size={16} />
+                  Start your free scan
+                  <ArrowRight size={16} />
                 </button>
                 <p className="text-center text-xs text-gray-400">
                   Takes 2 minutes · No credit card required
@@ -825,50 +822,33 @@ export default function MarketingPage() {
 
             {/* Headline */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight tracking-tight mb-6">
-              Recover every dollar of{' '}
+              Your code qualifies for{' '}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">
-                Canadian innovation funding
+                SR&amp;ED tax credits.
               </span>
+              <br />We prove it to the CRA.
             </h1>
 
             {/* Sub-headline */}
-            <p className="text-lg sm:text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed mb-3">
-              For Canadian tech founders and the CPAs who serve them — TaxLift turns your
-              GitHub and Jira activity into a CRA-ready SR&ED package. Connect your tools,
-              we handle the documentation.
+            <p className="text-lg sm:text-xl text-slate-300 max-w-xl mx-auto leading-relaxed mb-3">
+              Connect GitHub or Jira. Get a CRA-ready SR&ED package in hours.
+              Your CPA reviews and files — you keep every dollar.
             </p>
 
             {/* Pricing trust line */}
             <p className="text-sm text-indigo-300 font-medium mb-8">
-              $999 flat fee · no % of your refund taken · keep every dollar CRA sends you
+              $999 flat fee · no % of your refund · average refund{' '}
+              <span className="text-green-400 font-bold">${creditCount}K+</span>
+              {' '}for a 10-person team
             </p>
 
-            {/* Stat strip */}
-            <div className="flex flex-wrap items-center justify-center gap-3 mb-10">
-              <div className="inline-flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-5 py-2.5">
-                <TrendingUp size={16} className="text-green-400 flex-shrink-0" />
-                <span className="text-white text-sm font-medium">
-                  Average SR&ED refund:{' '}
-                  <span className="text-green-400 font-extrabold">${creditCount}K</span>
-                  <span className="text-slate-400 text-xs ml-1">/ yr for a 10-person team</span>
-                </span>
-              </div>
-              <div className="inline-flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-5 py-2.5">
-                <Sparkles size={16} className="text-violet-400 flex-shrink-0" />
-                <span className="text-white text-sm font-medium">
-                  <span className="text-violet-400 font-extrabold">$4.2M+</span>
-                  <span className="text-slate-400 text-xs ml-1">SR&ED + NRC-IRAP + SDTC potential</span>
-                </span>
-              </div>
-            </div>
-
-            {/* CTAs */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6">
+            {/* CTAs — two only */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8">
               <button
                 onClick={() => openWaitlist('', 'hero')}
                 className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-base px-7 py-3.5 rounded-xl transition-colors shadow-lg shadow-indigo-900/40"
               >
-                Get started free
+                Start free scan
                 <ArrowRight size={16} />
               </button>
               <Link
@@ -876,12 +856,12 @@ export default function MarketingPage() {
                 className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 text-white font-semibold text-base px-7 py-3.5 rounded-xl border border-white/20 transition-colors"
               >
                 <FlaskConical size={16} />
-                Try live demo
+                See a live demo
               </Link>
             </div>
 
-            {/* CPA self-selection strip */}
-            <div className="flex flex-col sm:flex-row justify-center items-center gap-3 mb-14">
+            {/* CPA self-selection strip — single clean link */}
+            <div className="flex justify-center mb-14">
               <Link
                 to="/partners"
                 className="group inline-flex items-center gap-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 hover:border-emerald-500/50 rounded-2xl px-5 py-3 transition-all"
@@ -891,16 +871,9 @@ export default function MarketingPage() {
                 </div>
                 <div className="text-left">
                   <p className="text-emerald-300 text-xs font-semibold leading-none mb-0.5">Are you a CPA or accountant?</p>
-                  <p className="text-emerald-400/70 text-xs leading-none">Earn $300 flat per client referral · Partner program →</p>
+                  <p className="text-emerald-400/70 text-xs leading-none">Earn $300 flat per client · Partner program →</p>
                 </div>
                 <ArrowRight size={13} className="text-emerald-500 group-hover:translate-x-0.5 transition-transform ml-1" />
-              </Link>
-              <Link
-                to="/cpa/login?mode=demo"
-                className="inline-flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-emerald-500/30 rounded-2xl px-5 py-3 transition-all"
-              >
-                <FlaskConical size={13} className="text-emerald-400" />
-                <span className="text-emerald-400/80 text-xs font-medium">Try CPA portal demo →</span>
               </Link>
             </div>
 
@@ -958,99 +931,6 @@ export default function MarketingPage() {
               )
             })}
           </div>
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════════════════════════
-          3b. CPA PARTNER CALLOUT (early — before features)
-      ══════════════════════════════════════════════════════════════════════ */}
-      <section className="py-16 bg-gradient-to-br from-emerald-950 via-slate-900 to-indigo-950">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-
-          {/* Header */}
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-semibold px-4 py-1.5 rounded-full mb-4">
-              <BadgeCheck size={12} /> For CPA Firms &amp; Accountants
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3">
-              Add SR&amp;ED to your practice.<br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400">
-                Earn $300 flat per client referral.
-              </span>
-            </h2>
-            <p className="text-slate-400 max-w-xl mx-auto text-sm leading-relaxed">
-              TaxLift prepares the complete T661 package from your client's GitHub and Jira.
-              You review, annotate, and file. Flat referral fee paid at package delivery — not contingent on CRA outcome.
-            </p>
-          </div>
-
-          {/* Three value props */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
-            {[
-              {
-                icon: Clock,
-                color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20',
-                title: 'Turn 60–80 hours into 2–3',
-                body: 'TaxLift generates T661 narratives from 100% of your client\'s GitHub commits. You review and approve — nothing more. Service 5× the SR&ED clients with the same team.',
-              },
-              {
-                icon: Pencil,
-                color: 'text-teal-400', bg: 'bg-teal-500/10 border-teal-500/20',
-                title: 'Your name on every deliverable',
-                body: 'Independent CPA login, annotation rights, and your firm name front-and-centre on every T661 PDF. Your clients receive a deliverable that looks like it came from you — TaxLift is a footer note, not the headline.',
-              },
-              {
-                icon: DollarSign,
-                color: 'text-indigo-400', bg: 'bg-indigo-500/10 border-indigo-500/20',
-                title: 'Flat fee, paid at delivery',
-                body: '$300 flat commission per client — no tiers, no caps. Paid by EFT when the T661 package is delivered, not contingent on CRA assessment.',
-              },
-            ].map(({ icon: Icon, color, bg, title, body }) => (
-              <div key={title} className={`bg-white/5 border rounded-2xl p-6 ${bg}`}>
-                <div className={`w-9 h-9 rounded-xl ${bg} border flex items-center justify-center mb-3`}>
-                  <Icon size={16} className={color} />
-                </div>
-                <h3 className="text-sm font-semibold text-white mb-2">{title}</h3>
-                <p className="text-xs text-slate-400 leading-relaxed">{body}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Fee table strip */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-8">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4 text-center">Referral fee schedule — paid at T661 package delivery</p>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-              {[
-                { range: 'Any credit size',    fee: '$300'   },
-                { range: 'No tiers',          fee: 'Flat'   },
-                { range: 'No caps',           fee: 'Always $300' },
-                { range: 'Break-even',        fee: '16 clients/yr' },
-                { range: '30 clients/yr',     fee: '$9,000 net' },
-              ].map(({ range, fee }) => (
-                <div key={range} className="text-center bg-white/5 rounded-xl py-3 px-2">
-                  <p className="text-lg font-extrabold text-emerald-400 mb-0.5">{fee}</p>
-                  <p className="text-[10px] text-slate-500 leading-tight">{range} credit</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* CTA row */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              to="/partners"
-              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm px-7 py-3 rounded-xl transition-colors shadow-lg"
-            >
-              Apply to partner — it's free <ArrowRight size={14} />
-            </Link>
-            <Link
-              to="/cpa/login"
-              className="flex items-center gap-2 border border-white/20 text-white text-sm font-medium px-6 py-3 rounded-xl hover:bg-white/10 transition-colors"
-            >
-              Already a partner? Sign in
-            </Link>
-          </div>
-
         </div>
       </section>
 
