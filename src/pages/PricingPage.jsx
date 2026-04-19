@@ -55,7 +55,7 @@ const FAQS = [
   },
   {
     q: 'What is the CPA Partner Seat?',
-    a: 'The $4,800/year CPA Partner Seat is for accounting firms and independent CPAs who want to offer SR&ED automation to their clients. It gives one CPA unlimited client workspaces, a white-label handoff experience, and a $300 referral commission for each net-new client they bring to TaxLift. It is the fastest way for a CPA to add SR&ED as a service without hiring an in-house specialist.',
+    a: 'The CPA Partner Seat is for accounting firms and independent CPAs who want to offer SR&ED automation to their clients. It gives one CPA unlimited client workspaces, a white-label handoff experience, and a $300 referral commission per net-new client. Pricing is shared during a short onboarding call — book at calendly.com/taxlift.',
   },
 ]
 
@@ -606,10 +606,10 @@ export default function PricingPage() {
         {
           '@type':       'Offer',
           name:          'CPA Partner Seat',
-          price:         '4800',
+          price:         '0',
           priceCurrency: 'CAD',
           priceSpecification: { '@type': 'UnitPriceSpecification', price: '4800', priceCurrency: 'CAD', unitText: 'ANN' },
-          description:   '$4,800/year for CPA firms. Unlimited client workspaces, white-label CPA handoff experience, and $300 referral commission per net-new client.',
+          description:   'Custom pricing for CPA firms. Unlimited client workspaces, white-label CPA handoff experience, and $300 referral commission per net-new client. Book a demo at calendly.com/taxlift.',
         },
       ],
       aggregateRating: {
@@ -1087,10 +1087,10 @@ export default function PricingPage() {
 
               <h2 className="text-xl font-bold text-slate-900 mb-1">CPA Partner Seat</h2>
               <p className="text-slate-500 text-sm leading-relaxed mb-6">
-                Join TaxLift as a CPA partner for{' '}
-                <strong className="text-slate-800">$4,800/year</strong> — get unlimited client
+                Join TaxLift as a CPA partner — get unlimited client
                 workspaces and earn <strong className="text-slate-800">$300 per referred client</strong>.
                 Add SR&amp;ED as a service without hiring a specialist.
+                Pricing shared on your 20-min onboarding call.
               </p>
 
               <div className="mb-4">
