@@ -73,7 +73,7 @@ export default function TermsPage() {
           </Section>
 
           <Section title="3. Fees and Payment">
-            <p><strong>Flat-Fee Pricing.</strong> TaxLift charges a flat fee of $999 CAD per fiscal year for the SR&amp;ED Filing Package (end users) and $4,800 CAD per year for the CPA Partner Seat (CPA firms). No percentage of your SR&amp;ED refund is taken. Current pricing is displayed at {WEBSITE}/pricing and is subject to change with 30 days' notice to existing customers.</p>
+            <p><strong>Flat-Fee Pricing.</strong> TaxLift charges a flat fee of $999 CAD per fiscal year for the SR&amp;ED Filing Package (end users). CPA Partner Seat pricing is provided upon request and confirmed in a written order form prior to activation. No percentage of your SR&amp;ED refund is taken. Current pricing is available at {WEBSITE}/pricing and is subject to change with 30 days' notice to existing customers.</p>
             <p><strong>Billing.</strong> The SR&amp;ED Filing Package is a one-time payment per fiscal year. The CPA Partner Seat is a recurring annual subscription managed through Stripe — your payment method will be charged automatically each year until you cancel. All amounts are in Canadian Dollars (CAD). Payments are processed by Stripe. By providing payment information, you authorize TaxLift to charge your payment method for the applicable fee.</p>
             <p><strong>Cancellation and Refunds.</strong> Fees paid for completed packages are non-refundable. CPA Partner Seat subscriptions may be cancelled at any time through the billing portal — access continues until the end of the current paid period and will not renew.</p>
           </Section>
