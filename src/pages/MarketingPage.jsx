@@ -86,43 +86,29 @@ const FEATURES = [
     icon:  GitBranch,
     color: 'text-indigo-600',
     bg:    'bg-indigo-50',
-    title: 'Automated cluster detection',
-    body:  'Groups commits, tickets, and build events into SR&ED clusters automatically — no manual tagging required.',
+    title: 'GitHub-native analysis',
+    body:  'CRA reviewers look at your code. So do we. TaxLift reads your commit history the same way an SR&ED technical reviewer does.',
   },
   {
     icon:  FileText,
     color: 'text-violet-600',
     bg:    'bg-violet-50',
-    title: 'T661-ready narratives',
-    body:  'Generates CRA-compliant project narratives scored against 5 compliance dimensions. Improve them in a single click.',
+    title: 'Not just an estimate — a filing',
+    body:  'Your CPA gets a T661-ready CSV and a methodology statement they can sign off on directly. No reformatting, no guesswork.',
   },
   {
-    icon:  Shield,
-    color: 'text-green-600',
-    bg:    'bg-green-50',
-    title: 'Evidence chain of custody',
-    body:  'Every commit, ticket, and artefact is hashed and timestamped. Cryptographic integrity verification for audit confidence.',
-  },
-  {
-    icon:  Package,
+    icon:  Clock,
     color: 'text-blue-600',
     bg:    'bg-blue-50',
-    title: 'CPA handoff package',
-    body:  'One-click PDF containing everything your CPA needs: T661 schedule, narratives, developer hours, and the evidence hash.',
+    title: '18-month retroactive lookback',
+    body:  "Didn't track SR&ED during your build years? Most founders don't. TaxLift looks back up to 18 months across 3 open CRA fiscal years.",
   },
   {
-    icon:  BarChart2,
-    color: 'text-amber-600',
-    bg:    'bg-amber-50',
-    title: 'Audit readiness score',
-    body:  'A live score across 7 audit dimensions tells you exactly where your claim is strong and where it needs reinforcement.',
-  },
-  {
-    icon:  Calculator,
-    color: 'text-rose-600',
-    bg:    'bg-rose-50',
-    title: 'SR&ED estimator',
-    body:  'Get an instant credit estimate before you commit. Adjustable for entity type, province, salary mix, and fiscal year.',
+    icon:  DollarSign,
+    color: 'text-green-600',
+    bg:    'bg-green-50',
+    title: 'Flat SaaS pricing — keep what you earned',
+    body:  "Consultants take 15–30% of your refund. We don't. $999 flat per year, no contingency, no percentage taken.",
   },
 ]
 
@@ -822,17 +808,16 @@ export default function MarketingPage() {
 
             {/* Headline */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight tracking-tight mb-6">
-              Your code qualifies for{' '}
+              Your GitHub commits are{' '}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">
-                SR&amp;ED tax credits.
+                worth money.
               </span>
-              <br />We prove it to the CRA.
+              <br />We'll prove it.
             </h1>
 
             {/* Sub-headline */}
             <p className="text-lg sm:text-xl text-slate-300 max-w-xl mx-auto leading-relaxed mb-3">
-              Connect GitHub or Jira. Get a CRA-ready SR&ED package in hours.
-              Your CPA reviews and files — you keep every dollar.
+              TaxLift analyzes your commit history and generates a CRA-ready SR&amp;ED claim — no consultants, no contingency, no percentage of your refund taken.
             </p>
 
             {/* Pricing trust line */}
@@ -848,7 +833,7 @@ export default function MarketingPage() {
                 onClick={() => openWaitlist('', 'hero')}
                 className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-base px-7 py-3.5 rounded-xl transition-colors shadow-lg shadow-indigo-900/40"
               >
-                Start free scan
+                Connect GitHub &amp; get your estimate
                 <ArrowRight size={16} />
               </button>
               <Link
@@ -1291,6 +1276,14 @@ export default function MarketingPage() {
             </p>
           </div>
 
+          {/* Competitor comparison callout */}
+          <div className="max-w-3xl mx-auto mb-8 bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 flex items-start gap-3">
+            <AlertTriangle size={16} className="text-amber-500 mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-amber-800 leading-relaxed">
+              <strong>SR&amp;ED consultants charge 15–30% contingency.</strong> On a $100K claim, that's $15–30K gone before you see a dollar. TaxLift costs $999 flat. You do the math.
+            </p>
+          </div>
+
           {/* Two-track pricing */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8 max-w-3xl mx-auto">
 
@@ -1405,7 +1398,7 @@ export default function MarketingPage() {
               onClick={() => openWaitlist('', 'cta_band')}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white text-indigo-700 font-bold text-base px-8 py-3.5 rounded-xl hover:bg-indigo-50 transition-colors shadow-lg"
             >
-              Get started free
+              Connect GitHub &amp; get your estimate
               <ArrowRight size={16} />
             </button>
             <Link

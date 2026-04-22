@@ -826,6 +826,14 @@ export default function PricingPage() {
           ))}
         </div>
 
+        {/* ── Competitor comparison callout ──────────────────────────────────── */}
+        <div className="mb-8 bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 flex items-start gap-3">
+          <AlertCircle size={16} className="text-amber-500 mt-0.5 flex-shrink-0" />
+          <p className="text-sm text-amber-800 leading-relaxed">
+            <strong>SR&amp;ED consultants charge 15–30% contingency.</strong> On a $100K claim, that's $15–30K gone before you see a dollar. TaxLift costs $999 flat. You do the math.
+          </p>
+        </div>
+
         {/* ── Two-track pricing ──────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4 items-start">
 
@@ -867,7 +875,7 @@ export default function PricingPage() {
               className="w-full rounded-xl py-3 text-sm font-semibold bg-white text-indigo-600 hover:bg-indigo-50 shadow transition-all disabled:opacity-60 flex items-center justify-center gap-2"
             >
               {checkoutLoading === 'starter' ? <Loader2 size={16} className="animate-spin" /> : null}
-              Get started — $999
+              Connect GitHub &amp; get your estimate
             </button>
           </div>
 
