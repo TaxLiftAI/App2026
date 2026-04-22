@@ -845,6 +845,14 @@ export default function MarketingPage() {
               </Link>
             </div>
 
+            {/* Process trust line */}
+            <p style={{ textAlign: 'center', marginTop: '14px', marginBottom: '16px' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#666', background: '#f1f5f9', borderRadius: '6px', padding: '6px 14px' }}>
+                <span style={{ width: '7px', height: '7px', background: '#22c55e', borderRadius: '50%', flexShrink: 0 }} />
+                TaxLift prepares the full package &nbsp;·&nbsp; your CPA reviews and files &nbsp;·&nbsp; you keep the refund
+              </span>
+            </p>
+
             {/* CPA self-selection strip — single clean link */}
             <div className="flex justify-center mb-14">
               <Link
@@ -989,88 +997,41 @@ export default function MarketingPage() {
               )
             })}
           </div>
+
+          {/* Security trust row */}
+          <div style={{ marginTop: '2.5rem', paddingTop: '2rem', borderTop: '1px solid #e2e8f0' }}>
+            <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#aaa', marginBottom: '14px' }}>Your code stays yours</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: '14px' }}>
+              {[
+                { emoji: '🔒', title: 'Read-only GitHub access',        body: 'OAuth read-only scope only. We can never write to, fork, or modify your repositories.' },
+                { emoji: '🚫', title: 'No code stored',                 body: 'Commit metadata and messages are analyzed in memory. Your source code is never stored on our servers.' },
+                { emoji: '🔗', title: 'Tamper-evident audit chain',     body: 'Every claim is cryptographically hashed. If CRA audits you, your evidence chain is timestamped and unbreakable.' },
+              ].map(({ emoji, title, body }) => (
+                <div key={title} style={{ background: '#f8f9fa', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px' }}>
+                  <div style={{ fontSize: '1.25rem', marginBottom: '6px' }}>{emoji}</div>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 600, marginBottom: '4px' }}>{title}</div>
+                  <div style={{ fontSize: '0.8rem', color: '#666', lineHeight: 1.4 }}>{body}</div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════════
-          6. GRANTS MODULE
+          6. GRANTS TEASER
       ══════════════════════════════════════════════════════════════════════ */}
-      <section id="grants" className="py-24 bg-gradient-to-b from-slate-950 to-indigo-950 overflow-hidden relative">
-        {/* Subtle grid texture */}
-        <div
-          className="absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage: 'linear-gradient(rgba(99,102,241,1) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,1) 1px, transparent 1px)',
-            backgroundSize: '40px 40px',
-          }}
-        />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Header */}
-          <div className="text-center mb-14">
-            <div className="inline-flex items-center gap-2 bg-violet-500/10 border border-violet-500/20 text-violet-300 text-xs font-semibold px-4 py-1.5 rounded-full mb-5">
-              <Sparkles size={11} />
-              Coming soon — SR&amp;ED is just the start
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-4">
-              Up to $4.2M in additional Canadian funding — matched automatically
-            </h2>
-            <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-              TaxLift will cross-reference your existing SR&amp;ED data against 7+ federal and provincial programs
-              and draft your application sections automatically. No double work.
+      <section id="grants" className="py-14 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div style={{ textAlign: 'center', padding: '28px 20px', background: '#fafbfc', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
+            <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#aaa', marginBottom: '8px' }}>Coming soon</div>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '10px' }}>SR&amp;ED is just the start</h2>
+            <p style={{ fontSize: '0.9rem', color: '#555', maxWidth: '420px', margin: '0 auto 18px' }}>
+              Your SR&amp;ED data will automatically unlock NRC-IRAP, SDTC, Mitacs, and 4+ provincial grants — up to $4.2M in additional funding. No double work.
             </p>
-          </div>
-
-          {/* Grant program tiles */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-10">
-            {[
-              { name: 'NRC-IRAP',          amount: 'Up to $500K',  flag: '🇨🇦', color: 'border-indigo-500/30 bg-indigo-500/5',  badge: 'Federal'    },
-              { name: 'SDTC',              amount: 'Up to $2M',    flag: '🇨🇦', color: 'border-violet-500/30 bg-violet-500/5',  badge: 'Federal'    },
-              { name: 'OITC',              amount: 'Up to $200K',  flag: '🏛',  color: 'border-blue-500/30   bg-blue-500/5',    badge: 'Provincial' },
-              { name: 'Mitacs',            amount: 'Up to $250K',  flag: '🇨🇦', color: 'border-cyan-500/30   bg-cyan-500/5',    badge: 'Federal'    },
-              { name: 'BC Ignite',         amount: 'Up to $100K',  flag: '🏛',  color: 'border-teal-500/30   bg-teal-500/5',    badge: 'Provincial' },
-              { name: 'Alberta Innovates', amount: 'Up to $150K',  flag: '🏛',  color: 'border-amber-500/30  bg-amber-500/5',   badge: 'Provincial' },
-              { name: 'QC CDAE-IA',        amount: 'Up to $500K',  flag: '🏛',  color: 'border-rose-500/30   bg-rose-500/5',    badge: 'Provincial' },
-              { name: '+ more programs',   amount: 'In roadmap',   flag: '✦',   color: 'border-slate-600/30  bg-slate-600/5',   badge: ''           },
-            ].map(g => (
-              <div key={g.name} className={`rounded-2xl border p-4 flex flex-col gap-2 opacity-75 ${g.color}`}>
-                <div className="flex items-center justify-between">
-                  <span className="text-lg">{g.flag}</span>
-                  {g.badge && <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{g.badge}</span>}
-                </div>
-                <p className="font-semibold text-sm leading-snug text-white">{g.name}</p>
-                <p className="text-xs font-medium text-slate-400">{g.amount}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* "No double work" callout */}
-          <div className="rounded-2xl bg-white/5 border border-white/10 px-6 py-5 flex flex-col sm:flex-row items-center gap-5 mb-10">
-            <div className="w-12 h-12 bg-indigo-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
-              <Zap size={22} className="text-indigo-400" />
-            </div>
-            <div>
-              <p className="text-white font-semibold text-base mb-0.5">
-                Powered by your SR&amp;ED data — no double work
-              </p>
-              <p className="text-slate-400 text-sm leading-relaxed">
-                The technical narratives, developer hours, and evidence you've already generated for SR&amp;ED
-                will pre-fill grant applications automatically. One source of truth, many programs covered.
-              </p>
-            </div>
-          </div>
-
-          {/* CTA */}
-          <div className="text-center">
-            <p className="text-slate-400 text-sm mb-2">SR&amp;ED qualifiers typically unlock 2–4 additional programs worth $500K–$4M+</p>
-            <button
-              onClick={() => openWaitlist('grants', 'grants_section')}
-              className="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white font-bold px-7 py-3.5 rounded-xl transition-colors shadow-lg shadow-violet-900/40"
-            >
-              <Sparkles size={15} />
-              Get early access
-              <ArrowRight size={16} />
-            </button>
-            <p className="text-slate-500 text-xs mt-3">SR&amp;ED is live today · Grants matching coming soon</p>
+            <Link to="/grants" style={{ display: 'inline-block', background: '#1a1a1a', color: '#fff', fontSize: '0.875rem', fontWeight: 600, padding: '10px 22px', borderRadius: '8px', textDecoration: 'none' }}>
+              Get early access →
+            </Link>
           </div>
         </div>
       </section>
@@ -1276,12 +1237,38 @@ export default function MarketingPage() {
             </p>
           </div>
 
-          {/* Competitor comparison callout */}
-          <div className="max-w-3xl mx-auto mb-8 bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 flex items-start gap-3">
-            <AlertTriangle size={16} className="text-amber-500 mt-0.5 flex-shrink-0" />
-            <p className="text-sm text-amber-800 leading-relaxed">
-              <strong>SR&amp;ED consultants charge 15–30% contingency.</strong> On a $100K claim, that's $15–30K gone before you see a dollar. TaxLift costs $999 flat. You do the math.
+          {/* Competitor comparison */}
+          <div className="max-w-3xl mx-auto mb-8">
+            <p className="text-sm text-gray-500 mb-4">
+              SR&amp;ED consultants charge 15–30% contingency. On a $100K claim, that's $15–30K gone before you see a dollar. TaxLift costs $999 flat — regardless of claim size.
             </p>
+            <div className="overflow-x-auto">
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                <thead>
+                  <tr style={{ background: '#f1f5f9' }}>
+                    {['Claim size', 'Consultant (20% avg)', 'TaxLift', 'You save'].map(h => (
+                      <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#555', borderBottom: '2px solid #e2e8f0' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { claim: '$50,000',  consultant: '$10,000', save: '$9,001'  },
+                    { claim: '$150,000', consultant: '$30,000', save: '$29,001' },
+                    { claim: '$340,000', consultant: '$68,000', save: '$67,001' },
+                  ].map((r, i) => (
+                    <tr key={r.claim}>
+                      <td style={{ padding: '11px 14px', borderBottom: i < 2 ? '1px solid #f0f0f0' : undefined }}>{r.claim}</td>
+                      <td style={{ padding: '11px 14px', borderBottom: i < 2 ? '1px solid #f0f0f0' : undefined, color: '#b91c1c', fontWeight: 600 }}>{r.consultant}</td>
+                      <td style={{ padding: '11px 14px', borderBottom: i < 2 ? '1px solid #f0f0f0' : undefined, color: '#15803d', fontWeight: 700 }}>$999</td>
+                      <td style={{ padding: '11px 14px', borderBottom: i < 2 ? '1px solid #f0f0f0' : undefined }}>
+                        <span style={{ background: '#f0fdf4', color: '#15803d', fontSize: '0.75rem', fontWeight: 700, padding: '2px 8px', borderRadius: '100px' }}>Save {r.save}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Two-track pricing */}
@@ -1499,8 +1486,8 @@ export default function MarketingPage() {
             <p className="text-slate-500 text-xs">
               © {new Date().getFullYear()} TaxLift Technologies Inc. All rights reserved.
             </p>
-            <p className="text-slate-600 text-xs">
-              SR&ED credit estimates are for planning purposes only. Consult a qualified SR&ED specialist before filing.
+            <p style={{ fontSize: '0.75rem', color: '#aaa', marginTop: '1.5rem' }}>
+              SR&amp;ED credit estimates are for planning purposes only. TaxLift prepares your documentation — a CPA or SR&amp;ED consultant reviews and files. We eliminate 95% of their prep work.
             </p>
           </div>
         </div>

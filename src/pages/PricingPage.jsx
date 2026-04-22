@@ -826,12 +826,38 @@ export default function PricingPage() {
           ))}
         </div>
 
-        {/* ── Competitor comparison callout ──────────────────────────────────── */}
-        <div className="mb-8 bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 flex items-start gap-3">
-          <AlertCircle size={16} className="text-amber-500 mt-0.5 flex-shrink-0" />
-          <p className="text-sm text-amber-800 leading-relaxed">
-            <strong>SR&amp;ED consultants charge 15–30% contingency.</strong> On a $100K claim, that's $15–30K gone before you see a dollar. TaxLift costs $999 flat. You do the math.
+        {/* ── Competitor comparison ──────────────────────────────────────────── */}
+        <div className="mb-8">
+          <p className="text-sm text-gray-500 mb-4">
+            SR&amp;ED consultants charge 15–30% contingency. On a $100K claim, that's $15–30K gone before you see a dollar. TaxLift costs $999 flat — regardless of claim size.
           </p>
+          <div className="overflow-x-auto">
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+              <thead>
+                <tr style={{ background: '#f1f5f9' }}>
+                  {['Claim size', 'Consultant (20% avg)', 'TaxLift', 'You save'].map(h => (
+                    <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#555', borderBottom: '2px solid #e2e8f0' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { claim: '$50,000',  consultant: '$10,000', save: '$9,001'  },
+                  { claim: '$150,000', consultant: '$30,000', save: '$29,001' },
+                  { claim: '$340,000', consultant: '$68,000', save: '$67,001' },
+                ].map((r, i) => (
+                  <tr key={r.claim}>
+                    <td style={{ padding: '11px 14px', borderBottom: i < 2 ? '1px solid #f0f0f0' : undefined }}>{r.claim}</td>
+                    <td style={{ padding: '11px 14px', borderBottom: i < 2 ? '1px solid #f0f0f0' : undefined, color: '#b91c1c', fontWeight: 600 }}>{r.consultant}</td>
+                    <td style={{ padding: '11px 14px', borderBottom: i < 2 ? '1px solid #f0f0f0' : undefined, color: '#15803d', fontWeight: 700 }}>$999</td>
+                    <td style={{ padding: '11px 14px', borderBottom: i < 2 ? '1px solid #f0f0f0' : undefined }}>
+                      <span style={{ background: '#f0fdf4', color: '#15803d', fontSize: '0.75rem', fontWeight: 700, padding: '2px 8px', borderRadius: '100px' }}>Save {r.save}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* ── Two-track pricing ──────────────────────────────────────────────── */}
