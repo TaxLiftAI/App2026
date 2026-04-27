@@ -489,11 +489,11 @@ export default function TaxLiftChat({ onLeadCapture }) {
       onDone: () => pushCard('estimate', { estimate: est, industry }, () => {
         pushBotMessages(['Which province is your company based in?'], {
           onDone: () => setChips([
-            { label: '🏙️ Ontario',         onClick: () => handleProvince('ontario',  'Ontario')  },
-            { label: '🍁 Quebec',           onClick: () => handleProvince('quebec',   'Quebec')   },
-            { label: '🌊 BC',              onClick: () => handleProvince('bc',       'BC')       },
-            { label: '🌾 Manitoba',         onClick: () => handleProvince('manitoba', 'Manitoba') },
-            { label: '🏔️ Alberta / Other', onClick: () => handleProvince('other',    'Alberta / Other') },
+            { label: '🏙️ Ontario',         onClick: () => handleProvince('ontario',  'Ontario',          est) },
+            { label: '🍁 Quebec',           onClick: () => handleProvince('quebec',   'Quebec',           est) },
+            { label: '🌊 BC',              onClick: () => handleProvince('bc',       'BC',               est) },
+            { label: '🌾 Manitoba',         onClick: () => handleProvince('manitoba', 'Manitoba',         est) },
+            { label: '🏔️ Alberta / Other', onClick: () => handleProvince('other',    'Alberta / Other',  est) },
           ]),
         })
       }),
@@ -501,7 +501,8 @@ export default function TaxLiftChat({ onLeadCapture }) {
   }
 
   // ── Province → top-up card ────────────────────────────────────────────────
-  function handleProvince(provId, label) {
+  // est passed explicitly to avoid stale-closure on the estimate state var
+  function handleProvince(provId, label, est) {
     pushUser(label)
     setStep(5)
     const prov = PROVINCES[provId]
@@ -509,7 +510,7 @@ export default function TaxLiftChat({ onLeadCapture }) {
 
     if (prov.rate > 0) {
       pushBotMessages([`Good news — ${prov.name} has an additional SR&ED credit. Here's your updated total:`], {
-        onDone: () => pushCard('provincial', { estimate, province: prov }, () => {
+        onDone: () => pushCard('provincial', { estimate: est, province: prov }, () => {
           afterProvince(prov)
         }),
       })
