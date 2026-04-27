@@ -128,7 +128,7 @@ const FAQS = [
   },
   {
     q: 'Is my code and data secure?',
-    a: 'TaxLift reads your commit metadata and issue summaries — never your source code. Data is encrypted in transit and at rest. Evidence artefacts are stored with FNV-1a cryptographic hashing so any tampering is immediately detectable. We are SOC 2 Type II compliant.',
+    a: 'TaxLift reads your commit metadata and issue summaries — never your source code. Data is encrypted in transit and at rest. Evidence artefacts are stored with FNV-1a cryptographic hashing so any tampering is immediately detectable.',
   },
   {
     q: 'What does my CPA need to do?',

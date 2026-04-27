@@ -37,23 +37,42 @@ class ChunkErrorBoundary extends Component {
     }
   }
   render() {
-    if (this.state.hasError && !this.state.isChunkError) {
+    if (!this.state.hasError) return this.props.children
+
+    if (this.state.isChunkError) {
       return (
         <div className="flex items-center justify-center min-h-screen bg-slate-50">
-          <div className="text-center space-y-2">
-            <p className="text-gray-700 font-medium">Something went wrong</p>
-            <p className="text-sm text-gray-400">Try refreshing the page.</p>
+          <div className="text-center space-y-3 max-w-sm px-4">
+            <p className="text-gray-700 font-semibold">TaxLift was just updated</p>
+            <p className="text-sm text-gray-400 leading-relaxed">
+              Click below to reload the latest version — this only happens when
+              we ship a new release while you have a tab open.
+            </p>
             <button
-              onClick={() => window.location.reload()}
-              className="mt-3 text-xs font-medium text-indigo-600 underline"
+              onClick={() => { sessionStorage.removeItem('_chunk_reloaded'); window.location.reload() }}
+              className="mt-1 px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-500 transition-colors"
             >
-              Refresh now
+              Reload now
             </button>
           </div>
         </div>
       )
     }
-    return this.props.children
+
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-50">
+        <div className="text-center space-y-2">
+          <p className="text-gray-700 font-medium">Something went wrong</p>
+          <p className="text-sm text-gray-400">Try refreshing the page.</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-3 text-xs font-medium text-indigo-600 underline"
+          >
+            Refresh now
+          </button>
+        </div>
+      </div>
+    )
   }
 }
 
