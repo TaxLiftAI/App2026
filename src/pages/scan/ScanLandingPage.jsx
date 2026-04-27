@@ -16,6 +16,7 @@ import {
   generateState,
   LS_KEYS,
 } from '../../lib/oauthConfig'
+import { leads } from '../../lib/api'
 
 const TRUST_BADGES = [
   { Icon: Lock,         text: 'We read commit metadata only — no source code stored' },
@@ -53,6 +54,9 @@ export default function ScanLandingPage() {
 
     // Persist email for the results page
     localStorage.setItem('taxlift_scan_email', email)
+
+    // Capture lead immediately — don't wait, don't block the redirect
+    leads.capture({ email, source: 'scan_landing' }).catch(() => {})
 
     // Signal to OAuthCallbackPage that this is a scan flow (redirect to /scan/repos)
     sessionStorage.setItem('taxlift_scan_flow', 'true')

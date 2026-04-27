@@ -22,7 +22,7 @@ export default function LoginPage() {
   // Mode: 'real' | 'demo'
   // ?mode=demo in the URL (linked from the homepage demo CTA) auto-selects demo tab
   const [mode, setMode]           = useState(() => searchParams.get('mode') === 'demo' ? 'demo' : 'real')
-  const [email, setEmail]         = useState('admin@taxlift.dev')
+  const [email, setEmail]         = useState('')
   const [password, setPassword]   = useState('')
   const [loading, setLoading]     = useState(false)
   const [localError, setLocalError] = useState(null)

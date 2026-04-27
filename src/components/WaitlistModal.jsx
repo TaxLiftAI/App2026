@@ -8,17 +8,19 @@
  *   source       {string}   — tracking source tag ('hero'|'pricing'|'cpa_section'|...)
  */
 import { useState, useEffect } from 'react'
-import { X, Loader2, CheckCircle2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { X, Loader2, CheckCircle2, ArrowRight } from 'lucide-react'
 import { leads } from '../lib/api'
 
 const PLAN_OPTIONS = [
   { value: '',           label: 'Not sure yet' },
   { value: 'starter',   label: 'SR&ED Filing Package — $999 flat fee' },
-  { value: 'plus',      label: 'CPA Partner Seat — $4,800/year' },
+  { value: 'plus',      label: 'CPA Partner Seat — custom pricing' },
   { value: 'enterprise', label: 'Enterprise — Custom' },
 ]
 
 export default function WaitlistModal({ isOpen, onClose, defaultPlan = '', source = 'marketing' }) {
+  const navigate = useNavigate()
   const [form, setForm] = useState({ name: '', email: '', company: '', plan_interest: defaultPlan })
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -89,19 +91,25 @@ export default function WaitlistModal({ isOpen, onClose, defaultPlan = '', sourc
 
           <div className="p-8">
             {success ? (
-              /* Success state */
+              /* Success state — keep user in the funnel */
               <div className="text-center">
                 <CheckCircle2 size={48} className="mx-auto mb-4 text-emerald-500" />
                 <h2 className="mb-2 text-2xl font-bold text-slate-900">You're on the list!</h2>
                 <p className="mb-6 text-slate-600">
-                  We'll reach out to <strong>{form.email}</strong> within 24 hours to set up your
-                  trial. In the meantime, check out how TaxLift works.
+                  We'll reach out to <strong>{form.email}</strong> within 24 hours. While you wait,
+                  run your free SR&ED scan — no account needed.
                 </p>
                 <button
-                  onClick={onClose}
-                  className="w-full rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700"
+                  onClick={() => { onClose(); navigate('/scan') }}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700 mb-3"
                 >
-                  Got it, thanks!
+                  Start your free scan now <ArrowRight size={15} />
+                </button>
+                <button
+                  onClick={onClose}
+                  className="w-full rounded-xl border border-gray-200 py-2.5 text-sm font-medium text-gray-500 hover:bg-gray-50"
+                >
+                  I'll do it later
                 </button>
               </div>
             ) : (

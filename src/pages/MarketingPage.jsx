@@ -24,6 +24,7 @@ import {
   Building2, Mail, ExternalLink, BadgeCheck, ShieldCheck, Pencil, FlaskConical,
 } from 'lucide-react'
 import WaitlistModal  from '../components/WaitlistModal'
+import { leads }      from '../lib/api'
 import TaxLiftChat    from '../components/TaxLiftChat'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -997,7 +998,7 @@ export default function MarketingPage() {
             <p style={{ fontSize: '0.9rem', color: '#555', maxWidth: '420px', margin: '0 auto 18px' }}>
               Your SR&amp;ED data will automatically unlock NRC-IRAP, SDTC, Mitacs, and 4+ provincial grants — up to $4.2M in additional funding. No double work.
             </p>
-            <Link to="/grants" style={{ display: 'inline-block', background: '#1a1a1a', color: '#fff', fontSize: '0.875rem', fontWeight: 600, padding: '10px 22px', borderRadius: '8px', textDecoration: 'none' }}>
+            <Link to="/scan" style={{ display: 'inline-block', background: '#1a1a1a', color: '#fff', fontSize: '0.875rem', fontWeight: 600, padding: '10px 22px', borderRadius: '8px', textDecoration: 'none' }}>
               Get early access →
             </Link>
           </div>
@@ -1472,8 +1473,7 @@ export default function MarketingPage() {
       {/* ── Floating chatbot ────────────────────────────────────────────── */}
       <TaxLiftChat
         onLeadCapture={(email, estimateRange) => {
-          // TODO: POST to /api/leads  { email, estimateRange, source: 'chat' }
-          console.log('[TaxLift chat lead]', email, estimateRange)
+          leads.capture({ email, estimate_range: estimateRange, source: 'chat' }).catch(() => {})
         }}
       />
 
