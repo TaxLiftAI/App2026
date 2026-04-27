@@ -142,14 +142,12 @@ export default function ScanReposPage() {
               { name: 'Bitbucket', icon: '🪣' },
               { name: 'Azure DevOps', icon: '🔷' },
             ].map(p => (
-              <a
+              <span
                 key={p.name}
-                href={`mailto:hello@taxlift.ai?subject=${encodeURIComponent(p.name + ' integration request')}`}
-                className="inline-flex items-center gap-1 text-[10px] bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-2 py-0.5 font-semibold hover:bg-amber-100 transition-colors"
-                title={`Request ${p.name} integration`}
+                className="inline-flex items-center gap-1 text-[10px] bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-2 py-0.5 font-semibold"
               >
                 {p.icon} {p.name} — coming soon
-              </a>
+              </span>
             ))}
           </div>
         </div>

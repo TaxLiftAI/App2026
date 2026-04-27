@@ -141,11 +141,11 @@ export default function CheckoutSuccessPage() {
     },
     ...(plan === 'plus' ? [{
       icon:        FileText,
-      title:       'Explore the Grants module',
-      description: 'Match against 9 Canadian innovation programs — NRC-IRAP, OITC, NGen, and more.',
+      title:       'Download your CPA handoff package',
+      description: 'Your T661 narrative, SR&ED cluster summary, and CPA briefing — ready to send to your accountant.',
       done:        false,
-      cta:         'Open Grants',
-      ctaTo:       '/grants',
+      cta:         'Go to dashboard →',
+      ctaTo:       '/dashboard',
     }] : []),
   ]
 
@@ -282,9 +282,9 @@ export default function CheckoutSuccessPage() {
           <a href="mailto:hello@taxlift.ai" className="text-indigo-400 hover:underline">
             hello@taxlift.ai
           </a>{' '}
-          · join our{' '}
-          <a href="https://taxlift.ai/slack" className="text-indigo-400 hover:underline">
-            Slack community
+          · or reach us at{' '}
+          <a href="mailto:hello@taxlift.ai" className="text-indigo-400 hover:underline">
+            hello@taxlift.ai
           </a>
         </p>
       </div>
