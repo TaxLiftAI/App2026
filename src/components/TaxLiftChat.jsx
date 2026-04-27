@@ -58,7 +58,7 @@ const SPEND_ESTIMATES = {
 // Provincial SR&ED credits (rate applied to federal low/high as rough multiplier)
 const PROVINCES = {
   ontario:  { name: 'Ontario',         rate: 0.08,  credit: 'OITC',  note: '8% Ontario Innovation Tax Credit'      },
-  quebec:   { name: 'Quebec',          rate: 0.25,  credit: 'CRDP',  note: '30% Quebec R&D credit on salaries'     },
+  quebec:   { name: 'Quebec',          rate: 0.14,  credit: 'CRDP',  note: '14% Quebec R&D tax credit (CRDP)'      },
   bc:       { name: 'BC',             rate: 0.10,  credit: 'BC R&D', note: '10% BC Scientific Research credit'    },
   manitoba: { name: 'Manitoba',        rate: 0.15,  credit: 'MRDTC', note: '15% Manitoba R&D Tax Credit'          },
   other:    { name: 'Alberta / Other', rate: 0,     credit: null,    note: 'No additional provincial SR&ED credit' },

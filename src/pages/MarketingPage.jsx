@@ -24,7 +24,6 @@ import {
   Building2, Mail, ExternalLink, BadgeCheck, ShieldCheck, Pencil, FlaskConical,
 } from 'lucide-react'
 import WaitlistModal  from '../components/WaitlistModal'
-import CalendlyEmbed  from '../components/CalendlyEmbed'
 import TaxLiftChat    from '../components/TaxLiftChat'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -112,37 +111,6 @@ const FEATURES = [
     body:  "Consultants take 15–30% of your refund. We don't. $999 flat per year, no contingency, no percentage taken.",
   },
 ]
-
-const TESTIMONIALS = [
-  {
-    quote:   "We recovered $312K we had completely written off. TaxLift found clusters our CPA didn't even know to ask about.",
-    name:    'Maya Chen',
-    role:    'CTO, Zenith Biotech',
-    credit:  '$312K recovered',
-    initial: 'M',
-    color:   'bg-indigo-500',
-    logo:    { abbr: 'ZB', bg: 'bg-indigo-100', text: 'text-indigo-700', ring: 'ring-indigo-200' },
-  },
-  {
-    quote:   "The CPA handoff package cut our prep time from three weeks to an afternoon. First year using it and zero audit issues.",
-    name:    'Daniel Okafor',
-    role:    'VP Engineering, Pulse Commerce',
-    credit:  '$142K recovered',
-    initial: 'D',
-    color:   'bg-violet-500',
-    logo:    { abbr: 'PC', bg: 'bg-violet-100', text: 'text-violet-700', ring: 'ring-violet-200' },
-  },
-  {
-    quote:   "I finally understand what SR&ED-qualifies in our stack. The narrative quality scores made our filing bulletproof.",
-    name:    'Sarah Tremblay',
-    role:    'Founder & CEO, Atlas Network',
-    credit:  '$67K recovered',
-    initial: 'S',
-    color:   'bg-blue-500',
-    logo:    { abbr: 'AN', bg: 'bg-blue-100', text: 'text-blue-700', ring: 'ring-blue-200' },
-  },
-]
-
 
 const FAQS = [
   {
@@ -591,7 +559,6 @@ export default function MarketingPage() {
   const [waitlistOpen, setWaitlistOpen] = useState(false)
   const [waitlistPlan, setWaitlistPlan] = useState('')
   const [waitlistSource, setWaitlistSource] = useState('marketing')
-  const [calendlyOpen, setCalendlyOpen]   = useState(false)
 
   // ── June 30 filing deadline urgency banner ──────────────────────────────────
   const DEADLINE = new Date('2026-06-30T23:59:59')
@@ -1501,14 +1468,9 @@ export default function MarketingPage() {
         defaultPlan={waitlistPlan}
         source={waitlistSource}
       />
-      <CalendlyEmbed
-        isOpen={calendlyOpen}
-        onClose={() => setCalendlyOpen(false)}
-      />
 
       {/* ── Floating chatbot ────────────────────────────────────────────── */}
       <TaxLiftChat
-        onOpenCalendly={() => setCalendlyOpen(true)}
         onLeadCapture={(email, estimateRange) => {
           // TODO: POST to /api/leads  { email, estimateRange, source: 'chat' }
           console.log('[TaxLift chat lead]', email, estimateRange)

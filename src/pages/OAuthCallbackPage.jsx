@@ -72,7 +72,8 @@ export default function OAuthCallbackPage() {
 
       if (!cancelled) setProvider(detectedProvider)
 
-      if (state && expectedState && state !== expectedState) {
+      // CSRF guard: reject if state is absent OR mismatched — don't silently skip
+      if (!state || !expectedState || state !== expectedState) {
         if (!cancelled) {
           setPhase('error')
           setMessage('Security check failed (state mismatch). Please try again.')
