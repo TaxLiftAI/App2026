@@ -4,12 +4,12 @@
  * Public entry point for the "first scan free" conversion flow.
  * No account required. Captures email → triggers GitHub OAuth → /scan/repos.
  */
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { usePageMeta } from '../../hooks/usePageMeta'
 import {
   Github, ShieldCheck, Zap, Clock, ArrowRight, Lock,
-  CheckCircle2, Sparkles, Code2, BarChart3,
+  CheckCircle2, Sparkles, Code2, BarChart3, Send,
 } from 'lucide-react'
 import {
   getGitHubAuthUrl,
@@ -30,6 +30,70 @@ const SOCIAL_PROOF_COMMITS = [
   { sha: 'e7a120f', msg: 'investigate intermittent OOM in inference pipeline', theme: 'Research' },
   { sha: '8b3d77a', msg: 'poc: zero-knowledge proof for user auth flow', theme: 'Security' },
 ]
+
+function VcsNotifyCard() {
+  const [notifyEmail, setNotifyEmail] = useState('')
+  const [notifyState, setNotifyState] = useState('idle') // idle | sending | done | error
+  const inputRef = useRef(null)
+
+  async function handleNotify(e) {
+    e.preventDefault()
+    const clean = notifyEmail.trim().toLowerCase()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) { inputRef.current?.focus(); return }
+    setNotifyState('sending')
+    try {
+      await leads.capture({ email: clean, source: 'vcs_notify', platform: 'gitlab_bitbucket' })
+      setNotifyState('done')
+    } catch {
+      setNotifyState('done') // still show success — don't penalise network errors
+    }
+  }
+
+  return (
+    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
+      <p className="text-xs text-slate-500 mb-2.5 font-medium">More integrations coming soon</p>
+      <div className="flex items-center justify-center gap-3 flex-wrap mb-4">
+        {[
+          { name: 'GitLab',       icon: '🦊' },
+          { name: 'Bitbucket',    icon: '🪣' },
+          { name: 'Azure DevOps', icon: '🔷' },
+        ].map(p => (
+          <div key={p.name} className="flex items-center gap-1.5 bg-white/8 border border-white/10 rounded-lg px-3 py-1.5">
+            <span className="text-sm">{p.icon}</span>
+            <span className="text-xs text-slate-400 font-medium">{p.name}</span>
+            <span className="text-[9px] bg-amber-500/20 text-amber-400 border border-amber-500/20 rounded-full px-1.5 py-0.5 font-semibold ml-1">
+              Soon
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {notifyState === 'done' ? (
+        <div className="flex items-center justify-center gap-1.5 text-emerald-400 text-xs font-medium">
+          <CheckCircle2 size={13} /> Got it — we'll email you when your platform is live.
+        </div>
+      ) : (
+        <form onSubmit={handleNotify} className="flex gap-2">
+          <input
+            ref={inputRef}
+            type="email"
+            value={notifyEmail}
+            onChange={e => setNotifyEmail(e.target.value)}
+            placeholder="your@email.com"
+            className="flex-1 min-w-0 bg-white/10 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-600 outline-none focus:ring-1 focus:ring-indigo-500/50"
+          />
+          <button
+            type="submit"
+            disabled={notifyState === 'sending'}
+            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+          >
+            <Send size={11} /> Notify me
+          </button>
+        </form>
+      )}
+    </div>
+  )
+}
 
 export default function ScanLandingPage() {
   usePageMeta({
@@ -215,30 +279,7 @@ export default function ScanLandingPage() {
 
       {/* GitLab / Bitbucket / Azure DevOps coming soon */}
       <div className="max-w-md mx-auto px-4 mt-2 mb-6">
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
-          <p className="text-xs text-slate-500 mb-2.5 font-medium">More integrations coming soon</p>
-          <div className="flex items-center justify-center gap-3 flex-wrap">
-            {[
-              { name: 'GitLab',      icon: '🦊' },
-              { name: 'Bitbucket',   icon: '🪣' },
-              { name: 'Azure DevOps',icon: '🔷' },
-            ].map(p => (
-              <div key={p.name} className="flex items-center gap-1.5 bg-white/8 border border-white/10 rounded-lg px-3 py-1.5">
-                <span className="text-sm">{p.icon}</span>
-                <span className="text-xs text-slate-400 font-medium">{p.name}</span>
-                <span className="text-[9px] bg-amber-500/20 text-amber-400 border border-amber-500/20 rounded-full px-1.5 py-0.5 font-semibold ml-1">
-                  Soon
-                </span>
-              </div>
-            ))}
-          </div>
-          <a
-            href="mailto:hello@taxlift.ai?subject=GitLab%20%2F%20Bitbucket%20integration%20waitlist"
-            className="inline-flex items-center gap-1.5 mt-3 text-[11px] text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
-          >
-            Notify me when my platform is supported →
-          </a>
-        </div>
+        <VcsNotifyCard />
       </div>
 
       {/* Social proof: example qualifying commits */}
