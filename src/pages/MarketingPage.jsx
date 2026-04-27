@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import WaitlistModal  from '../components/WaitlistModal'
 import CalendlyEmbed  from '../components/CalendlyEmbed'
+import TaxLiftChat    from '../components/TaxLiftChat'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Data
@@ -1503,6 +1504,15 @@ export default function MarketingPage() {
       <CalendlyEmbed
         isOpen={calendlyOpen}
         onClose={() => setCalendlyOpen(false)}
+      />
+
+      {/* ── Floating chatbot ────────────────────────────────────────────── */}
+      <TaxLiftChat
+        onOpenCalendly={() => setCalendlyOpen(true)}
+        onLeadCapture={(email, estimateRange) => {
+          // TODO: POST to /api/leads  { email, estimateRange, source: 'chat' }
+          console.log('[TaxLift chat lead]', email, estimateRange)
+        }}
       />
 
     </div>
