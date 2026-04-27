@@ -613,15 +613,12 @@ function TaxLiftChatInner({ onLeadCapture }) {
   function handleVcs() {
     pushUser('We use GitLab / Bitbucket')
     pushBotMessages([
-      "**GitLab and Bitbucket are both fully supported** — connect via OAuth in the same 2-minute flow.",
-      "Azure DevOps and Jira are also supported. If you use a different VCS or no VCS, TaxLift has a manual log upload path — you can export your commit history as a CSV and we'll process it.",
-      "Which one are you on?",
+      "GitLab, Bitbucket, and Azure DevOps OAuth connections are **coming soon** — GitHub is the only direct connect right now.",
+      "If you're on one of those platforms, you have two options: export your commit log as a CSV and use our manual upload path, or book a 20-min call and we'll walk you through it.",
     ], {
       onDone: () => setChips([
-        { label: 'GitLab',              onClick: () => { pushUser('GitLab');       goToScan() }, primary: true },
-        { label: 'Bitbucket',           onClick: () => { pushUser('Bitbucket');    goToScan() }, primary: true },
-        { label: 'Azure DevOps / Jira', onClick: () => { pushUser('Azure DevOps'); goToScan() }, primary: true },
-        { label: 'No VCS / manual',     onClick: handleNoVcs                                                   },
+        { label: '📄 Use the manual upload path', onClick: handleNoVcs,  primary: true },
+        { label: '📅 Book a call instead',        onClick: goToDemo                   },
       ]),
     })
   }
