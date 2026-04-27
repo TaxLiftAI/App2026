@@ -11,9 +11,19 @@
  * Place TaxLift_Sample_T661_Package.pdf in webapp/public/ as sample-t661.pdf
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, Component } from 'react'
 import { MessageCircle, X, Send, ArrowRight, Zap, TrendingUp, FileText } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+
+// ── Local error boundary — chatbot crash must NEVER take down the marketing page ──
+class ChatErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { crashed: false } }
+  static getDerivedStateFromError() { return { crashed: true } }
+  render() {
+    if (this.state.crashed) return null   // silent failure — chat just disappears
+    return this.props.children
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -214,7 +224,9 @@ function ProgressBar({ step, total }) {
   )
 }
 
-function ExitOverlay({ onStay, onCapture, estimate }) {
+// onStay  = keep chat open (hide overlay only)
+// onClose = dismiss chat entirely
+function ExitOverlay({ onStay, onClose, onCapture, estimate }) {
   const [email, setEmail] = useState('')
   const [err, setErr]     = useState('')
   const [sent, setSent]   = useState(false)
@@ -228,6 +240,7 @@ function ExitOverlay({ onStay, onCapture, estimate }) {
     setSent(true); onCapture(c)
   }
 
+  // After email captured: "Continue chatting" keeps chat open (overlay hidden)
   if (sent) return (
     <div className="absolute inset-0 z-10 bg-white/97 flex flex-col items-center justify-center px-6 text-center gap-3">
       <span className="text-3xl">🎉</span>
@@ -240,7 +253,9 @@ function ExitOverlay({ onStay, onCapture, estimate }) {
     <div className="absolute inset-0 z-10 bg-white/97 flex flex-col items-center justify-center px-5 text-center gap-3">
       <span className="text-3xl">⏳</span>
       <p className="text-gray-800 font-bold text-sm">
-        {estimate ? `Don't leave your **${estimate.range}** estimate behind.` : "Don't leave without your SR&ED estimate."}
+        {estimate
+          ? <RichText text={`Don't leave your **${estimate.range}** estimate behind.`} />
+          : "Don't leave without your SR&ED estimate."}
       </p>
       <p className="text-gray-500 text-xs">We'll email the full breakdown so you can review it later.</p>
       <form onSubmit={submit} className="w-full flex flex-col gap-2">
@@ -255,7 +270,8 @@ function ExitOverlay({ onStay, onCapture, estimate }) {
           Send me my estimate →
         </button>
       </form>
-      <button onClick={onStay} className="text-gray-400 text-xs hover:text-gray-600">No thanks, close</button>
+      {/* "No thanks, close" dismisses the whole chat — different from "Continue chatting" */}
+      <button onClick={onClose} className="text-gray-400 text-xs hover:text-gray-600">No thanks, close</button>
     </div>
   )
 }
@@ -264,7 +280,7 @@ function ExitOverlay({ onStay, onCapture, estimate }) {
 // Main component
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function TaxLiftChat({ onLeadCapture }) {
+function TaxLiftChatInner({ onLeadCapture }) {
   const navigate  = useNavigate()
   const bottomRef = useRef(null)
   const emailRef  = useRef(null)
@@ -626,6 +642,7 @@ export default function TaxLiftChat({ onLeadCapture }) {
   // ── Eligibility quiz ──────────────────────────────────────────────────────
   function handleEligibilityQuiz() {
     pushUser("Not sure I qualify")
+    setVisitorType('founder')  // fix: was never set in this branch
     setStep(3)
     pushBotMessages([
       "Quick check. Did your team write code to solve a technical problem where the answer wasn't obvious upfront?",
@@ -733,7 +750,9 @@ export default function TaxLiftChat({ onLeadCapture }) {
   }
 
   function goToDemo() {
-    const url = import.meta.env.VITE_CALENDLY_URL ?? 'https://calendly.com/taxlift/free-review'
+    // VITE_CALENDLY_URL must point to your real Calendly link (e.g. https://calendly.com/taxlift/20min)
+    // Fallback is the root Calendly page which always resolves
+    const url = import.meta.env.VITE_CALENDLY_URL ?? 'https://calendly.com/taxlift'
     window.open(url, '_blank', 'noopener,noreferrer')
     setOpen(false)
   }
@@ -776,7 +795,12 @@ export default function TaxLiftChat({ onLeadCapture }) {
         style={{ maxHeight: 'min(640px, calc(100vh - 5rem))', height: 'min(640px, calc(100vh - 5rem))' }}>
 
         {/* Exit overlay */}
-        {showExit && <ExitOverlay estimate={estimate} onStay={() => { setShowExit(false); setOpen(false) }} onCapture={email => { setEmailSent(true); onLeadCapture?.(email, estimate?.range) }} />}
+        {showExit && <ExitOverlay
+          estimate={estimate}
+          onStay={()  => setShowExit(false)}                              // keep chat open
+          onClose={() => { setShowExit(false); setOpen(false) }}          // dismiss chat
+          onCapture={email => { setEmailSent(true); onLeadCapture?.(email, estimate?.range) }}
+        />}
 
         {/* Header */}
         <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-3 flex items-center gap-3 flex-shrink-0">
@@ -869,5 +893,13 @@ export default function TaxLiftChat({ onLeadCapture }) {
         </div>
       </div>
     </>
+  )
+}
+
+export default function TaxLiftChat(props) {
+  return (
+    <ChatErrorBoundary>
+      <TaxLiftChatInner {...props} />
+    </ChatErrorBoundary>
   )
 }
