@@ -22,7 +22,7 @@ import { useNavigate } from 'react-router-dom'
 const DEADLINE  = new Date('2026-06-30T23:59:59')
 const DAYS_LEFT = Math.max(0, Math.ceil((DEADLINE - new Date()) / 86_400_000))
 const SESSION_KEY = 'tl_chat_v4'
-const SAMPLE_T661_URL = '/sample-t661.pdf'
+const SAMPLE_T661_URL = '/TaxLift_Sample_T661_Package.pdf'
 
 const SOCIAL_PROOF = [
   '372 Canadian founders found unclaimed credits last month',
