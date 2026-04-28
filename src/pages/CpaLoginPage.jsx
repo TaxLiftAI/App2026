@@ -16,6 +16,7 @@ import {
   ShieldCheck, Users, DollarSign, CheckCircle2, FileText,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import TaxLiftLogo from '../components/TaxLiftLogo'
 
 // ── What CPAs see on the left panel ───────────────────────────────────────────
 const PARTNER_PERKS = [
@@ -69,13 +70,8 @@ export default function CpaLoginPage() {
       {/* ── Left panel — value prop ── */}
       <div className="hidden lg:flex flex-col justify-center px-16 w-[44%] text-white">
         <div className="flex items-center gap-3 mb-10">
-          <div className="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center">
-            <Building2 size={20} className="text-white" />
-          </div>
-          <div>
-            <p className="font-bold text-base leading-none">TaxLift</p>
-            <p className="text-slate-400 text-xs mt-0.5">Partner Portal</p>
-          </div>
+          <TaxLiftLogo variant="dark" size="sm" />
+          <span className="text-slate-400 text-xs">Partner Portal</span>
         </div>
 
         <h2 className="text-3xl font-extrabold leading-tight mb-3">
@@ -113,14 +109,9 @@ export default function CpaLoginPage() {
 
           {/* Mobile logo */}
           <div className="lg:hidden text-center mb-8">
-            <div className="inline-flex items-center gap-2 text-white">
-              <div className="w-9 h-9 bg-indigo-500 rounded-xl flex items-center justify-center">
-                <Building2 size={18} className="text-white" />
-              </div>
-              <div className="text-left">
-                <p className="font-bold text-sm leading-none">TaxLift</p>
-                <p className="text-slate-400 text-[11px]">Partner Portal</p>
-              </div>
+            <div className="inline-flex items-center gap-2">
+              <TaxLiftLogo variant="dark" size="sm" />
+              <span className="text-slate-400 text-[11px]">Partner Portal</span>
             </div>
           </div>
 

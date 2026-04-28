@@ -12,6 +12,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { usePageMeta } from '../hooks/usePageMeta'
+import TaxLiftLogo from '../components/TaxLiftLogo'
 import {
   ShieldCheck, Building2, DollarSign, Users, CheckCircle2,
   ArrowRight, FileText, Lock, Star, ChevronDown, ChevronUp,
@@ -356,10 +357,7 @@ export default function PartnersPage() {
       <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <ShieldCheck size={14} className="text-white" />
-            </div>
-            <span className="font-bold text-gray-900 text-sm">TaxLift</span>
+            <TaxLiftLogo variant="light" size="sm" />
             <span className="text-gray-300 text-xs">for Accountants</span>
           </Link>
           <div className="flex items-center gap-3">
