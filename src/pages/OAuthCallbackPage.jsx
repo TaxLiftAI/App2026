@@ -48,8 +48,14 @@ export default function OAuthCallbackPage() {
       const error     = searchParams.get('error')
       const errorDesc = searchParams.get('error_description')
 
+      // ── Diagnostic logging (safe to ship — no tokens logged) ─────────────
+      console.log('[OAuthCallback] URL params:', { code: code ? `${code.slice(0,8)}…` : null, state, error, errorDesc })
+      console.log('[OAuthCallback] sessionStorage state:', sessionStorage.getItem(LS_KEYS.OAUTH_STATE))
+      console.log('[OAuthCallback] localStorage  state:', localStorage.getItem(LS_KEYS.OAUTH_STATE))
+
       // ── OAuth provider returned an error ──────────────────────────────────
       if (error) {
+        console.warn('[OAuthCallback] GitHub returned error:', error, errorDesc)
         if (!cancelled) {
           setPhase('error')
           setMessage(errorDesc ?? error ?? 'Authorization was denied or cancelled.')
@@ -58,6 +64,7 @@ export default function OAuthCallbackPage() {
       }
 
       if (!code) {
+        console.warn('[OAuthCallback] No code in URL')
         if (!cancelled) {
           setPhase('error')
           setMessage('No authorization code received. Please try again.')
@@ -73,6 +80,8 @@ export default function OAuthCallbackPage() {
                         || ''
       const [prov, expectedState] = storedRaw.split(':')
       const detectedProvider = prov || 'github'
+
+      console.log('[OAuthCallback] CSRF check — stored:', storedRaw, '| URL state:', state, '| match:', state === expectedState)
 
       if (!cancelled) setProvider(detectedProvider)
 
