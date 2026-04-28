@@ -1,42 +1,38 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link, useSearchParams } from 'react-router-dom'
-import { ShieldCheck, ChevronDown, Loader2, AlertCircle, FlaskConical } from 'lucide-react'
-import { useAuth, DEMO_PERSONAS } from '../context/AuthContext'
+import { Loader2, AlertCircle, FlaskConical, BarChart3, FileText, GitBranch } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 import Button from '../components/ui/Button'
 import TaxLiftLogo from '../components/TaxLiftLogo'
+
+const DEMO_USER_ID = 'u-001' // Admin — full access, best for demos
+
+const DEMO_HIGHLIGHTS = [
+  { icon: GitBranch, text: 'Live SR&ED cluster detection from real commit history' },
+  { icon: BarChart3, text: 'Credit estimate dashboard with province-level breakdown' },
+  { icon: FileText,  text: 'Auto-generated T661 narrative and CPA handoff package' },
+]
 
 export default function LoginPage() {
   const { currentUser, isDemoMode, loginWithCredentials, loginDemo, authError } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
-  // After loginDemo commits state, navigate to dashboard.
-  // useEffect fires post-commit, guaranteeing currentUser is set
-  // by the time ProtectedRoute renders (avoids the race condition
-  // where navigate() fires before React commits setCurrentUser).
   useEffect(() => {
     if (currentUser && isDemoMode) {
       navigate('/dashboard', { replace: true })
     }
   }, [currentUser, isDemoMode]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Mode: 'real' | 'demo'
-  // ?mode=demo in the URL (linked from the homepage demo CTA) auto-selects demo tab
-  const [mode, setMode]           = useState(() => searchParams.get('mode') === 'demo' ? 'demo' : 'real')
-  const [email, setEmail]         = useState('')
-  const [password, setPassword]   = useState('')
-  const [loading, setLoading]     = useState(false)
+  const [mode, setMode]             = useState(() => searchParams.get('mode') === 'demo' ? 'demo' : 'real')
+  const [email, setEmail]           = useState('')
+  const [password, setPassword]     = useState('')
+  const [loading, setLoading]       = useState(false)
   const [localError, setLocalError] = useState(null)
-
-  // Demo persona picker
-  const [demoUserId, setDemoUserId] = useState(DEMO_PERSONAS[0].userId)
 
   async function handleRealLogin(e) {
     e.preventDefault()
-    if (!email || !password) {
-      setLocalError('Please enter your email and password.')
-      return
-    }
+    if (!email || !password) { setLocalError('Please enter your email and password.'); return }
     setLocalError(null)
     setLoading(true)
     const result = await loginWithCredentials(email, password)
@@ -45,11 +41,7 @@ export default function LoginPage() {
   }
 
   function handleDemoLogin() {
-    loginDemo(demoUserId)
-    // navigate is intentionally omitted — loginDemo sets currentUser, which causes
-    // the /login route element (currentUser ? <Navigate to="/dashboard"> : <LoginPage>)
-    // to redirect automatically on the next render, avoiding the race condition
-    // where navigate fires before the state update commits.
+    loginDemo(DEMO_USER_ID)
   }
 
   const displayError = localError || authError
@@ -165,37 +157,25 @@ export default function LoginPage() {
             </form>
           )}
 
-          {/* ── Demo login form ── */}
+          {/* ── Demo login ── */}
           {mode === 'demo' && (
             <div className="space-y-4">
-              <div>
-                <label htmlFor="login-demo-account" className="block text-xs font-medium text-gray-700 mb-1.5">
-                  Demo account
-                </label>
-                <div className="relative">
-                  <select
-                    id="login-demo-account"
-                    name="demoAccount"
-                    value={demoUserId}
-                    onChange={e => setDemoUserId(e.target.value)}
-                    className="w-full appearance-none bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent pr-8"
-                  >
-                    {DEMO_PERSONAS.map(p => (
-                      <option key={p.userId} value={p.userId}>{p.label}</option>
-                    ))}
-                  </select>
-                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                </div>
+              <div className="">
+                {DEMO_HIGHLIGHTS.map(({ icon: Icon, text }) => (
+                  <div key={text} className="flex items-start gap-2.5">
+                    <Icon size={13} className="text-indigo-500 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-gray-600 leading-relaxed">{text}</p>
+                  </div>
+                ))}
               </div>
-
               <Button className="w-full justify-center" onClick={handleDemoLogin}>
-                Enter demo
+                Enter live demo →
               </Button>
             </div>
           )}
 
           {/* Footer note */}
-          <div className="mt-5 pt-4 border-t border-gray-100 space-y-2">
+          <div className="mt-5 pt-4 border-t border-gray-100 ">
             {mode === 'real' && (
               <p className="text-xs text-gray-500 text-center">
                 Don\u2019t have an account?{' '}
@@ -206,8 +186,8 @@ export default function LoginPage() {
             )}
             <p className="text-[10px] text-gray-400 text-center leading-relaxed">
               {mode === 'demo'
-                ? 'Demo mode uses synthetic data. No data is sent to a server.'
-                : 'Default dev credentials: admin@taxlift.dev / Admin1234!'}
+                ? 'Live demo — synthetic data only. Nothing is saved or sent.'
+                : ''}
             </p>
           </div>
         </div>
