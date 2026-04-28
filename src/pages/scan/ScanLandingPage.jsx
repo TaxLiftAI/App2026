@@ -18,6 +18,7 @@ import {
 } from '../../lib/oauthConfig'
 import { leads } from '../../lib/api'
 import TaxLiftLogo from '../../components/TaxLiftLogo'
+import TaxLiftChat from '../../components/TaxLiftChat'
 
 const TRUST_BADGES = [
   { Icon: Lock,         text: 'We read commit metadata only — no source code stored' },
@@ -312,6 +313,13 @@ export default function ScanLandingPage() {
           ))}
         </div>
       </div>
+
+      <TaxLiftChat
+        onLeadCapture={(email, estimateRange) => {
+          leads.capture({ email, estimate_range: estimateRange, source: 'chat_scan' }).catch(() => {})
+        }}
+      />
+
     </div>
   )
 }

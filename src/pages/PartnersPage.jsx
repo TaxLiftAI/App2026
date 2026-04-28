@@ -12,7 +12,9 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { usePageMeta } from '../hooks/usePageMeta'
-import TaxLiftLogo from '../components/TaxLiftLogo'
+import TaxLiftLogo  from '../components/TaxLiftLogo'
+import TaxLiftChat  from '../components/TaxLiftChat'
+import { leads }    from '../lib/api'
 import {
   ShieldCheck, Building2, DollarSign, Users, CheckCircle2,
   ArrowRight, FileText, Lock, Star, ChevronDown, ChevronUp,
@@ -688,6 +690,12 @@ export default function PartnersPage() {
           The signing CPA is responsible for all filed claims. SR&ED credits are subject to CRA review.
         </p>
       </footer>
+
+      <TaxLiftChat
+        onLeadCapture={(email, estimateRange) => {
+          leads.capture({ email, estimate_range: estimateRange, source: 'chat_partners' }).catch(() => {})
+        }}
+      />
 
     </div>
   )
