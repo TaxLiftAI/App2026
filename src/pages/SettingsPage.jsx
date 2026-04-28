@@ -3,11 +3,10 @@ import {
   User, Mail, Shield, Bell, Key, Copy, Eye, EyeOff,
   CheckCircle2, Save, RefreshCw, Globe, Calendar, Keyboard,
   ChevronRight, Lock, AlertCircle, CreditCard, Building2,
-  Loader2, Zap, Crown,
+  Loader2,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { auth as authApi, billing as billingApi } from '../lib/api'
-import { redirectToCheckout, PLANS } from '../lib/stripe'
 import { ROLE_COLORS } from '../lib/utils'
 
 // ─── Section wrapper ──────────────────────────────────────────────────────────
@@ -130,13 +129,6 @@ const INDUSTRY_DOMAINS = [
 // ─── Mock API key ─────────────────────────────────────────────────────────────
 const MOCK_API_KEY = 'cred_live_sk_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6'
 
-const TIER_CONFIG = {
-  free:       { label: 'Free',       badge: 'bg-gray-100 text-gray-600',    icon: null },
-  starter:    { label: 'Starter',    badge: 'bg-blue-100 text-blue-700',    icon: Zap  },
-  plus:       { label: 'Plus',       badge: 'bg-indigo-100 text-indigo-700', icon: Crown },
-  pro:        { label: 'Pro',        badge: 'bg-purple-100 text-purple-700', icon: Crown },
-  enterprise: { label: 'Enterprise', badge: 'bg-amber-100 text-amber-700',  icon: Crown },
-}
 
 export default function SettingsPage() {
   const { currentUser, refreshUser } = useAuth()
@@ -265,12 +257,7 @@ export default function SettingsPage() {
 
   const maskedKey = MOCK_API_KEY.slice(0, 12) + '•'.repeat(24) + MOCK_API_KEY.slice(-4)
 
-  const currentTier  = subscription?.tier ?? currentUser?.subscription_tier ?? 'free'
-  const tierCfg      = TIER_CONFIG[currentTier] ?? TIER_CONFIG.free
-  const TierIcon     = tierCfg.icon
-  const isFreeTier   = currentTier === 'free'
-  const isStarterTier = currentTier === 'starter'
-  const isPlusTier   = ['plus', 'pro', 'enterprise'].includes(currentTier)
+  const isActive = !!(subscription?.tier) || !!(currentUser?.subscription_tier)
 
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-6">
@@ -349,14 +336,13 @@ export default function SettingsPage() {
       </Section>
 
       {/* ── Billing & Plan ── */}
-      <Section icon={CreditCard} title="Plan & Billing" subtitle="Your current subscription and upgrade options">
+      <Section icon={CreditCard} title="Plan & Billing" subtitle="Your TaxLift SR&ED subscription">
 
         {/* Current plan status */}
-        <FieldRow label="Current plan" hint="Your active TaxLift subscription">
+        <FieldRow label="Subscription" hint="Your active TaxLift SR&ED plan">
           <div className="flex items-center gap-2">
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${tierCfg.badge}`}>
-              {TierIcon && <TierIcon size={10} />}
-              {tierCfg.label}
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700">
+              SR&amp;ED Filing Package
             </span>
             {subscription?.subscribedAt && (
               <span className="text-xs text-gray-400">
@@ -366,72 +352,8 @@ export default function SettingsPage() {
           </div>
         </FieldRow>
 
-        {/* Upgrade CTA — only shown to non-Plus users */}
-        {!isPlusTier && (
-          <>
-            <div className="border-t border-gray-100" />
-            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-xl p-4 space-y-3">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Crown size={14} className="text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">Upgrade to Plus — $599/mo</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    Unlock the Grants module — AI-matched against 9 Canadian programs (IRAP, SDTC, Mitacs, RDA + provincial).
-                    Average client finds <strong>$700K+</strong> in additional funding.
-                  </p>
-                </div>
-              </div>
-
-              <ul className="grid grid-cols-2 gap-x-4 gap-y-1">
-                {PLANS.plus.features.slice(1, 5).map((f, i) => (
-                  <li key={i} className="flex items-center gap-1.5 text-xs text-indigo-700">
-                    <CheckCircle2 size={11} className="text-indigo-500 flex-shrink-0" />
-                    {f.replace('✦ ', '')}
-                  </li>
-                ))}
-              </ul>
-
-              {upgradeError && (
-                <p className="text-xs text-red-600 flex items-center gap-1.5">
-                  <AlertCircle size={11} /> {upgradeError}
-                </p>
-              )}
-
-              <div className="flex items-center gap-3 pt-1">
-                <button
-                  onClick={() => handleUpgrade('plus')}
-                  disabled={upgrading || !subscription?.stripeConfigured}
-                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-colors"
-                >
-                  {upgrading ? <Loader2 size={14} className="animate-spin" /> : <Crown size={14} />}
-                  {upgrading ? 'Redirecting…' : 'Upgrade to Plus'}
-                </button>
-
-                {isFreeTier && (
-                  <button
-                    onClick={() => handleUpgrade('starter')}
-                    disabled={upgrading || !subscription?.stripeConfigured}
-                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 hover:bg-gray-50 disabled:opacity-50 text-gray-700 text-sm font-medium rounded-xl transition-colors"
-                  >
-                    {upgrading ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
-                    Get SR&ED Filing Package — $999
-                  </button>
-                )}
-              </div>
-
-              {!subscription?.stripeConfigured && (
-                <p className="text-xs text-amber-600 flex items-center gap-1.5">
-                  <AlertCircle size={11} /> Stripe is not configured — set STRIPE_SECRET_KEY on the server to enable billing.
-                </p>
-              )}
-            </div>
-          </>
-        )}
-
-        {/* Already on Plus — manage subscription */}
-        {isPlusTier && (
+        {/* Manage subscription */}
+        {isActive && (
           <>
             <div className="border-t border-gray-100" />
             <FieldRow label="Manage subscription" hint="Update payment method, download invoices, or cancel">

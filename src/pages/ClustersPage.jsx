@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Filter, SortDesc, ChevronUp, ChevronDown, CheckSquare, Square, CheckCheck, X, ThumbsUp, ThumbsDown, Layers, GitMerge, AlertTriangle, FlaskConical, Zap, ArrowRight } from 'lucide-react'
+import { Filter, SortDesc, ChevronUp, ChevronDown, CheckSquare, Square, CheckCheck, X, ThumbsUp, ThumbsDown, Layers, GitMerge, AlertTriangle, FlaskConical, ArrowRight } from 'lucide-react'
 import { useClusters, useBulkClusters, useIntegrations } from '../hooks'
 import { formatCurrency, formatHours, formatDate, canDo } from '../lib/utils'
 import { StatusBadge } from '../components/ui/Badge'
@@ -11,40 +11,6 @@ import Button from '../components/ui/Button'
 import { useAuth } from '../context/AuthContext'
 import { QualificationBadges, qualifyCluster } from '../components/SREDQualificationPanel'
 import { EVIDENCE_SNAPSHOTS } from '../data/mockData'
-
-const PLAN_LIMITS = { free: 3, starter: 25, plus: Infinity, enterprise: Infinity }
-
-function QuotaBar({ total, tier }) {
-  const limit = PLAN_LIMITS[tier] ?? 3
-  if (limit === Infinity) return null
-  const pct  = Math.min(100, Math.round((total / limit) * 100))
-  const near = pct >= 80
-  const full = total >= limit
-  return (
-    <div className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs border ${
-      full ? 'bg-red-50 border-red-200 text-red-700' :
-      near ? 'bg-amber-50 border-amber-200 text-amber-700' :
-      'bg-gray-50 border-gray-200 text-gray-600'
-    }`}>
-      <div className="flex-1">
-        <div className="flex items-center justify-between mb-1">
-          <span className="font-medium">{total} / {limit} clusters used</span>
-          {full && <span className="font-semibold">Limit reached</span>}
-          {near && !full && <span>{limit - total} remaining</span>}
-        </div>
-        <div className="h-1.5 bg-white/60 rounded-full overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all ${full ? 'bg-red-500' : near ? 'bg-amber-500' : 'bg-indigo-500'}`}
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-      </div>
-      <a href="/pricing" className={`flex items-center gap-1 font-semibold whitespace-nowrap hover:underline ${full ? 'text-red-700' : 'text-indigo-600'}`}>
-        <Zap size={11} /> Upgrade
-      </a>
-    </div>
-  )
-}
 
 const STATUSES = ['All', 'New', 'Interviewed', 'Drafted', 'Approved', 'Rejected']
 
@@ -273,14 +239,6 @@ export default function ClustersPage() {
             Connect GitHub or Jira <ArrowRight size={14} />
           </button>
         </div>
-      )}
-
-      {/* Plan quota bar — visible to free/starter users approaching their limit */}
-      {!usingMock && currentUser && (
-        <QuotaBar
-          total={(apiClusters ?? []).filter(c => !['Archived','Rejected'].includes(c.status)).length}
-          tier={currentUser.subscription_tier ?? 'free'}
-        />
       )}
 
       {/* Bulk result toast */}

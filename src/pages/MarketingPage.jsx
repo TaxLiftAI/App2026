@@ -986,25 +986,7 @@ export default function MarketingPage() {
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════════
-          6. GRANTS TEASER
-      ══════════════════════════════════════════════════════════════════════ */}
-      <section id="grants" className="py-14 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div style={{ textAlign: 'center', padding: '28px 20px', background: '#fafbfc', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
-            <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#aaa', marginBottom: '8px' }}>Coming soon</div>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '10px' }}>SR&amp;ED is just the start</h2>
-            <p style={{ fontSize: '0.9rem', color: '#555', maxWidth: '420px', margin: '0 auto 18px' }}>
-              Your SR&amp;ED data will automatically unlock NRC-IRAP, SDTC, Mitacs, and 4+ provincial grants — up to $4.2M in additional funding. No double work.
-            </p>
-            <Link to="/scan" style={{ display: 'inline-block', background: '#1a1a1a', color: '#fff', fontSize: '0.875rem', fontWeight: 600, padding: '10px 22px', borderRadius: '8px', textDecoration: 'none' }}>
-              Get early access →
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════════════════════════
-          7. EARLY ADOPTER SECTION (replaces fake testimonials)
+          6. EARLY ADOPTER SECTION (replaces fake testimonials)
       ══════════════════════════════════════════════════════════════════════ */}
       <section className="py-20 bg-slate-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -1395,7 +1377,6 @@ export default function MarketingPage() {
                 {[
                   { label: 'How it works',  href: '#how-it-works' },
                   { label: 'Features',      href: '#features'     },
-                  { label: 'Grants module', href: '#grants'       },
                   { label: 'Pricing',       href: '#pricing'      },
                   { label: 'Free scan',     href: '/scan',        internal: true },
                   { label: 'Estimator',     href: '/estimate',    internal: true },

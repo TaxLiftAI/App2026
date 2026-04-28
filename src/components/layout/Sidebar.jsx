@@ -4,7 +4,7 @@ import {
   LayoutDashboard, GitMerge, FileText, BarChart3,
   Users, ScrollText, Plug, LogOut, ShieldCheck, DollarSign,
   UserCircle2, SlidersHorizontal, TrendingUp, Activity, ShieldAlert, Vault, HelpCircle, Settings, Keyboard, Building2,
-  Award, Trello, ChevronDown, ChevronUp, Target, CheckCircle2, Circle, ChevronRight,
+  Trello, ChevronDown, ChevronUp, Target, CheckCircle2, Circle, ChevronRight,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { canDo } from '../../lib/utils'
@@ -22,7 +22,6 @@ const CORE_NAV = [
 
 // ── More nav — secondary / advanced features, collapsed by default ────────────
 const MORE_NAV = [
-  { to: '/grants',        label: 'Grants',          icon: Award,             action: null,                badge: 'Plus' },
   { to: '/vault',         label: 'Document Vault',  icon: Vault,             action: 'viewVault'          },
   { to: '/audit-readiness', label: 'Audit Readiness', icon: ShieldAlert,     action: 'viewAuditReadiness' },
   { to: '/analytics',     label: 'Analytics',       icon: TrendingUp,        action: 'viewAnalytics'      },

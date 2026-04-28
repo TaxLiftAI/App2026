@@ -14,12 +14,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  CheckCircle2, ArrowRight, TrendingUp, Award, Zap,
-  Building2, MapPin, Users, ChevronRight, Sparkles, Crown,
-  Clock, GitBranch, FileText, AlertCircle,
+  CheckCircle2, ArrowRight, TrendingUp,
+  Building2, MapPin, Users, ChevronRight, Sparkles,
+  Clock, GitBranch, FileText,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { auth as authApi, grants as grantsApi } from '../lib/api'
+import { auth as authApi } from '../lib/api'
 import { useIntegrations } from '../hooks'
 
 const PROVINCIAL_RATES = {
@@ -237,29 +237,18 @@ export default function WelcomePage() {
   const { currentUser } = useAuth()
 
   const [profile,       setProfile]       = useState(null)
-  const [grants,        setGrants]        = useState(null)
   const [loading,       setLoading]       = useState(true)
   const [showBreakdown, setShowBreakdown] = useState(false)
 
-  const isPlusUser = ['plus', 'pro', 'enterprise'].includes(
-    currentUser?.subscription_tier?.toLowerCase()
-  ) || ['admin', 'cpa'].includes(currentUser?.role?.toLowerCase())
-
   useEffect(() => {
-    Promise.all([
-      authApi.getProfile().catch(() => ({})),
-      grantsApi.eligibility().catch(() => null),
-    ]).then(([prof, elig]) => {
+    authApi.getProfile().catch(() => ({})).then(prof => {
       setProfile(prof)
-      setGrants(elig)
       setLoading(false)
     })
   }, [])
 
-  const estimate           = profile ? computeEstimate(profile) : null
-  const grantPotential     = grants?.total_potential_funding ?? 700_000
-  const recommendedGrants  = (grants?.grants ?? []).filter(g => g.recommended).length || 3
-  const firstName          = (currentUser?.name ?? currentUser?.display_name ?? 'there').split(' ')[0]
+  const estimate  = profile ? computeEstimate(profile) : null
+  const firstName = (currentUser?.name ?? currentUser?.display_name ?? 'there').split(' ')[0]
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-950 via-indigo-900 to-slate-900 flex flex-col items-center justify-start px-4 py-16 pb-24">
@@ -351,24 +340,6 @@ export default function WelcomePage() {
       <div className="w-full max-w-lg mb-5">
         {!loading && <OnboardingChecklist profile={profile} />}
       </div>
-
-      {/* Grants upsell — only for non-Plus users */}
-      {!isPlusUser && (
-        <div className="w-full max-w-lg mb-5">
-          <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-5">
-            <div className="flex items-start gap-3 mb-3">
-              <div className="w-8 h-8 bg-amber-400 rounded-lg flex items-center justify-center flex-shrink-0"><Award size={15} className="text-white" /></div>
-              <div>
-                <p className="text-sm font-bold text-gray-900">Plus: {formatCAD(grantPotential)}+ in additional Canadian grants</p>
-                <p className="text-xs text-gray-500 mt-0.5">{recommendedGrants} programs pre-matched to your profile — IRAP, SDTC, Mitacs and more.</p>
-              </div>
-            </div>
-            <button onClick={() => navigate('/settings')} className="flex items-center gap-2 text-xs font-semibold text-amber-700 hover:text-amber-900">
-              <Crown size={12} /> Upgrade to unlock grants <ArrowRight size={12} />
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Primary CTA */}
       <div className="w-full max-w-lg space-y-3">

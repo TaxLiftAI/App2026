@@ -21,11 +21,7 @@ import {
 import { useAuth } from '../context/AuthContext'
 import { integrations as intApi, clusters as clusterApi } from '../lib/api'
 
-const PLAN_LABELS = {
-  starter:    'SR&ED Filing Package',
-  plus:       'CPA Partner Seat',
-  enterprise: 'Enterprise',
-}
+const PLAN_LABEL = 'SR&ED Filing Package'
 
 // ── Activation step row ───────────────────────────────────────────────────────
 function StepRow({ number, icon: Icon, title, description, done, loading, cta, ctaTo, ctaOnClick, primary }) {
@@ -89,8 +85,7 @@ function StepRow({ number, icon: Icon, title, description, done, loading, cta, c
 export default function CheckoutSuccessPage() {
   const [params]       = useSearchParams()
   const { currentUser } = useAuth()
-  const plan      = params.get('plan') ?? 'starter'
-  const planLabel = PLAN_LABELS[plan] ?? 'your plan'
+  const planLabel = PLAN_LABEL
 
   // ── Dynamic step state ────────────────────────────────────────────────────
   const [checking,        setChecking]        = useState(true)
@@ -139,14 +134,14 @@ export default function CheckoutSuccessPage() {
       cta:         'Invite CPA',
       ctaTo:       '/settings',
     },
-    ...(plan === 'plus' ? [{
+    {
       icon:        FileText,
       title:       'Download your CPA handoff package',
       description: 'Your T661 narrative, SR&ED cluster summary, and CPA briefing — ready to send to your accountant.',
       done:        false,
       cta:         'Go to dashboard →',
       ctaTo:       '/dashboard',
-    }] : []),
+    },
   ]
 
   // First incomplete step is primary
