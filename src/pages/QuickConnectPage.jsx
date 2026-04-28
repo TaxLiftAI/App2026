@@ -470,14 +470,18 @@ export default function QuickConnectPage() {
   // ── OAuth initiation ──────────────────────────────────────────────────────────
   function initiateGitHubOAuth() {
     const state = generateState()
-    localStorage.setItem(LS_KEYS.OAUTH_STATE, `github:${state}`)
+    const oauthStateValue = `github:${state}`
+    localStorage.setItem(LS_KEYS.OAUTH_STATE, oauthStateValue)
+    sessionStorage.setItem(LS_KEYS.OAUTH_STATE, oauthStateValue) // fallback for Safari ITP
     window.location.href = getGitHubAuthUrl(state)
   }
 
   async function initiateJiraOAuth() {
     const state                   = generateState()
     const { verifier, challenge } = await generatePKCE()
-    localStorage.setItem(LS_KEYS.OAUTH_STATE,   `jira:${state}`)
+    const oauthStateValue = `jira:${state}`
+    localStorage.setItem(LS_KEYS.OAUTH_STATE,   oauthStateValue)
+    sessionStorage.setItem(LS_KEYS.OAUTH_STATE, oauthStateValue) // fallback for Safari ITP
     localStorage.setItem(LS_KEYS.PKCE_VERIFIER, verifier)
     window.location.href = getJiraAuthUrl(state, challenge)
   }

@@ -139,7 +139,9 @@ export default function ScanLandingPage() {
 
     // Build GitHub OAuth URL and redirect
     const state = generateState()
-    localStorage.setItem(LS_KEYS.OAUTH_STATE, `github:${state}`)
+    const oauthStateValue = `github:${state}`
+    localStorage.setItem(LS_KEYS.OAUTH_STATE, oauthStateValue)
+    sessionStorage.setItem(LS_KEYS.OAUTH_STATE, oauthStateValue) // fallback for Safari ITP
     window.location.href = getGitHubAuthUrl(state)
   }
 

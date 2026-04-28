@@ -66,7 +66,11 @@ export default function OAuthCallbackPage() {
       }
 
       // ── Detect provider and validate state (CSRF guard) ───────────────────
-      const storedRaw    = localStorage.getItem(LS_KEYS.OAUTH_STATE) ?? ''
+      // Read from sessionStorage first (survives cross-origin redirects in Safari/ITP),
+      // then fall back to localStorage for other browsers.
+      const storedRaw    = sessionStorage.getItem(LS_KEYS.OAUTH_STATE)
+                        || localStorage.getItem(LS_KEYS.OAUTH_STATE)
+                        || ''
       const [prov, expectedState] = storedRaw.split(':')
       const detectedProvider = prov || 'github'
 
@@ -100,6 +104,7 @@ export default function OAuthCallbackPage() {
             setMessage('GitHub authorized — proceeding in demo scan mode.')
           }
           localStorage.removeItem(LS_KEYS.OAUTH_STATE)
+          sessionStorage.removeItem(LS_KEYS.OAUTH_STATE)
           setPhase('success')
 
           // If this auth was triggered from the free scan flow, go to repo selector.
@@ -136,6 +141,7 @@ export default function OAuthCallbackPage() {
             setMessage('Jira authorized — proceeding in demo scan mode.')
           }
           localStorage.removeItem(LS_KEYS.OAUTH_STATE)
+          sessionStorage.removeItem(LS_KEYS.OAUTH_STATE)
           localStorage.removeItem(LS_KEYS.PKCE_VERIFIER)
           setPhase('success')
           setTimeout(() => navigate('/quick-connect?provider=jira&connected=1'), 1200)
