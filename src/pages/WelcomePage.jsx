@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { auth as authApi, grants as grantsApi } from '../lib/api'
+import { useIntegrations } from '../hooks'
 
 const PROVINCIAL_RATES = {
   ON: { rate: 0.08,  label: 'Ontario',             program: 'OITC'        },
@@ -148,11 +149,15 @@ const ONBOARDING_STEPS = [
 ]
 
 function OnboardingChecklist({ profile }) {
-  const navigate  = useNavigate()
+  const navigate                    = useNavigate()
+  const { data: integrations = [] } = useIntegrations()
+  const hasIntegration              = integrations.some(i => i.status === 'healthy')
 
   const steps = ONBOARDING_STEPS.map(s => ({
     ...s,
-    done: s.alwaysDone || (s.doneWhen ? s.doneWhen(profile) : false),
+    done: s.alwaysDone
+      || (s.id === 'integration' ? hasIntegration : false)
+      || (s.doneWhen ? s.doneWhen(profile) : false),
   }))
 
   const doneCount    = steps.filter(s => s.done).length

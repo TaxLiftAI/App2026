@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  Check, ChevronRight, ChevronLeft, ShieldCheck, Lock,
-  Clock, Zap, GitBranch, ArrowRight, Loader2,
-  Database, Webhook, Settings2, CheckCircle2,
+  Check, ChevronRight, ChevronLeft, Lock,
+  GitBranch, ArrowRight, Loader2,
+  Webhook, Settings2, CheckCircle2, SlidersHorizontal,
 } from 'lucide-react'
 import Button from '../components/ui/Button'
+import TaxLiftLogo from '../components/TaxLiftLogo'
 
 // ── Provider catalogue ────────────────────────────────────────────────────────
 const PROVIDERS = {
@@ -56,46 +57,10 @@ const PROVIDERS = {
   },
 }
 
-const BACKFILL_OPTIONS = [
-  { value: '3m',  label: '3 months',    note: 'Light scan — fastest setup' },
-  { value: '6m',  label: '6 months',    note: 'Recommended for first run', recommended: true },
-  { value: '1y',  label: '1 year',      note: 'Good for SR&ED retroactive claims' },
-  { value: '2y',  label: '2 years',     note: 'Maximum CRA lookback window' },
-]
-
-const SENSITIVITY_OPTIONS = [
-  {
-    value: 'conservative',
-    label: 'Conservative',
-    threshold: 0.80,
-    desc: 'Only high-confidence signals. Fewer clusters, each very likely qualifying. Best for teams with limited review capacity.',
-    est_clusters: '4–7',
-    color: 'text-green-700',
-    ring: 'ring-green-400',
-  },
-  {
-    value: 'balanced',
-    label: 'Balanced',
-    threshold: 0.70,
-    desc: 'Mixed confidence signals. Moderate cluster volume with good precision. Recommended for most teams.',
-    est_clusters: '8–14',
-    color: 'text-indigo-700',
-    ring: 'ring-indigo-400',
-    recommended: true,
-  },
-  {
-    value: 'aggressive',
-    label: 'Aggressive',
-    threshold: 0.60,
-    desc: 'All potential signals included. Higher volume, requires more reviewer time to filter. Good for maximising credit discovery.',
-    est_clusters: '15–25',
-    color: 'text-amber-700',
-    ring: 'ring-amber-400',
-  },
-]
-
 // ── Step indicator ────────────────────────────────────────────────────────────
-const STEPS = ['Provider', 'Authorize', 'Backfill', 'Sensitivity', 'Complete']
+// Backfill (6m) and Sensitivity (balanced) are auto-applied — no need to
+// interrupt non-technical users with technical configuration steps.
+const STEPS = ['Connect', 'Authorize', 'All set!']
 
 function StepIndicator({ current }) {
   return (
@@ -279,161 +244,11 @@ function StepAuthorize({ provider, onNext, onBack }) {
   )
 }
 
-// ── Step 3: Backfill ──────────────────────────────────────────────────────────
-function StepBackfill({ provider, backfill, onBackfill, onNext, onBack }) {
+// ── Step 3: All Set ───────────────────────────────────────────────────────────
+// Backfill and sensitivity are auto-applied with recommended defaults.
+// No need to ask non-technical users to configure thresholds.
+function StepComplete({ provider, onDone }) {
   const p = PROVIDERS[provider]
-  const selected = BACKFILL_OPTIONS.find(o => o.value === backfill)
-  const estObjects = p?.estimated_objects[backfill] ?? '—'
-
-  return (
-    <div className="space-y-5">
-      <div>
-        <h2 className="text-xl font-bold text-gray-900">Configure backfill window</h2>
-        <p className="text-sm text-gray-500 mt-1">
-          How far back should TaxLift scan your existing {p?.name} data?
-          CRA SR&ED allows claims up to 18 months retroactively; IRS Form 6765 up to 3 years.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2">
-        {BACKFILL_OPTIONS.map(opt => (
-          <button
-            key={opt.value}
-            onClick={() => onBackfill(opt.value)}
-            className={`text-left border-2 rounded-xl p-3.5 transition-all ${
-              backfill === opt.value
-                ? 'border-indigo-500 bg-indigo-50'
-                : 'border-gray-200 bg-white hover:border-gray-300'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-1">
-              <span className="font-semibold text-gray-900 text-sm">{opt.label}</span>
-              <div className="flex items-center gap-1">
-                {opt.recommended && (
-                  <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-medium">Recommended</span>
-                )}
-                {backfill === opt.value && <Check size={13} className="text-indigo-600" />}
-              </div>
-            </div>
-            <p className="text-xs text-gray-500">{opt.note}</p>
-          </button>
-        ))}
-      </div>
-
-      {/* Estimate panel */}
-      <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 flex items-center gap-4">
-        <Database size={16} className="text-gray-400 flex-shrink-0" />
-        <div className="flex-1">
-          <p className="text-xs font-medium text-gray-700">Estimated objects to process</p>
-          <p className="text-lg font-bold text-indigo-700 mt-0.5">{estObjects}</p>
-        </div>
-        <div className="text-right">
-          <p className="text-xs text-gray-500">Est. processing time</p>
-          <p className="text-sm font-semibold text-gray-700">
-            {backfill === '3m' ? '~8 min' : backfill === '6m' ? '~15 min' : backfill === '1y' ? '~30 min' : '~50 min'}
-          </p>
-        </div>
-      </div>
-
-      <div className="flex items-start gap-2 px-3 py-2.5 bg-blue-50 border border-blue-100 rounded-lg">
-        <Clock size={13} className="text-blue-600 flex-shrink-0 mt-0.5" />
-        <p className="text-xs text-blue-800">
-          Backfill runs as a background job. The app remains fully usable while it processes.
-          You'll receive a dashboard notification when the first clusters are detected.
-        </p>
-      </div>
-
-      <div className="flex justify-between pt-2">
-        <Button variant="secondary" onClick={onBack}><ChevronLeft size={14} /> Back</Button>
-        <Button variant="primary" onClick={onNext}>
-          Continue <ChevronRight size={14} />
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-// ── Step 4: Sensitivity ───────────────────────────────────────────────────────
-function StepSensitivity({ sensitivity, onSensitivity, onNext, onBack }) {
-  return (
-    <div className="space-y-5">
-      <div>
-        <h2 className="text-xl font-bold text-gray-900">Detection sensitivity</h2>
-        <p className="text-sm text-gray-500 mt-1">
-          Controls the minimum heuristic score needed to create a cluster. This can be adjusted later
-          in the Heuristics configuration page.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3">
-        {SENSITIVITY_OPTIONS.map(opt => (
-          <button
-            key={opt.value}
-            onClick={() => onSensitivity(opt.value)}
-            className={`w-full text-left border-2 rounded-xl p-4 transition-all ${
-              sensitivity === opt.value
-                ? `border-indigo-500 bg-indigo-50`
-                : 'border-gray-200 bg-white hover:border-gray-300'
-            }`}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-semibold text-gray-900">{opt.label}</span>
-                  {opt.recommended && (
-                    <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-medium">Recommended</span>
-                  )}
-                </div>
-                <p className="text-xs text-gray-500">{opt.desc}</p>
-              </div>
-              <div className="text-right flex-shrink-0">
-                <p className="text-[10px] text-gray-500">Est. clusters</p>
-                <p className={`text-base font-bold ${opt.color}`}>{opt.est_clusters}</p>
-                <p className="text-[10px] text-gray-400 font-mono">threshold ≥ {opt.threshold.toFixed(2)}</p>
-              </div>
-            </div>
-            {sensitivity === opt.value && (
-              <div className="mt-3 pt-3 border-t border-indigo-200">
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-indigo-500 rounded-full"
-                      style={{ width: `${(1 - opt.threshold) * 100 * 2}%` }}
-                    />
-                  </div>
-                  <span className="text-xs text-gray-500 font-mono w-24 text-right">
-                    {opt.threshold.toFixed(2)} threshold
-                  </span>
-                </div>
-              </div>
-            )}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex justify-between pt-2">
-        <Button variant="secondary" onClick={onBack}><ChevronLeft size={14} /> Back</Button>
-        <Button variant="primary" onClick={onNext}>
-          Continue <ChevronRight size={14} />
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-// ── Step 5: Complete ──────────────────────────────────────────────────────────
-function StepComplete({ provider, backfill, sensitivity, onDone }) {
-  const p = PROVIDERS[provider]
-  const bf = BACKFILL_OPTIONS.find(o => o.value === backfill)
-  const sens = SENSITIVITY_OPTIONS.find(o => o.value === sensitivity)
-  const estObjects = p?.estimated_objects[backfill] ?? '—'
-
-  const summaryItems = [
-    { icon: ShieldCheck, label: 'OAuth token secured', val: `Vault-encrypted · 90-day rotation`, ok: true },
-    { icon: Webhook,     label: 'Webhook registered', val: p?.events.join(', '), ok: true },
-    { icon: Database,    label: 'Backfill job queued', val: `${bf?.label} · ${estObjects}`, ok: true },
-    { icon: Settings2,   label: 'Detection rules', val: `rule-v2.1 · ${sens?.label} (≥ ${sens?.threshold.toFixed(2)})`, ok: true },
-  ]
 
   return (
     <div className="space-y-5 text-center">
@@ -442,27 +257,38 @@ function StepComplete({ provider, backfill, sensitivity, onDone }) {
           <CheckCircle2 size={32} className="text-green-600" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-gray-900">{p?.name} is connected</h2>
+          <h2 className="text-xl font-bold text-gray-900">{p?.name} is connected!</h2>
           <p className="text-sm text-gray-500 mt-1">
-            TaxLift is now monitoring your {p?.name} activity.
-            First detections are expected within <strong>2–4 hours</strong>.
+            TaxLift is scanning your commit history in the background.
+            First SR&ED clusters typically appear within <strong>2–4 hours</strong>.
           </p>
         </div>
       </div>
 
+      {/* Compact auto-configured summary */}
       <div className="text-left border border-gray-200 rounded-xl overflow-hidden">
-        <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200">
-          <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Setup summary</p>
+        <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200 flex items-center justify-between">
+          <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Auto-configured for you</p>
+          <button
+            onClick={() => onDone('/heuristics')}
+            className="flex items-center gap-1 text-[11px] text-indigo-600 hover:text-indigo-800 font-medium"
+          >
+            <SlidersHorizontal size={11} /> Advanced settings
+          </button>
         </div>
         <div className="divide-y divide-gray-100">
-          {summaryItems.map(item => (
+          {[
+            { icon: Webhook,     label: 'Webhook + OAuth secured',  val: 'Vault-encrypted · 90-day rotation' },
+            { icon: GitBranch,   label: 'Backfill window',          val: '6 months of history — best for first claims' },
+            { icon: Settings2,   label: 'Detection sensitivity',    val: 'Balanced — 8–14 estimated clusters' },
+          ].map(item => (
             <div key={item.label} className="flex items-center gap-3 px-4 py-3">
               <div className="w-7 h-7 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
                 <item.icon size={13} className="text-green-600" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-gray-700">{item.label}</p>
-                <p className="text-[11px] text-gray-500 truncate">{item.val}</p>
+                <p className="text-[11px] text-gray-500">{item.val}</p>
               </div>
               <Check size={14} className="text-green-500 flex-shrink-0" />
             </div>
@@ -470,14 +296,14 @@ function StepComplete({ provider, backfill, sensitivity, onDone }) {
         </div>
       </div>
 
-      {/* Next steps */}
+      {/* What happens next */}
       <div className="text-left bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 space-y-2">
         <p className="text-xs font-semibold text-indigo-800">What happens next</p>
         {[
-          'Bloodhound agent begins scanning your backfill window in the background',
-          "Clusters will appear in the Activity Clusters page as they're detected",
-          'The Interviewer agent will reach out to developers via Slack for context',
-          'Narratives and credit calculations will be ready for Reviewer sign-off',
+          'We scan 6 months of your commit history for CRA-eligible R&D signals',
+          'SR&ED activity clusters appear on your dashboard as they\'re detected',
+          'AI drafts T661 narratives — you review and approve each one',
+          'Download your CPA handoff package when you\'re ready to file',
         ].map((step, i) => (
           <div key={i} className="flex items-start gap-2">
             <div className="w-4 h-4 rounded-full bg-indigo-200 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -489,11 +315,11 @@ function StepComplete({ provider, backfill, sensitivity, onDone }) {
       </div>
 
       <div className="flex flex-col gap-2 pt-2">
-        <Button variant="primary" onClick={() => onDone('/welcome')}>
-          See your credit estimate <ArrowRight size={14} />
+        <Button variant="primary" onClick={() => onDone('/dashboard')}>
+          Go to your dashboard <ArrowRight size={14} />
         </Button>
-        <Button variant="secondary" onClick={() => onDone('/integrations')}>
-          Go to Integrations
+        <Button variant="secondary" onClick={() => onDone('/welcome')}>
+          See your credit estimate first
         </Button>
       </div>
     </div>
@@ -505,32 +331,27 @@ export default function OnboardingWizardPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
-  const [step, setStep] = useState(0)
-  const [provider,    setProvider]    = useState(searchParams.get('provider') ?? '')
-  const [backfill,    setBackfill]    = useState('6m')
-  const [sensitivity, setSensitivity] = useState('balanced')
+  const [step, setStep]         = useState(0)
+  const [provider, setProvider] = useState(searchParams.get('provider') ?? '')
 
-  // If a provider was pre-selected via query param, jump to step 1
+  // If a provider was pre-selected via query param, jump straight to Authorize
   useEffect(() => {
     const p = searchParams.get('provider')
     if (p && PROVIDERS[p]) {
       setProvider(p)
       setStep(1)
     }
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-start py-10 px-4">
       {/* Header */}
       <div className="mb-8 text-center">
-        <div className="flex items-center justify-center gap-2 mb-3">
-          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-            <ShieldCheck size={16} className="text-white" />
-          </div>
-          <span className="text-lg font-bold text-gray-900">TaxLift</span>
+        <div className="flex items-center justify-center mb-4">
+          <TaxLiftLogo variant="light" size="sm" />
         </div>
-        <h1 className="text-2xl font-bold text-gray-900">Connect an integration</h1>
-        <p className="text-sm text-gray-500 mt-1">Follow the steps to authorize data access and configure detection.</p>
+        <h1 className="text-2xl font-bold text-gray-900">Connect your first data source</h1>
+        <p className="text-sm text-gray-500 mt-1">Takes about 2 minutes. We handle the rest automatically.</p>
       </div>
 
       {/* Step indicator */}
@@ -555,29 +376,10 @@ export default function OnboardingWizardPage() {
           />
         )}
         {step === 2 && (
-          <StepBackfill
-            provider={provider}
-            backfill={backfill}
-            onBackfill={setBackfill}
-            onNext={() => setStep(3)}
-            onBack={() => setStep(1)}
-          />
-        )}
-        {step === 3 && (
-          <StepSensitivity
-            sensitivity={sensitivity}
-            onSensitivity={setSensitivity}
-            onNext={() => setStep(4)}
-            onBack={() => setStep(2)}
-          />
-        )}
-        {step === 4 && (
           <StepComplete
             provider={provider}
-            backfill={backfill}
-            sensitivity={sensitivity}
             onDone={path => {
-              const ALLOWED = ['/welcome', '/integrations', '/dashboard']
+              const ALLOWED = ['/welcome', '/integrations', '/dashboard', '/heuristics']
               navigate(ALLOWED.includes(path) ? path : '/dashboard')
             }}
           />

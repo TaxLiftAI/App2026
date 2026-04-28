@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Filter, SortDesc, ChevronUp, ChevronDown, CheckSquare, Square, CheckCheck, X, ThumbsUp, ThumbsDown, Layers, GitMerge, AlertTriangle, FlaskConical, Zap } from 'lucide-react'
-import { useClusters, useBulkClusters } from '../hooks'
+import { Filter, SortDesc, ChevronUp, ChevronDown, CheckSquare, Square, CheckCheck, X, ThumbsUp, ThumbsDown, Layers, GitMerge, AlertTriangle, FlaskConical, Zap, ArrowRight } from 'lucide-react'
+import { useClusters, useBulkClusters, useIntegrations } from '../hooks'
 import { formatCurrency, formatHours, formatDate, canDo } from '../lib/utils'
 import { StatusBadge } from '../components/ui/Badge'
 import RiskScore from '../components/ui/RiskScore'
@@ -66,7 +66,8 @@ export default function ClustersPage() {
 
   // ── API data ─────────────────────────────────────────────────────────────────
   const { data: apiClusters, loading, usingMock, refetch } = useClusters()
-  const { mutate: bulkMutate } = useBulkClusters(() => refetch())
+  const { data: integrations = [] }                        = useIntegrations()
+  const { mutate: bulkMutate }                             = useBulkClusters(() => refetch())
 
   // ── Bulk review state ───────────────────────────────────────────────────────
   const [bulkMode, setBulkMode] = useState(false)
@@ -214,6 +215,62 @@ export default function ClustersPage() {
             className="flex-shrink-0 bg-white text-indigo-700 font-semibold px-3 py-1 rounded-lg hover:bg-indigo-50 transition-colors whitespace-nowrap"
           >
             Connect now
+          </button>
+        </div>
+      )}
+
+      {/* Scanning-in-progress empty state — real user, connected, but no clusters yet */}
+      {!usingMock && !loading && (apiClusters ?? []).length === 0 && integrations.some(i => i.status === 'healthy') && (
+        <div className="border border-indigo-200 bg-indigo-50 rounded-2xl px-6 py-8 text-center">
+          <div className="w-12 h-12 rounded-full bg-indigo-100 border-4 border-indigo-200 flex items-center justify-center mx-auto mb-4">
+            <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+          <h3 className="text-base font-bold text-indigo-900 mb-1">Scanning your repository…</h3>
+          <p className="text-sm text-indigo-700 max-w-md mx-auto mb-5">
+            TaxLift is analysing your commit history for SR&ED signals. First clusters
+            typically appear within <strong>2–4 hours</strong> of connecting.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-lg mx-auto mb-5">
+            {[
+              { step: '1', label: 'Indexing commits',    done: true  },
+              { step: '2', label: 'Detecting R&D signals', done: false },
+              { step: '3', label: 'Forming clusters',    done: false },
+            ].map(({ step, label, done }) => (
+              <div key={step} className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium ${
+                done ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-white text-indigo-600 border border-indigo-200'
+              }`}>
+                {done
+                  ? <CheckCheck size={13} className="text-green-500 flex-shrink-0" />
+                  : <div className="w-3 h-3 border border-indigo-400 border-t-transparent rounded-full animate-spin flex-shrink-0" />}
+                {label}
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="text-xs text-indigo-600 hover:text-indigo-800 font-medium underline"
+          >
+            ← Back to dashboard
+          </button>
+        </div>
+      )}
+
+      {/* No integration connected yet — real user, zero clusters, no integration */}
+      {!usingMock && !loading && (apiClusters ?? []).length === 0 && !integrations.some(i => i.status === 'healthy') && (
+        <div className="border border-gray-200 bg-gray-50 rounded-2xl px-6 py-8 text-center">
+          <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center mx-auto mb-4">
+            <GitMerge size={22} className="text-indigo-500" />
+          </div>
+          <h3 className="text-base font-bold text-gray-900 mb-1">Connect a data source to see clusters</h3>
+          <p className="text-sm text-gray-500 max-w-md mx-auto mb-4">
+            TaxLift needs access to your GitHub commits or Jira tickets to detect SR&ED activity.
+            It takes about 2 minutes and we only read metadata — no source code is stored.
+          </p>
+          <button
+            onClick={() => navigate('/onboarding')}
+            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors"
+          >
+            Connect GitHub or Jira <ArrowRight size={14} />
           </button>
         </div>
       )}
