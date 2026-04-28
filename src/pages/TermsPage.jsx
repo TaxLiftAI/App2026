@@ -4,7 +4,8 @@
  */
 import { useNavigate } from 'react-router-dom'
 import { usePageMeta } from '../hooks/usePageMeta'
-import { Zap, ArrowLeft } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
+import TaxLiftLogo from '../components/TaxLiftLogo'
 
 const EFFECTIVE_DATE = 'April 1, 2026'
 const COMPANY        = 'TaxLift Inc.'
@@ -33,11 +34,8 @@ export default function TermsPage() {
       {/* Nav */}
       <nav className="bg-white border-b border-gray-200 sticky top-0 z-20">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3">
-          <button onClick={() => navigate('/')} className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-indigo-600 rounded-xl flex items-center justify-center">
-              <Zap size={14} className="text-white" />
-            </div>
-            <span className="font-bold text-gray-900 tracking-tight text-sm">TaxLift</span>
+          <button onClick={() => navigate('/')} className="flex items-center">
+            <TaxLiftLogo variant="light" size="sm" />
           </button>
           <span className="text-gray-300">/</span>
           <span className="text-sm text-gray-500">Terms of Service</span>
