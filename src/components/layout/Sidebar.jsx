@@ -1,14 +1,15 @@
 import { useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, GitMerge, FileText, BarChart3,
   Users, ScrollText, Plug, LogOut, ShieldCheck, DollarSign,
   UserCircle2, SlidersHorizontal, TrendingUp, Activity, ShieldAlert, Vault, HelpCircle, Settings, Keyboard, Building2,
-  Award, Trello, ChevronDown, ChevronUp, Target,
+  Award, Trello, ChevronDown, ChevronUp, Target, CheckCircle2, Circle, ChevronRight,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { canDo } from '../../lib/utils'
 import TaxLiftLogo from '../TaxLiftLogo'
+import { useClusters, useIntegrations } from '../../hooks'
 
 // ── Core nav — client / internal users ────────────────────────────────────────
 const CORE_NAV = [
@@ -45,6 +46,86 @@ const CPA_CORE_NAV = [
   { to: '/cpa-portal/referrals', label: 'Referrals & Fees', icon: DollarSign,     action: 'viewCPAPortal' },
   { to: '/settings',             label: 'Settings',         icon: Settings,        action: null            },
 ]
+
+const CLAIM_STEPS = [
+  { label: 'Connect source',     to: '/integrations',            key: 'hasIntegration' },
+  { label: 'Clusters detected',  to: '/clusters',                key: 'hasClusters'    },
+  { label: 'Narratives drafted', to: '/clusters',                key: 'hasNarrative'   },
+  { label: 'CPA package ready',  to: '/clusters?status=Drafted', key: 'hasApproved'    },
+]
+
+function ClaimProgressWidget() {
+  const navigate = useNavigate()
+  const { data: clusters     = [] } = useClusters()
+  const { data: integrations = [] } = useIntegrations()
+
+  const hasIntegration = integrations.some(i => i.status === 'healthy')
+  const hasClusters    = clusters.length > 0
+  const hasNarrative   = clusters.some(c => ['Drafted', 'Approved'].includes(c.status))
+  const hasApproved    = clusters.some(c => c.status === 'Approved')
+
+  const done      = [hasIntegration, hasClusters, hasNarrative, hasApproved]
+  const doneCount = done.filter(Boolean).length
+  const allDone   = doneCount === done.length
+  const nextIdx   = done.findIndex(d => !d)
+
+  return (
+    <div className="mx-3 mb-3 bg-slate-800 rounded-xl p-3">
+      <div className="flex items-center justify-between mb-2.5">
+        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Claim progress</span>
+        <span className={`text-[10px] font-bold ${allDone ? 'text-green-400' : 'text-indigo-400'}`}>
+          {doneCount}/4
+        </span>
+      </div>
+
+      {/* Progress bar */}
+      <div className="h-1 bg-slate-700 rounded-full mb-3 overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-500 ${allDone ? 'bg-green-500' : 'bg-indigo-500'}`}
+          style={{ width: `${(doneCount / 4) * 100}%` }}
+        />
+      </div>
+
+      <div className="space-y-1">
+        {CLAIM_STEPS.map((step, i) => {
+          const isDone = done[i]
+          const isNext = i === nextIdx
+          return (
+            <button
+              key={step.key}
+              onClick={() => navigate(step.to)}
+              className={`w-full flex items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors ${
+                isNext
+                  ? 'bg-indigo-600/20 hover:bg-indigo-600/30'
+                  : 'hover:bg-slate-700/50'
+              }`}
+            >
+              {isDone ? (
+                <CheckCircle2 size={13} className="text-green-400 flex-shrink-0" />
+              ) : (
+                <Circle size={13} className={`flex-shrink-0 ${isNext ? 'text-indigo-400' : 'text-slate-600'}`} />
+              )}
+              <span className={`flex-1 text-[11px] leading-tight ${
+                isDone ? 'text-slate-500 line-through' :
+                isNext ? 'text-white font-medium'      :
+                         'text-slate-500'
+              }`}>
+                {step.label}
+              </span>
+              {isNext && <ChevronRight size={11} className="text-indigo-400 flex-shrink-0" />}
+            </button>
+          )
+        })}
+      </div>
+
+      {allDone && (
+        <div className="mt-2 pt-2 border-t border-slate-700 text-center">
+          <span className="text-[10px] text-green-400 font-medium">🎉 Package ready to send!</span>
+        </div>
+      )}
+    </div>
+  )
+}
 
 function NavItem({ to, label, icon: Icon, badge }) {
   return (
@@ -127,6 +208,9 @@ export default function Sidebar() {
           </div>
         )}
       </nav>
+
+      {/* Claim progress stepper — client users only */}
+      {!isCPA && <ClaimProgressWidget />}
 
       {/* Shortcuts hint */}
       <div className="px-3 pb-2">
