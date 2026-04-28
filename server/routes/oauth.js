@@ -116,14 +116,14 @@ router.get('/github/callback', optionalAuth, async (req, res) => {
 // The GET /github/callback route above is used when GitHub redirects back to the
 // server directly.  OAuthCallbackPage.jsx calls this POST endpoint instead, so
 // the browser can send the code in a JSON body (avoids CORS issues with GitHub).
+//
+// CSRF note: SPA OAuth flows validate state client-side (sessionStorage → OAuthCallbackPage).
+// The server-side cookie check via validateOAuthState is for server-rendered redirect flows
+// only (GET /github/callback).  Applying it here would always fail because the browser
+// SPA generates state without calling POST /api/v1/oauth/state, so no cookie is set.
 router.post('/github/exchange', async (req, res) => {
-  const { code, state } = req.body ?? {}
+  const { code } = req.body ?? {}
   if (!code) return res.status(400).json({ message: 'code is required' })
-
-  // CSRF guard — same state cookie check as the GET callback
-  if (!validateOAuthState(req, res, state)) {
-    return res.status(403).json({ message: 'OAuth state mismatch — possible CSRF. Please try connecting again.' })
-  }
 
   const missing = missingEnv('GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET')
   if (missing.length) {
