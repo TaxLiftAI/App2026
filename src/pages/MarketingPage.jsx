@@ -613,17 +613,17 @@ export default function MarketingPage() {
       ══════════════════════════════════════════════════════════════════════ */}
       {showBanner && (
         <div className="fixed top-0 inset-x-0 z-[60] h-10 bg-amber-500 flex items-center justify-between px-4 sm:px-6 gap-3">
-          <div className="flex items-center gap-2 min-w-0">
+          <Link to="/scan" className="flex items-center gap-2 min-w-0 flex-1">
             <Clock size={13} className="text-amber-900 flex-shrink-0" />
             <p className="text-amber-950 text-xs sm:text-sm font-semibold truncate">
               <span className="font-extrabold">{daysLeft} days left</span>
               {' '}to file your FY 2024 SR&amp;ED claim — June 30 deadline
             </p>
-          </div>
+          </Link>
           <div className="flex items-center gap-3 flex-shrink-0">
             <Link
               to="/scan"
-              className="hidden sm:inline-flex items-center gap-1 text-xs font-bold text-amber-950 underline underline-offset-2 hover:no-underline"
+              className="inline-flex items-center gap-1 text-xs font-bold text-amber-950 underline underline-offset-2 hover:no-underline"
             >
               Start your claim <ArrowRight size={11} />
             </Link>
