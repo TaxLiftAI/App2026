@@ -649,7 +649,7 @@ export default function MarketingPage() {
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Logo */}
           <a href="#" onClick={e => handleAnchor(e, 'body')} className="flex items-center flex-shrink-0">
-            <TaxLiftLogo variant={scrolled ? 'light' : 'light'} size="sm" />
+            <TaxLiftLogo variant={scrolled ? 'light' : 'dark'} size="sm" />
           </a>
 
           {/* Desktop links */}
