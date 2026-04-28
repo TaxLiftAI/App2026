@@ -139,6 +139,65 @@ router.put('/:id', (req, res) => {
   res.json(shapeCluster(updated))
 })
 
+// -- PATCH /api/clusters/:id/approve -----------------------------------------
+router.patch('/:id/approve', (req, res) => {
+  const cluster = db.prepare(`
+    SELECT cl.*, c.user_id, cl.client_id FROM clusters cl
+    JOIN clients c ON cl.client_id = c.id
+    WHERE cl.id = ? AND c.user_id = ?
+  `).get(req.params.id, req.user.id)
+  if (!cluster) return res.status(404).json({ message: 'Cluster not found' })
+
+  db.prepare(`UPDATE clusters SET status = 'Approved', updated_at = datetime('now') WHERE id = ?`).run(req.params.id)
+  updateClientAggregates(cluster.client_id)
+  const updated = db.prepare(`SELECT cl.*, c.company_name, c.industry FROM clusters cl JOIN clients c ON cl.client_id = c.id WHERE cl.id = ?`).get(req.params.id)
+  res.json(shapeCluster(updated))
+})
+
+// -- PATCH /api/clusters/:id/reject ------------------------------------------
+router.patch('/:id/reject', (req, res) => {
+  const cluster = db.prepare(`
+    SELECT cl.*, c.user_id, cl.client_id FROM clusters cl
+    JOIN clients c ON cl.client_id = c.id
+    WHERE cl.id = ? AND c.user_id = ?
+  `).get(req.params.id, req.user.id)
+  if (!cluster) return res.status(404).json({ message: 'Cluster not found' })
+
+  const { reason } = req.body ?? {}
+  db.prepare(`UPDATE clusters SET status = 'Rejected', updated_at = datetime('now') WHERE id = ?`).run(req.params.id)
+  updateClientAggregates(cluster.client_id)
+  const updated = db.prepare(`SELECT cl.*, c.company_name, c.industry FROM clusters cl JOIN clients c ON cl.client_id = c.id WHERE cl.id = ?`).get(req.params.id)
+  res.json({ ...shapeCluster(updated), reject_reason: reason ?? null })
+})
+
+// -- POST /api/clusters/bulk -------------------------------------------------
+router.post('/bulk', (req, res) => {
+  const { ids, action, reason } = req.body ?? {}
+  if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ message: 'ids must be a non-empty array' })
+  if (!['approve', 'reject', 'merge'].includes(action)) return res.status(400).json({ message: 'action must be approve, reject, or merge' })
+
+  const statusMap = { approve: 'Approved', reject: 'Rejected', merge: 'Merged' }
+  const newStatus = statusMap[action]
+
+  const placeholders = ids.map(() => '?').join(',')
+  const clusters = db.prepare(`
+    SELECT cl.id, cl.client_id, c.user_id FROM clusters cl
+    JOIN clients c ON cl.client_id = c.id
+    WHERE cl.id IN (${placeholders}) AND c.user_id = ?
+  `).all(...ids, req.user.id)
+
+  if (clusters.length === 0) return res.status(404).json({ message: 'No matching clusters found' })
+
+  const validIds = clusters.map(c => c.id)
+  const validPlaceholders = validIds.map(() => '?').join(',')
+  db.prepare(`UPDATE clusters SET status = ?, updated_at = datetime('now') WHERE id IN (${validPlaceholders})`).run(newStatus, ...validIds)
+
+  const uniqueClientIds = [...new Set(clusters.map(c => c.client_id))]
+  uniqueClientIds.forEach(updateClientAggregates)
+
+  res.json({ updated: validIds.length, action, status: newStatus })
+})
+
 // -- DELETE /api/clusters/:id -------------------------------------------------
 router.delete('/:id', (req, res) => {
   const cluster = db.prepare(`
