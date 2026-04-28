@@ -17,6 +17,7 @@ import {
   LS_KEYS,
 } from '../../lib/oauthConfig'
 import { leads } from '../../lib/api'
+import TaxLiftLogo from '../../components/TaxLiftLogo'
 
 const TRUST_BADGES = [
   { Icon: Lock,         text: 'We read commit metadata only — no source code stored' },
@@ -136,14 +137,8 @@ export default function ScanLandingPage() {
 
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-4 max-w-5xl mx-auto">
-        <button
-          onClick={() => navigate('/')}
-          className="flex items-center gap-2.5"
-        >
-          <div className="w-8 h-8 bg-indigo-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
-            <ShieldCheck size={16} className="text-white" />
-          </div>
-          <span className="text-white font-bold tracking-tight">TaxLift</span>
+        <button onClick={() => navigate('/')} className="flex items-center">
+          <TaxLiftLogo variant="dark" size="sm" />
         </button>
         <div className="flex items-center gap-3">
           <button

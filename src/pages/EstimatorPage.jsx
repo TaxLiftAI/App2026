@@ -19,6 +19,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { usePageMeta } from '../hooks/usePageMeta'
+import TaxLiftLogo  from '../components/TaxLiftLogo'
 import {
   ShieldCheck, ChevronRight, Copy, Check, Building2, MapPin,
   Info, TrendingUp, ArrowRight, Sparkles, FlaskConical,
@@ -794,11 +795,8 @@ export default function EstimatorPage() {
 
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto">
-        <button onClick={() => navigate('/')} className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-indigo-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
-            <ShieldCheck size={16} className="text-white" />
-          </div>
-          <span className="text-white font-bold tracking-tight">TaxLift</span>
+        <button onClick={() => navigate('/')} className="flex items-center">
+          <TaxLiftLogo variant="dark" size="sm" />
         </button>
         <div className="flex items-center gap-3">
           <button onClick={copyLink} className="flex items-center gap-1.5 text-xs text-slate-300 hover:text-white border border-slate-600 hover:border-slate-400 px-3 py-1.5 rounded-lg transition-all">

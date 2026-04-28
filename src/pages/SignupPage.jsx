@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import { useAuth }                   from '../context/AuthContext'
 import { referrals as referralsApi } from '../lib/api'
+import TaxLiftLogo from '../components/TaxLiftLogo'
 
 const PLAN_LABELS = {
   starter:    'Starter',
@@ -168,10 +169,8 @@ export default function SignupPage() {
       <div className="w-full max-w-md">
 
         {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-indigo-500 rounded-2xl mb-4 shadow-lg shadow-indigo-500/30">
-            <ShieldCheck size={28} className="text-white" />
-          </div>
+        <div className="flex flex-col items-center mb-8">
+          <TaxLiftLogo variant="dark" size="lg" className="mb-3" />
           <h1 className="text-2xl font-bold text-white tracking-tight">
             {isCpaSignup ? 'Join as a CPA Partner' : fromCheckout ? 'Create your account' : 'Get started free'}
           </h1>

@@ -26,6 +26,7 @@ import {
 import WaitlistModal  from '../components/WaitlistModal'
 import { leads }      from '../lib/api'
 import TaxLiftChat    from '../components/TaxLiftChat'
+import TaxLiftLogo   from '../components/TaxLiftLogo'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Data
@@ -647,11 +648,8 @@ export default function MarketingPage() {
       }`}>
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Logo */}
-          <a href="#" onClick={e => handleAnchor(e, 'body')} className="flex items-center gap-2 flex-shrink-0">
-            <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <Zap size={14} className="text-white" />
-            </div>
-            <span className="font-bold text-gray-900 text-lg tracking-tight">TaxLift</span>
+          <a href="#" onClick={e => handleAnchor(e, 'body')} className="flex items-center flex-shrink-0">
+            <TaxLiftLogo variant={scrolled ? 'light' : 'light'} size="sm" />
           </a>
 
           {/* Desktop links */}

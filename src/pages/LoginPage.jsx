@@ -3,6 +3,7 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { ShieldCheck, ChevronDown, Loader2, AlertCircle, FlaskConical } from 'lucide-react'
 import { useAuth, DEMO_PERSONAS } from '../context/AuthContext'
 import Button from '../components/ui/Button'
+import TaxLiftLogo from '../components/TaxLiftLogo'
 
 export default function LoginPage() {
   const { currentUser, isDemoMode, loginWithCredentials, loginDemo, authError } = useAuth()
@@ -58,11 +59,8 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
 
         {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-indigo-500 rounded-2xl mb-4 shadow-lg shadow-indigo-500/30">
-            <ShieldCheck size={28} className="text-white" />
-          </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">TaxLift</h1>
+        <div className="flex flex-col items-center mb-8">
+          <TaxLiftLogo variant="dark" size="lg" className="mb-3" />
           <p className="text-slate-400 text-sm mt-1">R&D Tax Credit Compliance Platform</p>
         </div>
 

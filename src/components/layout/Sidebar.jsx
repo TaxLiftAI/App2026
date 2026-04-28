@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { canDo } from '../../lib/utils'
+import TaxLiftLogo from '../TaxLiftLogo'
 
 // ── Core nav — client / internal users ────────────────────────────────────────
 const CORE_NAV = [
@@ -93,15 +94,7 @@ export default function Sidebar() {
     <aside className="w-60 h-screen bg-slate-900 flex flex-col fixed left-0 top-0 z-40">
       {/* Logo */}
       <div className="px-5 py-5 border-b border-slate-800">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center">
-            <ShieldCheck size={16} className="text-white" />
-          </div>
-          <div>
-            <span className="text-white font-bold text-base tracking-tight">TaxLift</span>
-            <p className="text-slate-400 text-[10px] leading-none mt-0.5">R&D Tax Platform</p>
-          </div>
-        </div>
+        <TaxLiftLogo variant="dark" size="sm" />
       </div>
 
       {/* Nav */}
