@@ -163,8 +163,6 @@ export default function SettingsPage() {
 
   // Billing
   const [subscription,  setSubscription]  = useState(null)
-  const [upgrading,     setUpgrading]     = useState(false)
-  const [upgradeError,  setUpgradeError]  = useState(null)
   const [portalLoading, setPortalLoading] = useState(false)
   const [portalError,   setPortalError]   = useState(null)
 
@@ -242,17 +240,6 @@ export default function SettingsPage() {
     } finally {
       setProfileSaving(false)
     }
-  }
-
-  async function handleUpgrade(planId) {
-    setUpgrading(true)
-    setUpgradeError(null)
-    const result = await redirectToCheckout(planId)
-    if (!result.ok) {
-      setUpgradeError(result.message ?? 'Checkout failed — please try again')
-      setUpgrading(false)
-    }
-    // On success, browser redirects to Stripe — no further state needed
   }
 
   const maskedKey = MOCK_API_KEY.slice(0, 12) + '•'.repeat(24) + MOCK_API_KEY.slice(-4)

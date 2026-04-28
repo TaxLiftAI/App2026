@@ -15,6 +15,7 @@ import {
   getGitHubAuthUrl,
   generateState,
   LS_KEYS,
+  GITHUB_CLIENT_ID,
 } from '../../lib/oauthConfig'
 import { leads } from '../../lib/api'
 import TaxLiftLogo from '../../components/TaxLiftLogo'
@@ -105,18 +106,27 @@ export default function ScanLandingPage() {
   })
 
   const navigate = useNavigate()
-  const [email,   setEmail]   = useState('')
-  const [touched, setTouched] = useState(false)
-  const [busy,    setBusy]    = useState(false)
+  const [email,      setEmail]      = useState('')
+  const [touched,    setTouched]    = useState(false)
+  const [busy,       setBusy]       = useState(false)
+  const [oauthError, setOauthError] = useState(null)
 
-  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  const emailValid      = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  const githubConfigured = !!GITHUB_CLIENT_ID
 
   function handleConnectGitHub(e) {
     e.preventDefault()
     setTouched(true)
     if (!emailValid) return
 
+    // Guard: GitHub OAuth App client ID must be configured
+    if (!githubConfigured) {
+      setOauthError('GitHub connection is not yet configured. Please contact support at hello@taxlift.ai.')
+      return
+    }
+
     setBusy(true)
+    setOauthError(null)
 
     // Persist email for the results page
     localStorage.setItem('taxlift_scan_email', email)
@@ -197,6 +207,13 @@ export default function ScanLandingPage() {
                 <p className="text-xs text-red-400 mt-1.5">Please enter a valid email address.</p>
               )}
             </div>
+
+            {oauthError && (
+              <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-2.5 text-xs text-red-300">
+                <span className="mt-0.5 flex-shrink-0">⚠️</span>
+                <span>{oauthError}</span>
+              </div>
+            )}
 
             <button
               type="submit"
