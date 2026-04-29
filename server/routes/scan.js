@@ -14,7 +14,7 @@ const router  = express.Router()
 const db      = require('../db')
 const { makeId } = require('../utils/uuid')
 const { scheduleDrip } = require('../lib/emailDrip')
-const { alertHighValueScan } = require('../lib/alertEmail')
+const { alertHighValueScan, alertNewScan } = require('../lib/alertEmail')
 const { requireAuth }       = require('../middleware/auth')
 const { leadsLimiter }      = require('../middleware/rateLimiter')
 
@@ -99,6 +99,15 @@ router.post('/free', leadsLimiter, (req, res) => {
         repoCount:       repos.length,
       }).catch(err => console.error('[scan/free] alert error:', err.message))
     }
+
+    // Notify info@taxlift.ai on every scan — fire-and-forget
+    alertNewScan({
+      email,
+      estimatedCredit: estimated_credit,
+      clusterCount:    clusters.length,
+      repoCount:       repos.length,
+      repos,
+    }).catch(err => console.error('[scan/free] alertNewScan error:', err.message))
 
     res.json({ ok: true, id, estimated_credit, cluster_count: clusters.length })
   } catch (err) {

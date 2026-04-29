@@ -20,6 +20,7 @@ const https      = require('https')
 
 const EMAIL_FROM      = process.env.EMAIL_FROM      || 'hello@taxlift.ai'
 const ALERT_TO        = process.env.ALERT_TO        || 'hello@taxlift.ai'
+const SCAN_ALERT_TO   = process.env.SCAN_ALERT_TO   || 'info@taxlift.ai'
 const SMTP_HOST       = process.env.SMTP_HOST
 const SMTP_PORT       = parseInt(process.env.SMTP_PORT || '587', 10)
 const SMTP_USER       = process.env.SMTP_USER
@@ -241,4 +242,63 @@ async function alertHighValueScan({ email, estimatedCredit, clusterCount, repoCo
   ])
 }
 
-module.exports = { alertNewLead, alertNewRegistration, alertHighValueScan }
+// ── Alert: every scan ─────────────────────────────────────────────────────────
+// Fires on every POST /api/scan/free regardless of credit size or email capture.
+async function alertNewScan({ email, estimatedCredit, clusterCount, repoCount, repos = [] }) {
+  const creditStr  = estimatedCredit
+    ? `$${Number(estimatedCredit).toLocaleString('en-CA')} CAD`
+    : 'not estimated'
+  const repoList   = repos.slice(0, 5).join(', ') || 'unknown'
+  const subject    = `🔍 New scan — ${creditStr} · ${email || 'anonymous'}`
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px">
+      <div style="background:#0F172A;border-radius:12px;padding:20px;margin-bottom:20px">
+        <h2 style="color:#fff;margin:0;font-size:18px">🔍 GitHub Repo Scanned</h2>
+        <p style="color:#94A3B8;margin:6px 0 0;font-size:13px">${new Date().toLocaleString('en-CA', { timeZone: 'America/Toronto' })} ET</p>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:14px">
+        <tr style="background:#F8FAFC">
+          <td style="padding:10px 12px;font-weight:600;color:#334155;width:140px">Email</td>
+          <td style="padding:10px 12px;color:#1E293B">${email ? `<a href="mailto:${email}" style="color:#4F46E5">${email}</a>` : '<em style="color:#94A3B8">not captured</em>'}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 12px;font-weight:600;color:#334155">SR&amp;ED Estimate</td>
+          <td style="padding:10px 12px;color:${estimatedCredit ? '#059669' : '#94A3B8'};font-weight:${estimatedCredit ? '700' : '400'}">${creditStr}</td>
+        </tr>
+        <tr style="background:#F8FAFC">
+          <td style="padding:10px 12px;font-weight:600;color:#334155">Clusters</td>
+          <td style="padding:10px 12px;color:#1E293B">${clusterCount ?? 0} qualifying activities</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 12px;font-weight:600;color:#334155">Repos</td>
+          <td style="padding:10px 12px;color:#1E293B">${repoList}${repos.length > 5 ? ` +${repos.length - 5} more` : ''}</td>
+        </tr>
+      </table>
+      <div style="margin-top:16px;text-align:center">
+        <a href="${APP_URL}/admin/leads" style="display:inline-block;background:#0F172A;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600">
+          View All Scans →
+        </a>
+      </div>
+      <p style="margin-top:24px;font-size:11px;color:#94A3B8;text-align:center">
+        TaxLift · <a href="${APP_URL}" style="color:#94A3B8">${APP_URL}</a>
+      </p>
+    </div>
+  `
+
+  const text = `New scan\nEmail: ${email || 'not captured'}\nEstimate: ${creditStr}\nClusters: ${clusterCount ?? 0}\nRepos: ${repoList}\nTime: ${new Date().toISOString()}`
+
+  const transport = getTransport()
+  if (!transport) {
+    console.log(`[alert/scan] (SMTP not configured)\nTo: ${SCAN_ALERT_TO}\nSubject: ${subject}\n${text}`)
+    return
+  }
+  try {
+    await transport.sendMail({ from: EMAIL_FROM, to: SCAN_ALERT_TO, subject, html, text })
+    console.log(`[alert/scan] Sent scan notification → ${SCAN_ALERT_TO}`)
+  } catch (err) {
+    console.error('[alert/scan] Failed:', err.message)
+  }
+}
+
+module.exports = { alertNewLead, alertNewRegistration, alertHighValueScan, alertNewScan }
