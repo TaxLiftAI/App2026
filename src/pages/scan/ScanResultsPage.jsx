@@ -426,7 +426,10 @@ export default function ScanResultsPage() {
           email:        email,
         }),
       })
-      if (!res.ok) throw new Error('PDF generation failed')
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error ?? 'PDF generation failed')
+      }
       const blob     = await res.blob()
       const url      = URL.createObjectURL(blob)
       const a        = document.createElement('a')
@@ -437,6 +440,7 @@ export default function ScanResultsPage() {
       URL.revokeObjectURL(url)
     } catch (err) {
       console.error('[handleDownloadPDF]', err.message)
+      alert(`Could not generate PDF: ${err.message}`)
     } finally {
       setPdfBusy(false)
     }
