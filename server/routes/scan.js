@@ -12,7 +12,7 @@
 const express = require('express')
 const router  = express.Router()
 const db      = require('../db')
-const { makeId } = require('../utils/uuid')
+const { v4: makeId } = require('../utils/uuid')
 const { scheduleDrip } = require('../lib/emailDrip')
 const { alertHighValueScan, alertNewScan } = require('../lib/alertEmail')
 const { requireAuth }       = require('../middleware/auth')
