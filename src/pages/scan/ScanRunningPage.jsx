@@ -231,11 +231,10 @@ export default function ScanRunningPage() {
     } catch { /* backend unreachable — continue */ }
 
     // Store results for /scan/results
-    sessionStorage.setItem('taxlift_scan_results', JSON.stringify({
-      ...payload,
-      scanId,
-      is_demo: isDemo,
-    }))
+    // Write to both sessionStorage (fast) and localStorage (survives Stripe cross-origin redirect)
+    const scanPayload = JSON.stringify({ ...payload, scanId, is_demo: isDemo })
+    sessionStorage.setItem('taxlift_scan_results', scanPayload)
+    try { localStorage.setItem('taxlift_scan_results_backup', scanPayload) } catch { /* quota */ }
 
     await delay(400)
     setDone(true)

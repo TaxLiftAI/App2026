@@ -76,6 +76,25 @@ class ChunkErrorBoundary extends Component {
   }
 }
 
+// ── Scan results error boundary ──────────────────────────────────────────────
+// Guards against malformed/missing sessionStorage crashing the results page.
+class ScanResultsBoundary extends Component {
+  constructor(props) { super(props); this.state = { hasError: false } }
+  static getDerivedStateFromError() { return { hasError: true } }
+  render() {
+    if (!this.state.hasError) return this.props.children
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-50">
+        <div className="text-center space-y-3 max-w-sm px-4">
+          <p className="text-gray-700 font-semibold">Scan results unavailable</p>
+          <p className="text-sm text-gray-400">Your session may have expired. Run a new scan to see your results.</p>
+          <a href="/scan" className="inline-block mt-2 text-sm font-medium text-indigo-600 underline">Start a new scan</a>
+        </div>
+      </div>
+    )
+  }
+}
+
 // ── Lazy-loaded pages (each becomes its own JS chunk) ─────────────────────────
 // Vite splits these at the dynamic import boundary, so users only download
 // the code for pages they actually visit. Initial bundle drops from ~1.1 MB
@@ -458,7 +477,7 @@ function AppRoutes() {
       <Route path="/scan"         element={<ScanLandingPage />} />
       <Route path="/scan/repos"   element={<ScanReposPage />} />
       <Route path="/scan/running" element={<ScanRunningPage />} />
-      <Route path="/scan/results" element={<ScanResultsPage />} />
+      <Route path="/scan/results" element={<ScanResultsBoundary><ScanResultsPage /></ScanResultsBoundary>} />
 
       {/* Admin routes */}
       <Route path="/admin/leads" element={

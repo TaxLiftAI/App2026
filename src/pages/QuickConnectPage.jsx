@@ -51,6 +51,7 @@ import {
   DEMO_COMMITS, DEMO_JIRA_ISSUES, DEMO_REPO_NAME,
   scoreMessageOnly, QUALIFY_THRESHOLD,
 } from '../lib/sredScanner'
+import { clusters as clustersApi } from '../lib/api'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const delay   = (ms) => new Promise(res => setTimeout(res, ms))
@@ -816,6 +817,14 @@ export default function QuickConnectPage() {
       if (!cancelledRef.current) {
         setClusters(allClusters)
         setScanDone(true)
+        // Persist clusters to backend so dashboard/clusters page reflects real data
+        if (!isDemoMode && allClusters.length > 0) {
+          allClusters.forEach(cl => {
+            clustersApi.create(cl).catch(err =>
+              console.warn('[QuickConnect] cluster persist failed:', err.message)
+            )
+          })
+        }
       }
     } catch (err) {
       if (!cancelledRef.current) {

@@ -224,10 +224,11 @@ export default function ScanResultsPage() {
     currentUser?.subscription_tier?.toLowerCase() ?? ''
   )
 
-  // Read scan results from sessionStorage
+  // Read scan results — sessionStorage primary, localStorage backup (survives Stripe redirect)
   const [results] = useState(() => {
     try {
       const raw = sessionStorage.getItem('taxlift_scan_results')
+        ?? localStorage.getItem('taxlift_scan_results_backup')
       if (!raw) return null
       return JSON.parse(raw)
     } catch { return null }

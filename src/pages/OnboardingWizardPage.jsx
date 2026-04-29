@@ -259,8 +259,8 @@ function StepComplete({ provider, onDone }) {
         <div>
           <h2 className="text-xl font-bold text-gray-900">{p?.name} is connected!</h2>
           <p className="text-sm text-gray-500 mt-1">
-            TaxLift is scanning your commit history in the background.
-            First SR&ED clusters typically appear within <strong>2–4 hours</strong>.
+            TaxLift is scanning your commit history now.
+            First SR&ED clusters typically appear within <strong>60 seconds</strong>.
           </p>
         </div>
       </div>

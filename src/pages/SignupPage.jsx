@@ -100,6 +100,7 @@ export default function SignupPage() {
     if (estimateRaw) return
     try {
       const raw = sessionStorage.getItem('taxlift_scan_results')
+        ?? localStorage.getItem('taxlift_scan_results_backup')
       if (raw) {
         const scan = JSON.parse(raw)
         if (scan?.estimated_credit) setScanEstimate(scan.estimated_credit)
@@ -147,6 +148,7 @@ export default function SignupPage() {
     // Associate pending free scan with the new account
     try {
       const raw = sessionStorage.getItem('taxlift_scan_results')
+        ?? localStorage.getItem('taxlift_scan_results_backup')
       if (raw) {
         const scan = JSON.parse(raw)
         if (scan?.scanId && result.user?.id) {

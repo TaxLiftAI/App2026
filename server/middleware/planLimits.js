@@ -56,7 +56,9 @@ function getTier(req) {
     }
   } catch (err) {
     console.error('[planLimits] paid_until check failed:', err.message)
-    // Fail open on DB error rather than accidentally locking out a paying customer
+    // Fail closed: return free tier on DB error to prevent expired subscriptions
+    // from silently retaining paid access. Paying customers can re-login to refresh JWT.
+    return 'free'
   }
 
   return tier
