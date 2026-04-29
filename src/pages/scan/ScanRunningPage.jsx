@@ -196,9 +196,12 @@ export default function ScanRunningPage() {
     const provRate    = PROV_RATES[province] ?? 0.08
     const totalRate   = 0.35 + provRate   // CCPC federal + provincial
 
+    // CRA proxy method: qualified SR&ED expenditures = T4 salary × 1.55
+    // (the 55% overhead proxy replaces tracking actual overhead costs per T4088)
+    const OVERHEAD_PROXY  = 1.55
     const maxHours        = teamSize * 1_800
     const eligibilityFrac = Math.min(totalHours / Math.max(maxHours, 1), 0.85)
-    const qualifiedSpend  = teamSize * avgSalary * eligibilityFrac
+    const qualifiedSpend  = teamSize * avgSalary * OVERHEAD_PROXY * eligibilityFrac
     const totalCredit     = Math.round(qualifiedSpend * totalRate)
 
     const payload = {
