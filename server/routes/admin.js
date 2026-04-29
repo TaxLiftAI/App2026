@@ -298,4 +298,67 @@ router.get('/sales', requireAuth, requireAdmin, (req, res) => {
   }
 })
 
+// ── POST /api/admin/test-email ────────────────────────────────────────────────
+// No auth — intentionally open so you can test SMTP from curl without logging in.
+// Send a test alert email immediately to diagnose SMTP config in Railway.
+// Usage: curl -X POST https://app2026-production.up.railway.app/api/v1/admin/test-email
+router.post('/test-email', async (req, res) => {
+  const nodemailer = require('nodemailer')
+  const SMTP_HOST  = process.env.SMTP_HOST
+  const SMTP_PORT  = parseInt(process.env.SMTP_PORT || '587', 10)
+  const SMTP_USER  = process.env.SMTP_USER
+  const SMTP_PASS  = process.env.SMTP_PASS
+  const EMAIL_FROM = process.env.EMAIL_FROM || 'hello@taxlift.ai'
+  const ALERT_TO   = process.env.SCAN_ALERT_TO || process.env.ALERT_TO || 'info@taxlift.ai'
+
+  const config = {
+    SMTP_HOST: SMTP_HOST || '(not set)',
+    SMTP_PORT,
+    SMTP_USER: SMTP_USER || '(not set)',
+    SMTP_PASS: SMTP_PASS ? `${SMTP_PASS.slice(0, 6)}…` : '(not set)',
+    EMAIL_FROM,
+    ALERT_TO,
+    secure: SMTP_PORT === 465,
+  }
+
+  console.log('[admin/test-email] Config:', JSON.stringify(config))
+
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
+    return res.status(500).json({
+      ok: false,
+      error: 'SMTP not configured',
+      config,
+      fix: 'Set SMTP_HOST, SMTP_USER, SMTP_PASS, SMTP_PORT=465 in Railway env vars',
+    })
+  }
+
+  const transport = nodemailer.createTransport({
+    host: SMTP_HOST, port: SMTP_PORT,
+    secure: SMTP_PORT === 465,
+    auth: { user: SMTP_USER, pass: SMTP_PASS },
+  })
+
+  try {
+    await transport.verify()
+    console.log('[admin/test-email] SMTP verify OK')
+  } catch (err) {
+    console.error('[admin/test-email] SMTP verify FAILED:', err.message)
+    return res.status(500).json({ ok: false, error: `SMTP verify failed: ${err.message}`, config })
+  }
+
+  try {
+    await transport.sendMail({
+      from:    EMAIL_FROM,
+      to:      ALERT_TO,
+      subject: '✅ TaxLift SMTP test — it works!',
+      text:    `SMTP is working correctly.\n\nSent at: ${new Date().toISOString()}\nFrom: ${EMAIL_FROM}\nTo: ${ALERT_TO}`,
+    })
+    console.log(`[admin/test-email] Test email sent → ${ALERT_TO}`)
+    res.json({ ok: true, message: `Test email sent to ${ALERT_TO}`, config })
+  } catch (err) {
+    console.error('[admin/test-email] sendMail FAILED:', err.message)
+    res.status(500).json({ ok: false, error: `sendMail failed: ${err.message}`, config })
+  }
+})
+
 module.exports = router
