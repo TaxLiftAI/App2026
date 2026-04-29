@@ -16,7 +16,7 @@ const { v4: makeId } = require('../utils/uuid')
 const { scheduleDrip } = require('../lib/emailDrip')
 const { alertHighValueScan, alertNewScan } = require('../lib/alertEmail')
 const { requireAuth }       = require('../middleware/auth')
-const { leadsLimiter }      = require('../middleware/rateLimiter')
+const { scanLimiter }       = require('../middleware/rateLimiter')
 
 /**
  * POST /api/scan/free
