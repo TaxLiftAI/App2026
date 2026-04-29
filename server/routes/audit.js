@@ -21,7 +21,9 @@ const { scanLimiter }  = require('../middleware/rateLimiter')
 
 const SCRIPT = path.join(__dirname, '../scripts/audit_pdf.py')
 
-router.post('/pdf', requireAuth, scanLimiter, (req, res) => {
+// No auth required — free scan funnel uses this without a session.
+// Rate-limited by scanLimiter to prevent abuse.
+router.post('/pdf', scanLimiter, (req, res) => {
   const body = req.body
   if (!body || !body.clusters) {
     return res.status(400).json({ error: 'clusters array required' })
