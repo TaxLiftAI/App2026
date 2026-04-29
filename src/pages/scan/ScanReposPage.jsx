@@ -34,11 +34,12 @@ const LANG_COLORS = {
 
 export default function ScanReposPage() {
   const navigate   = useNavigate()
-  const [repos,     setRepos]     = useState([])
-  const [loading,   setLoading]   = useState(true)
-  const [error,     setError]     = useState(null)
-  const [query,     setQuery]     = useState('')
-  const [selected,  setSelected]  = useState([])   // array of full_name strings
+  const [repos,      setRepos]      = useState([])
+  const [loading,    setLoading]    = useState(true)
+  const [error,      setError]      = useState(null)
+  const [query,      setQuery]      = useState('')
+  const [selected,   setSelected]   = useState([])   // array of full_name strings
+  const [teamSize,   setTeamSize]   = useState(5)    // engineers who do R&D work
 
   useEffect(() => {
     loadRepos()
@@ -91,6 +92,7 @@ export default function ScanReposPage() {
   function handleStartScan() {
     if (selected.length === 0) return
     sessionStorage.setItem('taxlift_scan_repos', JSON.stringify(selected))
+    sessionStorage.setItem('taxlift_scan_team_size', String(teamSize))
     navigate('/scan/running')
   }
 
@@ -259,6 +261,17 @@ export default function ScanReposPage() {
                   </p>
                 </div>
               )}
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-gray-500 whitespace-nowrap">R&amp;D team size</label>
+              <input
+                type="number"
+                min={1}
+                max={500}
+                value={teamSize}
+                onChange={e => setTeamSize(Math.max(1, parseInt(e.target.value) || 1))}
+                className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+              />
             </div>
             <button
               onClick={handleStartScan}

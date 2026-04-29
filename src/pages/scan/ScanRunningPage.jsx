@@ -175,8 +175,30 @@ export default function ScanRunningPage() {
     // ── Step 4: calculate + save ───────────────────────────────────────────────────────────────────────
     setStep(4)
 
-    const totalHours  = allClusters.reduce((s, c) => s + (c.aggregate_time_hours ?? 0), 0)
-    const totalCredit = allClusters.reduce((s, c) => s + (c.estimated_credit_cad  ?? 0), 0)
+    const teamSize   = parseInt(sessionStorage.getItem('taxlift_scan_team_size') ?? '5', 10) || 5
+    const totalHours = allClusters.reduce((s, c) => s + (c.aggregate_time_hours ?? 0), 0)
+
+    // ── Salary-anchored credit (CRA proxy method) ────────────────────────────
+    // Commit-based hours tell us the SR&ED eligibility fraction (qualifying hours /
+    // max plausible hours). Apply that fraction to actual payroll to get a realistic
+    // credit rather than inflating contractor-rate guesses.
+    //
+    //   max plausible hours  = teamSize × 1,800 hrs/yr × 70% cap (SR&ED cannot be >70% of work)
+    //   eligibility fraction = min(totalHours / maxHours, 0.85)
+    //   qualified spend      = teamSize × $120,000 avg salary × eligibility fraction
+    //   federal ITC          = qualified spend × 35% (CCPC)
+    //
+    // ScanResultsPage adds provincial ITC when the user selects their province.
+    const maxHours           = teamSize * 1_800 * 0.70
+    const eligibilityFrac    = Math.min(totalHours / Math.max(maxHours, 1), 0.85)
+    const avgSalary          = 120_000
+    const qualifiedSpend     = teamSize * avgSalary * eligibilityFrac
+    const salaryCredit       = Math.round(qualifiedSpend * 0.35)   // federal ITC only
+
+    // Use the higher of commit-based or salary-anchored (salary is usually more accurate
+    // for multi-person teams; commit-based is more accurate for solo contributors)
+    const commitCredit       = allClusters.reduce((s, c) => s + (c.estimated_credit_cad ?? 0), 0)
+    const totalCredit        = teamSize <= 2 ? commitCredit : Math.max(commitCredit, salaryCredit)
 
     const payload = {
       email,
@@ -185,6 +207,8 @@ export default function ScanRunningPage() {
       estimated_credit: totalCredit,
       commit_count:     totalCommits,
       hours_total:      totalHours,
+      team_size:        teamSize,
+      eligibility_pct:  Math.round(eligibilityFrac * 100),
     }
 
     // Persist to backend (best-effort — don't block UX if backend unreachable)

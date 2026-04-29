@@ -241,11 +241,11 @@ export default function ScanResultsPage() {
   const [showCpaPanel,   setShowCpaPanel]   = useState(false)
   const [cpaDraftCopied, setCpaDraftCopied] = useState(false)
 
-  // ── Payroll-based estimator (free — headcount × salary, bypasses commit proxy) ──
+  // ── Payroll-based estimator — pre-seeded from scan's team_size + eligibility_pct ──
   const [showPayrollEst, setShowPayrollEst] = useState(false)
-  const [rdDevCount,     setRdDevCount]     = useState(3)
-  const [rdAvgSalary,    setRdAvgSalary]    = useState(110000)
-  const [rdPct,          setRdPct]          = useState(40)
+  const [rdDevCount,     setRdDevCount]     = useState(() => results?.team_size ?? 5)
+  const [rdAvgSalary,    setRdAvgSalary]    = useState(120000)
+  const [rdPct,          setRdPct]          = useState(() => results?.eligibility_pct ?? 40)
 
   // ── Feature 1: Payroll rate override ─────────────────────────────────────
   const [showPayroll,    setShowPayroll]    = useState(false)
@@ -353,9 +353,10 @@ export default function ScanResultsPage() {
   const payrollLow      = Math.round(payrollCredit * 0.65)
   const payrollHigh     = Math.round(payrollCredit * 1.35)
 
-  // Rebase the raw credit on current rates (scan used 0.35 federal by default)
+  // Rebase the raw credit on current rates (scan stores federal-only 35% ITC)
+  // Multiplying by (totalRate / 0.35) adds the provincial rate on top.
   const baseCredit  = results?.estimated_credit ?? 0
-  const credit      = Math.round(baseCredit * (totalRate / 0.43))  // 0.43 = original assumed 0.35+0.08
+  const credit      = Math.round(baseCredit * (totalRate / 0.35))
   // If paid and custom payroll rates differ from defaults, apply the multiplier
   const creditAdj   = isPaid ? Math.round(credit * payrollMultiplier) : credit
   const creditLow   = Math.round(creditAdj * 0.65)

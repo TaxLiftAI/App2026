@@ -285,12 +285,14 @@ function detectTheme(text) {
 
 /**
  * Hours per qualifying commit.
- * A qualifying commit represents the *output* of an investigation — the
- * underlying R&D work (hypothesis → experiment → observation) typically
- * spans 8–24 hours. We use 8h as a conservative floor.
+ * A qualifying commit represents the *output* of a systematic investigation —
+ * the underlying R&D work (hypothesis → experiment → observation) typically
+ * spans 2–5 business days (16–40 hours). We use 24h (3 days) as the midpoint,
+ * consistent with CRA guidance that SR&ED activities require sustained effort.
+ * Conservative: many qualifying commits reflect weeks of prior exploration.
  */
 function estimateHoursFromCommits(count) {
-  return count * 8
+  return count * 24
 }
 
 /** 20 eligible hours per qualifying Jira ticket (tickets represent larger work items) */
@@ -299,13 +301,24 @@ function estimateHoursFromIssues(count) {
 }
 
 /**
- * ITC estimate using simplified proxy method:
- *   Fully-loaded contractor rate: $150 CAD/hr
- *   CCPC enhanced ITC rate (first $3M): 35%
- *   → $52.50 credit per eligible hour
+ * ITC estimate using the CRA proxy method.
+ *
+ * The correct approach is: (eligible T4 salary) × ITC rate — NOT hours × billing rate.
+ *   Average Canadian tech employee T4 salary:  $120,000 / yr
+ *   Working hours / year:                      1,800
+ *   Effective T4 rate:                         $66.67 / hr
+ *   CCPC enhanced ITC rate (first $3M):        35% federal
+ *   Per-hour federal credit:                   $66.67 × 35% ≈ $23.33
+ *
+ * Provincial rates are added in ScanResultsPage when the user sets their province.
+ * We bake in a 15% overhead proxy (CRA allows 65% of salary as overhead proxy) so
+ * the effective multiplier is salary × 1.55 (proxy method). Net: $66.67 × 1.55 × 35% = $36.13/hr.
  */
 function estimateCredit(hours) {
-  return Math.round(hours * 150 * 0.35)
+  const avgHourlyT4     = 120_000 / 1_800   // ≈ $66.67/hr  (T4 employment income)
+  const overheadProxy   = 1.55               // CRA proxy: 55% overhead on SR&ED salary
+  const federalItcRate  = 0.35               // CCPC enhanced refundable ITC
+  return Math.round(hours * avgHourlyT4 * overheadProxy * federalItcRate)
 }
 
 /**
