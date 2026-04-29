@@ -290,7 +290,7 @@ async function alertNewScan({ email, estimatedCredit, clusterCount, repoCount, r
 
   const transport = getTransport()
   if (!transport) {
-    console.log(`[alert/scan] (SMTP not configured)\nTo: ${SCAN_ALERT_TO}\nSubject: ${subject}\n${text}`)
+    console.warn(`[alert/scan] SMTP not configured — set SMTP_HOST/SMTP_USER/SMTP_PASS in Railway env vars. Would have sent:\nTo: ${SCAN_ALERT_TO}\nSubject: ${subject}\n${text}`)
     return
   }
   try {
