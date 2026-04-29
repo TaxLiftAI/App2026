@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { redirectToCheckout } from '../lib/stripe'
 import WaitlistModal from '../components/WaitlistModal'
+import TaxLiftLogo from '../components/TaxLiftLogo'
 
 function fmtK(n) {
   const v = Number(n) || 0
@@ -455,11 +456,8 @@ function LeadCaptureGate({ onUnlock }) {
       <div className="max-w-md w-full">
 
         {/* Logo */}
-        <div className="flex items-center justify-center gap-2 mb-10">
-          <div className="w-9 h-9 bg-indigo-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
-            <Zap size={16} className="text-white" />
-          </div>
-          <span className="text-white font-bold text-lg tracking-tight">TaxLift</span>
+        <div className="flex items-center justify-center mb-10">
+          <TaxLiftLogo variant="dark" size="md" />
         </div>
 
         {/* Gate card */}
@@ -740,8 +738,7 @@ export default function PricingPage() {
               </button>
             )}
             <button onClick={() => navigate('/')} className="flex items-center gap-2">
-              <div className="w-7 h-7 bg-indigo-600 rounded-xl flex items-center justify-center"><Zap size={14} className="text-white" /></div>
-              <span className="font-bold text-gray-900 tracking-tight text-sm">TaxLift</span>
+              <TaxLiftLogo variant="light" size="sm" />
             </button>
           </div>
           <div className="flex items-center gap-3">
