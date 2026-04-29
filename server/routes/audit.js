@@ -16,14 +16,16 @@ const express     = require('express')
 const router      = express.Router()
 const { spawn }   = require('child_process')
 const path        = require('path')
-const { requireAuth }  = require('../middleware/auth')
-const { scanLimiter }  = require('../middleware/rateLimiter')
+const { requireAuth, optionalAuth } = require('../middleware/auth')
+const { requirePlan }               = require('../middleware/planLimits')
+const { scanLimiter }               = require('../middleware/rateLimiter')
 
 const SCRIPT = path.join(__dirname, '../scripts/audit_pdf.py')
 
-// No auth required — free scan funnel uses this without a session.
-// Rate-limited by scanLimiter to prevent abuse.
-router.post('/pdf', scanLimiter, (req, res) => {
+// Requires authentication + starter plan or higher.
+// optionalAuth alone is not enough — requireAuth ensures a valid session exists,
+// then requirePlan('starter') verifies the subscription tier server-side.
+router.post('/pdf', scanLimiter, requireAuth, requirePlan('starter'), (req, res) => {
   const body = req.body
   if (!body || !body.clusters) {
     return res.status(400).json({ error: 'clusters array required' })
