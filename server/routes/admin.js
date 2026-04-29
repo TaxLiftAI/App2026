@@ -333,9 +333,11 @@ router.post('/test-email', async (req, res) => {
   }
 
   const transport = nodemailer.createTransport({
-    host: SMTP_HOST, port: SMTP_PORT,
+    host:   SMTP_HOST,
+    port:   SMTP_PORT,
     secure: SMTP_PORT === 465,
-    auth: { user: SMTP_USER, pass: SMTP_PASS },
+    auth:   { user: SMTP_USER, pass: SMTP_PASS },
+    family: 4,   // force IPv4
   })
 
   try {

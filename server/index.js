@@ -73,7 +73,8 @@ const db = require('./db')
   const t = nodemailer.createTransport({
     host, port: parseInt(port, 10) || 587,
     secure: parseInt(port, 10) === 465,
-    auth: { user, pass },
+    auth:   { user, pass },
+    family: 4,
   })
   t.verify()
     .then(() => console.log(`[startup/smtp] ✅ SMTP connection verified OK`))
@@ -221,12 +222,25 @@ app.use(`${V}/webhooks`, require('./routes/webhooks'))
 function healthHandler(_req, res) {
   try {
     db.prepare('SELECT 1').get()           // fast no-op query — confirms DB is alive
+    const smtpHost = process.env.SMTP_HOST
+    const smtpUser = process.env.SMTP_USER
+    const smtpPass = process.env.SMTP_PASS
+    const smtpPort = process.env.SMTP_PORT || '587'
     res.status(200).json({
       status:    'ok',
       db:        'ok',
       service:   'taxlift-api',
       version:   '1.0.0',
       timestamp: new Date().toISOString(),
+      smtp: {
+        configured: !!(smtpHost && smtpUser && smtpPass),
+        host:       smtpHost  || 'NOT SET',
+        port:       smtpPort,
+        user:       smtpUser  || 'NOT SET',
+        pass:       smtpPass  ? `${smtpPass.slice(0, 8)}…` : 'NOT SET',
+        from:       process.env.EMAIL_FROM    || 'NOT SET',
+        alertTo:    process.env.SCAN_ALERT_TO || process.env.ALERT_TO || 'NOT SET',
+      },
     })
   } catch (err) {
     console.error('[healthz] DB check failed:', err.message)

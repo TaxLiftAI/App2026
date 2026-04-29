@@ -37,6 +37,7 @@ function getTransporter() {
     port:   SMTP_PORT,
     secure: SMTP_PORT === 465,
     auth: { user: SMTP_USER, pass: SMTP_PASS },
+    family: 4,   // force IPv4 — Railway egress is IPv6 but most SMTP hosts only accept IPv4
   })
   return _transporter
 }

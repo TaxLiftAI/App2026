@@ -54,10 +54,11 @@ function getTransport() {
     return null
   }
   _transport = nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: SMTP_PORT,
+    host:   SMTP_HOST,
+    port:   SMTP_PORT,
     secure: SMTP_PORT === 465,
-    auth: { user: SMTP_USER, pass: SMTP_PASS },
+    auth:   { user: SMTP_USER, pass: SMTP_PASS },
+    family: 4,   // force IPv4 — Railway egress is IPv6 but most SMTP hosts only accept IPv4
   })
   // Verify connection immediately so misconfiguration shows up in Railway logs at startup
   _transport.verify().then(() => {
