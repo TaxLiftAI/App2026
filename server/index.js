@@ -55,6 +55,31 @@ if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
 // ── Bootstrap database (runs migrations + seed on first start) ────────────────
 const db = require('./db')
 
+// ── SMTP connectivity check at startup ────────────────────────────────────────
+// Logs immediately so Railway shows SMTP status without waiting for a scan.
+;(function checkSmtp() {
+  const host = process.env.SMTP_HOST
+  const user = process.env.SMTP_USER
+  const pass = process.env.SMTP_PASS
+  const port = process.env.SMTP_PORT || '(not set — defaults to 587)'
+  if (!host || !user || !pass) {
+    console.warn(`[startup/smtp] ⚠️  SMTP not configured — emails will NOT be sent.`)
+    console.warn(`[startup/smtp]    Set in Railway: SMTP_HOST=${host||'MISSING'} SMTP_USER=${user||'MISSING'} SMTP_PASS=${pass?'set':'MISSING'} SMTP_PORT=${port}`)
+    return
+  }
+  console.log(`[startup/smtp] ✅ SMTP configured — host=${host} port=${port} user=${user}`)
+  // Full connection verify (async — result appears in logs a few seconds after boot)
+  const nodemailer = require('nodemailer')
+  const t = nodemailer.createTransport({
+    host, port: parseInt(port, 10) || 587,
+    secure: parseInt(port, 10) === 465,
+    auth: { user, pass },
+  })
+  t.verify()
+    .then(() => console.log(`[startup/smtp] ✅ SMTP connection verified OK`))
+    .catch(err => console.error(`[startup/smtp] ❌ SMTP verify FAILED: ${err.message} — check SMTP_HOST/PORT/USER/PASS in Railway`))
+})()
+
 // ── Email drip runs as a separate Railway cron job (server/drip-cron.js) ──────
 // Do NOT call startDripScheduler() here — running it in the web process causes
 // duplicate sends when Railway scales to multiple replicas.

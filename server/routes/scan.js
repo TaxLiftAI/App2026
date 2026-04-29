@@ -42,10 +42,11 @@ router.post('/free', scanLimiter, (req, res) => {
       estimated_credit = 0,
       commit_count     = 0,
       hours_total      = 0,
+      team_size        = null,
       user_id          = null,
     } = req.body
 
-    console.log(`[scan/free] hit — email=${email || 'none'} repos=${repos.length} credit=${estimated_credit} clusters=${clusters.length}`)
+    console.log(`[scan/free] hit — email=${email || 'none'} repos=${repos.length} credit=${estimated_credit} clusters=${clusters.length} teamSize=${team_size} hours=${hours_total}`)
 
     // Validate email format before any drip scheduling
     if (email && !EMAIL_RE.test(email)) {
