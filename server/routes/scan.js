@@ -33,7 +33,7 @@ const { leadsLimiter }      = require('../middleware/rateLimiter')
  */
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-router.post('/free', leadsLimiter, (req, res) => {
+router.post('/free', scanLimiter, (req, res) => {
   try {
     const {
       email            = '',
@@ -44,6 +44,8 @@ router.post('/free', leadsLimiter, (req, res) => {
       hours_total      = 0,
       user_id          = null,
     } = req.body
+
+    console.log(`[scan/free] hit — email=${email || 'none'} repos=${repos.length} credit=${estimated_credit} clusters=${clusters.length}`)
 
     // Validate email format before any drip scheduling
     if (email && !EMAIL_RE.test(email)) {

@@ -49,12 +49,22 @@ let _transport = null
 
 function getTransport() {
   if (_transport) return _transport
-  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) return null   // log-only mode
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
+    console.warn('[alertEmail] SMTP not configured — SMTP_HOST/SMTP_USER/SMTP_PASS missing. Emails will not be sent.')
+    return null
+  }
   _transport = nodemailer.createTransport({
     host: SMTP_HOST,
     port: SMTP_PORT,
     secure: SMTP_PORT === 465,
     auth: { user: SMTP_USER, pass: SMTP_PASS },
+  })
+  // Verify connection immediately so misconfiguration shows up in Railway logs at startup
+  _transport.verify().then(() => {
+    console.log(`[alertEmail] SMTP connected — ${SMTP_HOST}:${SMTP_PORT} as ${SMTP_USER}`)
+  }).catch(err => {
+    console.error(`[alertEmail] SMTP verify failed — ${err.message}. Check SMTP_HOST/SMTP_USER/SMTP_PASS/SMTP_PORT in Railway env vars.`)
+    _transport = null  // reset so next call retries
   })
   return _transport
 }
