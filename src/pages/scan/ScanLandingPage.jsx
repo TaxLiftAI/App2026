@@ -22,7 +22,7 @@ import TaxLiftLogo from '../../components/TaxLiftLogo'
 import TaxLiftChat from '../../components/TaxLiftChat'
 
 const TRUST_BADGES = [
-  { Icon: Lock,         text: 'We read commit metadata only — no source code stored' },
+  { Icon: Lock,         text: 'Read-only diff access — no source files stored or copied' },
   { Icon: ShieldCheck,  text: 'No account required to see your results' },
   { Icon: Clock,        text: 'Results in under 60 seconds' },
 ]
@@ -237,7 +237,7 @@ export default function ScanLandingPage() {
 
             <p className="text-[11px] text-slate-500 text-center">
               You'll be redirected to GitHub to authorize read-only access.
-              No code is stored — only commit messages and file names.
+              Read-only access — your source files are never stored or copied.
             </p>
           </div>
         </form>
