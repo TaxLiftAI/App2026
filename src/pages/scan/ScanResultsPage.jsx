@@ -254,7 +254,7 @@ export default function ScanResultsPage() {
   const [archRate,       setArchRate]       = useState(116)
   // Weighted avg of custom rates (50% dev, 35% senior, 15% arch)
   const customAvgRate   = Math.round(devRate * 0.50 + senRate * 0.35 + archRate * 0.15)
-  const defaultAvgRate  = Math.round(72   * 0.50 + 92  * 0.35 + 116  * 0.15)  // 83
+  const defaultAvgRate  = Math.round(120_000 / 1_800)  // 67/hr — matches ScanRunningPage avgSalary default ($120K ÷ 1800hrs)
   const payrollMultiplier = customAvgRate / defaultAvgRate
 
   // ── Feature 2: Retroactive lookback ──────────────────────────────────────
@@ -349,8 +349,8 @@ export default function ScanResultsPage() {
   const provRate    = PROV_RATES[province] ?? 0.08
   const totalRate   = federalRate + provRate
 
-  // Payroll-based credit = headcount × salary × rd% × combined ITC rate
-  const payrollSpend    = rdDevCount * rdAvgSalary * (rdPct / 100)
+  // Payroll-based credit = headcount × salary × 1.55 proxy × rd% × combined ITC rate
+  const payrollSpend    = rdDevCount * rdAvgSalary * 1.55 * (rdPct / 100)
   const payrollCredit   = Math.round(payrollSpend * totalRate)
   const payrollLow      = Math.round(payrollCredit * 0.65)
   const payrollHigh     = Math.round(payrollCredit * 1.35)
