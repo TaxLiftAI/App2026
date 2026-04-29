@@ -199,7 +199,7 @@ export default function ScanRunningPage() {
     // CRA proxy method: qualified SR&ED expenditures = T4 salary × 1.55
     // (the 55% overhead proxy replaces tracking actual overhead costs per T4088)
     const OVERHEAD_PROXY  = 1.55
-    const maxHours        = teamSize * 1_800
+    const maxHours        = 1_800   // per-person annual cap; teamSize scales spend directly below
     const eligibilityFrac = Math.min(totalHours / Math.max(maxHours, 1), 0.85)
     const qualifiedSpend  = teamSize * avgSalary * OVERHEAD_PROXY * eligibilityFrac
     const totalCredit     = Math.round(qualifiedSpend * totalRate)

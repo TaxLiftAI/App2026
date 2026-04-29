@@ -16,7 +16,7 @@
 
 const nodemailer = require('nodemailer')
 const db         = require('../db')
-const { makeId } = require('../utils/uuid')
+const { v4: makeId } = require('../utils/uuid')
 
 const EMAIL_FROM   = process.env.EMAIL_FROM   || 'hello@taxlift.ai'
 const SMTP_HOST    = process.env.SMTP_HOST
