@@ -176,29 +176,30 @@ export default function ScanRunningPage() {
     setStep(4)
 
     const teamSize   = parseInt(sessionStorage.getItem('taxlift_scan_team_size') ?? '5', 10) || 5
+    const avgSalary  = parseInt(sessionStorage.getItem('taxlift_scan_avg_salary') ?? '120000', 10) || 120_000
+    const province   = sessionStorage.getItem('taxlift_scan_province') ?? 'ON'
     const totalHours = allClusters.reduce((s, c) => s + (c.aggregate_time_hours ?? 0), 0)
 
-    // ── Salary-anchored credit (CRA proxy method) ────────────────────────────
-    // Commit-based hours tell us the SR&ED eligibility fraction (qualifying hours /
-    // max plausible hours). Apply that fraction to actual payroll to get a realistic
-    // credit rather than inflating contractor-rate guesses.
+    // ── CRA proxy method ─────────────────────────────────────────────────────
+    // Commits determine the SR&ED eligibility fraction.
+    // That fraction is applied to actual T4 payroll — this is how CRA computes it.
     //
-    //   max plausible hours  = teamSize × 1,800 hrs/yr × 70% cap (SR&ED cannot be >70% of work)
-    //   eligibility fraction = min(totalHours / maxHours, 0.85)
-    //   qualified spend      = teamSize × $120,000 avg salary × eligibility fraction
-    //   federal ITC          = qualified spend × 35% (CCPC)
+    //   max plausible SR&ED hours = teamSize × 1,800 hrs/yr  (one working year per person)
+    //   eligibility fraction      = min(qualifying hours / max hours, 0.85)
+    //                               capped at 85% — CRA rarely accepts >80-85%
+    //   qualified spend           = teamSize × avgSalary × eligibilityFrac
+    //   federal ITC               = qualified spend × 35% (CCPC) or 15% (non-CCPC)
+    //   provincial ITC            = qualified spend × provincial rate
     //
-    // ScanResultsPage adds provincial ITC when the user selects their province.
-    const maxHours           = teamSize * 1_800 * 0.70
-    const eligibilityFrac    = Math.min(totalHours / Math.max(maxHours, 1), 0.85)
-    const avgSalary          = 120_000
-    const qualifiedSpend     = teamSize * avgSalary * eligibilityFrac
-    const salaryCredit       = Math.round(qualifiedSpend * 0.35)   // federal ITC only
+    // Provincial rates (added here so the stored credit is fully province-aware):
+    const PROV_RATES  = { ON:0.08, QC:0.30, BC:0.10, AB:0.10, MB:0.07, SK:0.075, NS:0.15 }
+    const provRate    = PROV_RATES[province] ?? 0.08
+    const totalRate   = 0.35 + provRate   // CCPC federal + provincial
 
-    // Use the higher of commit-based or salary-anchored (salary is usually more accurate
-    // for multi-person teams; commit-based is more accurate for solo contributors)
-    const commitCredit       = allClusters.reduce((s, c) => s + (c.estimated_credit_cad ?? 0), 0)
-    const totalCredit        = teamSize <= 2 ? commitCredit : Math.max(commitCredit, salaryCredit)
+    const maxHours        = teamSize * 1_800
+    const eligibilityFrac = Math.min(totalHours / Math.max(maxHours, 1), 0.85)
+    const qualifiedSpend  = teamSize * avgSalary * eligibilityFrac
+    const totalCredit     = Math.round(qualifiedSpend * totalRate)
 
     const payload = {
       email,

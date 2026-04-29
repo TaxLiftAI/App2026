@@ -38,8 +38,10 @@ export default function ScanReposPage() {
   const [loading,    setLoading]    = useState(true)
   const [error,      setError]      = useState(null)
   const [query,      setQuery]      = useState('')
-  const [selected,   setSelected]   = useState([])   // array of full_name strings
-  const [teamSize,   setTeamSize]   = useState(5)    // engineers who do R&D work
+  const [selected,   setSelected]   = useState([])    // array of full_name strings
+  const [teamSize,   setTeamSize]   = useState(5)     // engineers who do R&D work
+  const [avgSalary,  setAvgSalary]  = useState(120000) // avg T4 salary
+  const [province,   setProvince]   = useState('ON')   // province of incorporation
 
   useEffect(() => {
     loadRepos()
@@ -91,8 +93,10 @@ export default function ScanReposPage() {
 
   function handleStartScan() {
     if (selected.length === 0) return
-    sessionStorage.setItem('taxlift_scan_repos', JSON.stringify(selected))
-    sessionStorage.setItem('taxlift_scan_team_size', String(teamSize))
+    sessionStorage.setItem('taxlift_scan_repos',      JSON.stringify(selected))
+    sessionStorage.setItem('taxlift_scan_team_size',  String(teamSize))
+    sessionStorage.setItem('taxlift_scan_avg_salary', String(avgSalary))
+    sessionStorage.setItem('taxlift_scan_province',   province)
     navigate('/scan/running')
   }
 
@@ -262,16 +266,39 @@ export default function ScanReposPage() {
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-gray-500 whitespace-nowrap">R&amp;D team size</label>
-              <input
-                type="number"
-                min={1}
-                max={500}
-                value={teamSize}
-                onChange={e => setTeamSize(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-              />
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-1.5">
+                <label className="text-xs text-gray-500 whitespace-nowrap">Employees</label>
+                <input
+                  type="number" min={1} max={500} value={teamSize}
+                  onChange={e => setTeamSize(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-14 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <label className="text-xs text-gray-500 whitespace-nowrap">Avg salary</label>
+                <div className="relative">
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">$</span>
+                  <input
+                    type="number" min={40000} max={500000} step={5000} value={avgSalary}
+                    onChange={e => setAvgSalary(Math.max(40000, parseInt(e.target.value) || 120000))}
+                    className="w-24 border border-gray-200 rounded-lg pl-5 pr-2 py-1.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <label className="text-xs text-gray-500 whitespace-nowrap">Province</label>
+                <select
+                  value={province}
+                  onChange={e => setProvince(e.target.value)}
+                  className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                >
+                  {[['ON','Ontario'],['QC','Québec'],['BC','BC'],['AB','Alberta'],
+                    ['MB','Manitoba'],['SK','Saskatchewan'],['NS','Nova Scotia']].map(([v,l]) => (
+                    <option key={v} value={v}>{l}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             <button
               onClick={handleStartScan}

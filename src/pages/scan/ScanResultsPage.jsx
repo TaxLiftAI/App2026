@@ -339,7 +339,9 @@ export default function ScanResultsPage() {
   // ── CCPC / methodology state ─────────────────────────────────────────────
   const [isCcpc,           setIsCcpc]           = useState(true)
   const [showMethodology,  setShowMethodology]  = useState(false)
-  const [province,         setProvince]         = useState('ON')
+  const [province,         setProvince]         = useState(
+    () => { try { return sessionStorage.getItem('taxlift_scan_province') ?? 'ON' } catch { return 'ON' } }
+  )
 
   const PROV_RATES = { ON: 0.08, QC: 0.30, BC: 0.10, AB: 0.10, MB: 0.07, SK: 0.075, NS: 0.15 }
   const PROV_NAMES = { ON: 'Ontario', QC: 'Québec', BC: 'British Columbia', AB: 'Alberta', MB: 'Manitoba', SK: 'Saskatchewan', NS: 'Nova Scotia' }
@@ -353,10 +355,14 @@ export default function ScanResultsPage() {
   const payrollLow      = Math.round(payrollCredit * 0.65)
   const payrollHigh     = Math.round(payrollCredit * 1.35)
 
-  // Rebase the raw credit on current rates (scan stores federal-only 35% ITC)
-  // Multiplying by (totalRate / 0.35) adds the provincial rate on top.
-  const baseCredit  = results?.estimated_credit ?? 0
-  const credit      = Math.round(baseCredit * (totalRate / 0.35))
+  // The stored credit was computed with the province the user entered at scan time.
+  // If they change province/CCPC status here, rebase proportionally.
+  const scanProvRate   = { ON:0.08, QC:0.30, BC:0.10, AB:0.10, MB:0.07, SK:0.075, NS:0.15 }[
+    (() => { try { return sessionStorage.getItem('taxlift_scan_province') ?? 'ON' } catch { return 'ON' } })()
+  ] ?? 0.08
+  const scanTotalRate  = 0.35 + scanProvRate   // rate used when credit was computed
+  const baseCredit     = results?.estimated_credit ?? 0
+  const credit         = Math.round(baseCredit * (totalRate / scanTotalRate))
   // If paid and custom payroll rates differ from defaults, apply the multiplier
   const creditAdj   = isPaid ? Math.round(credit * payrollMultiplier) : credit
   const creditLow   = Math.round(creditAdj * 0.65)
