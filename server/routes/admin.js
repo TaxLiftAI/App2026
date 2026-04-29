@@ -332,12 +332,19 @@ router.post('/test-email', async (req, res) => {
     })
   }
 
+  // Resolve hostname to IPv4 — Railway is IPv6-first, Hostinger SMTP is IPv4-only
+  let smtpIp = SMTP_HOST
+  try {
+    const addrs = await require('dns').promises.resolve4(SMTP_HOST)
+    if (addrs && addrs[0]) smtpIp = addrs[0]
+  } catch { /* fall back to hostname */ }
+
   const transport = nodemailer.createTransport({
-    host:   SMTP_HOST,
+    host:   smtpIp,
     port:   SMTP_PORT,
     secure: SMTP_PORT === 465,
     auth:   { user: SMTP_USER, pass: SMTP_PASS },
-    family: 4,   // force IPv4
+    tls:    { servername: SMTP_HOST },
   })
 
   try {

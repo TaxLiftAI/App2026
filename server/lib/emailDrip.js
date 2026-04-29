@@ -26,18 +26,30 @@ const SMTP_PASS    = process.env.SMTP_PASS
 const FRONTEND_URL = (process.env.FRONTEND_URL || 'https://taxlift.ai').replace(/\/$/, '')
 
 // ── Transporter ────────────────────────────────────────────────────────────────
+const dns = require('dns').promises
+
 let _transporter = null
+let _smtpHost    = SMTP_HOST
+
+// Pre-resolve to IPv4 — Railway defaults to IPv6; Hostinger SMTP is IPv4-only
+;(async () => {
+  if (!SMTP_HOST) return
+  try {
+    const addrs = await dns.resolve4(SMTP_HOST)
+    if (addrs && addrs[0]) { _smtpHost = addrs[0] }
+  } catch { /* use hostname */ }
+})()
 
 function getTransporter() {
   if (_transporter) return _transporter
   if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) return null
 
   _transporter = nodemailer.createTransport({
-    host:   SMTP_HOST,
+    host:   _smtpHost,
     port:   SMTP_PORT,
     secure: SMTP_PORT === 465,
-    auth: { user: SMTP_USER, pass: SMTP_PASS },
-    family: 4,   // force IPv4 — Railway egress is IPv6 but most SMTP hosts only accept IPv4
+    auth:   { user: SMTP_USER, pass: SMTP_PASS },
+    tls:    { servername: SMTP_HOST },
   })
   return _transporter
 }

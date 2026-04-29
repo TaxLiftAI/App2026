@@ -45,7 +45,25 @@ function postSlack(text) {
   })
 }
 
-let _transport = null
+const dns = require('dns').promises
+
+let _transport    = null
+let _smtpHost     = SMTP_HOST   // may be replaced with IPv4 after resolution
+
+// Pre-resolve SMTP hostname to IPv4 at module load so Railway (IPv6-first) connects correctly.
+// TLS servername is set separately so cert validation still uses the original hostname.
+;(async () => {
+  if (!SMTP_HOST) return
+  try {
+    const addrs = await dns.resolve4(SMTP_HOST)
+    if (addrs && addrs[0]) {
+      _smtpHost = addrs[0]
+      console.log(`[alertEmail] Resolved ${SMTP_HOST} → ${_smtpHost} (IPv4)`)
+    }
+  } catch (err) {
+    console.warn(`[alertEmail] DNS resolve4(${SMTP_HOST}) failed — using hostname: ${err.message}`)
+  }
+})()
 
 function getTransport() {
   if (_transport) return _transport
@@ -54,18 +72,17 @@ function getTransport() {
     return null
   }
   _transport = nodemailer.createTransport({
-    host:   SMTP_HOST,
+    host:   _smtpHost,           // IPv4 address (after DNS resolution)
     port:   SMTP_PORT,
     secure: SMTP_PORT === 465,
     auth:   { user: SMTP_USER, pass: SMTP_PASS },
-    family: 4,   // force IPv4 — Railway egress is IPv6 but most SMTP hosts only accept IPv4
+    tls:    { servername: SMTP_HOST },  // cert validation uses original hostname
   })
-  // Verify connection immediately so misconfiguration shows up in Railway logs at startup
   _transport.verify().then(() => {
-    console.log(`[alertEmail] SMTP connected — ${SMTP_HOST}:${SMTP_PORT} as ${SMTP_USER}`)
+    console.log(`[alertEmail] SMTP connected — ${SMTP_HOST}(${_smtpHost}):${SMTP_PORT} as ${SMTP_USER}`)
   }).catch(err => {
-    console.error(`[alertEmail] SMTP verify failed — ${err.message}. Check SMTP_HOST/SMTP_USER/SMTP_PASS/SMTP_PORT in Railway env vars.`)
-    _transport = null  // reset so next call retries
+    console.error(`[alertEmail] SMTP verify failed — ${err.message}`)
+    _transport = null
   })
   return _transport
 }
