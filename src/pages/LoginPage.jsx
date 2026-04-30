@@ -54,6 +54,7 @@ export default function LoginPage() {
         <div className="flex flex-col items-center mb-8">
           <TaxLiftLogo variant="dark" size="lg" className="mb-3" />
           <p className="text-slate-400 text-sm mt-1">R&D Tax Credit Compliance Platform</p>
+          <p className="text-slate-500 text-xs mt-1">🇨🇦 Proudly Canadian</p>
         </div>
 
         {/* Card */}

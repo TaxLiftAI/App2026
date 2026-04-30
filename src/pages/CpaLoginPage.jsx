@@ -72,6 +72,7 @@ export default function CpaLoginPage() {
         <div className="flex items-center gap-3 mb-10">
           <TaxLiftLogo variant="dark" size="sm" />
           <span className="text-slate-400 text-xs">Partner Portal</span>
+          <span className="text-slate-500 text-xs ml-2">🇨🇦 Proudly Canadian</span>
         </div>
 
         <h2 className="text-3xl font-extrabold leading-tight mb-3">
