@@ -681,6 +681,7 @@ export default function MarketingPage() {
 
           {/* Desktop CTAs */}
           <div className="hidden md:flex items-center gap-3">
+            <span className="text-xs text-gray-400 font-medium px-2">🇨🇦 Proudly Canadian</span>
             <Link
               to="/login"
               className="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors px-3 py-1.5"

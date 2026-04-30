@@ -154,6 +154,7 @@ export default function ScanLandingPage() {
           <TaxLiftLogo variant="dark" size="sm" />
         </button>
         <div className="flex items-center gap-3">
+          <span className="hidden sm:block text-xs text-slate-500 font-medium">🇨🇦 Proudly Canadian</span>
           <button
             onClick={() => navigate('/estimate')}
             className="text-xs text-slate-400 hover:text-white transition-colors"

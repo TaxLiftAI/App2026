@@ -39,6 +39,7 @@ export default function TermsPage() {
           </button>
           <span className="text-gray-300">/</span>
           <span className="text-sm text-gray-500">Terms of Service</span>
+          <span className="ml-auto text-xs text-gray-400 font-medium">🇨🇦 Proudly Canadian</span>
         </div>
       </nav>
 

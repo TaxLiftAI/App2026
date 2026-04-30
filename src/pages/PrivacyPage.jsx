@@ -51,6 +51,7 @@ export default function PrivacyPage() {
           </button>
           <span className="text-gray-300">/</span>
           <span className="text-sm text-gray-500">Privacy Policy</span>
+          <span className="ml-auto text-xs text-gray-400 font-medium">🇨🇦 Proudly Canadian</span>
         </div>
       </nav>
 
