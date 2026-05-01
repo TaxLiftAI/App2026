@@ -65,7 +65,11 @@ export default function CpaLoginPage() {
   const displayError = localError || authError
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 flex">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 flex flex-col">
+      <div className="w-full bg-red-600 text-center py-0.5 flex-shrink-0">
+        <span className="text-white text-xs font-medium tracking-wide">🇨🇦 Proudly Canadian — Built for Canadian founders</span>
+      </div>
+      <div className="flex flex-1">
 
       {/* ── Left panel — value prop ── */}
       <div className="hidden lg:flex flex-col justify-center px-16 w-[44%] text-white">
@@ -242,6 +246,7 @@ export default function CpaLoginPage() {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   )

@@ -148,13 +148,17 @@ export default function ScanLandingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900">
 
+      {/* Always-visible Canadian strip */}
+      <div className="w-full bg-red-600 text-center py-0.5">
+        <span className="text-white text-xs font-medium tracking-wide">🇨🇦 Proudly Canadian — Built for Canadian founders</span>
+      </div>
+
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-4 max-w-5xl mx-auto">
         <button onClick={() => navigate('/')} className="flex items-center">
           <TaxLiftLogo variant="dark" size="sm" />
         </button>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-slate-500 font-medium">🇨🇦 Proudly Canadian</span>
           <button
             onClick={() => navigate('/estimate')}
             className="text-xs text-slate-400 hover:text-white transition-colors"

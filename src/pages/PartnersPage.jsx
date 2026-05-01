@@ -354,6 +354,9 @@ export default function PartnersPage() {
 
   return (
     <div className="min-h-screen bg-white">
+      <div className="w-full bg-red-600 text-center py-0.5 sticky top-0 z-[60]">
+        <span className="text-white text-xs font-medium tracking-wide">🇨🇦 Proudly Canadian — Built for Canadian founders</span>
+      </div>
 
       {/* ── Sticky nav ── */}
       <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-100">
@@ -363,7 +366,6 @@ export default function PartnersPage() {
             <span className="text-gray-300 text-xs">for Accountants</span>
           </Link>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-gray-400 font-medium">🇨🇦 Proudly Canadian</span>
             <Link
               to="/cpa/register"
               className="text-xs text-gray-500 hover:text-gray-800 transition-colors hidden sm:block"
