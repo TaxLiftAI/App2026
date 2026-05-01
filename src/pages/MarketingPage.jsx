@@ -732,6 +732,7 @@ export default function MarketingPage() {
                 </a>
               ))}
               <div className="pt-2 flex flex-col gap-2">
+                <p className="text-center text-xs text-gray-400 font-medium py-1">🇨🇦 Proudly Canadian</p>
                 <Link to="/login" className="block text-center py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg">
                   Sign in
                 </Link>

@@ -742,7 +742,7 @@ export default function PricingPage() {
             </button>
           </div>
           <div className="flex items-center gap-3">
-            <span className="hidden sm:block text-xs text-gray-400 font-medium">🇨🇦 Proudly Canadian</span>
+            <span className="text-xs text-gray-400 font-medium">🇨🇦 Proudly Canadian</span>
             <button onClick={() => navigate('/estimate')} className="text-xs text-gray-500 hover:text-gray-700 transition-colors hidden sm:block">Manual estimator</button>
             <button onClick={() => navigate('/scan')} className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors">
               <Sparkles size={12} /> Free scan

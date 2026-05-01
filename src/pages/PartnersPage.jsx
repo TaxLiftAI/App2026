@@ -363,7 +363,7 @@ export default function PartnersPage() {
             <span className="text-gray-300 text-xs">for Accountants</span>
           </Link>
           <div className="flex items-center gap-3">
-            <span className="hidden sm:block text-xs text-gray-400 font-medium">🇨🇦 Proudly Canadian</span>
+            <span className="text-xs text-gray-400 font-medium">🇨🇦 Proudly Canadian</span>
             <Link
               to="/cpa/register"
               className="text-xs text-gray-500 hover:text-gray-800 transition-colors hidden sm:block"

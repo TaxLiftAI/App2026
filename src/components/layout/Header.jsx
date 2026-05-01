@@ -45,7 +45,7 @@ export default function Header({ onOpenSearch }) {
             <span>⌘</span><span>K</span>
           </kbd>
         </button>
-        <span className="hidden sm:flex items-center gap-1 text-xs text-gray-400 font-medium px-2">
+        <span className="flex items-center gap-1 text-xs text-gray-400 font-medium px-2">
           🇨🇦 Proudly Canadian
         </span>
         {currentUser && <RoleBadge role={currentUser.role} />}
