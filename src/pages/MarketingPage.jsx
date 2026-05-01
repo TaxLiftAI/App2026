@@ -208,7 +208,7 @@ function FaqItem({ q, a }) {
 // Dashboard mockup (SVG placeholder)
 function DashboardMockup() {
   return (
-    <div className="relative w-full max-w-2xl mx-auto">
+    <div className="relative w-full max-w-2xl mx-auto overflow-x-auto">
       {/* glow */}
       <div className="absolute -inset-4 bg-indigo-400/20 rounded-3xl blur-2xl" />
       <div className="relative rounded-2xl border border-white/20 shadow-2xl overflow-hidden bg-slate-900">
@@ -426,11 +426,11 @@ function SrEdCalculator({ openWaitlist, navigate }) {
                 {/* Credit range */}
                 <div className="mb-6">
                   <div className="flex items-end gap-2 mb-1">
-                    <span className="text-4xl sm:text-5xl font-extrabold text-indigo-700 tabular-nums">
+                    <span className="text-3xl sm:text-5xl font-extrabold text-indigo-700 tabular-nums">
                       {fmt(low)}
                     </span>
                     <span className="text-gray-400 text-lg mb-1 font-medium">–</span>
-                    <span className="text-4xl sm:text-5xl font-extrabold text-violet-700 tabular-nums">
+                    <span className="text-3xl sm:text-5xl font-extrabold text-violet-700 tabular-nums">
                       {fmt(high)}
                     </span>
                   </div>
@@ -780,7 +780,7 @@ export default function MarketingPage() {
             </div>
 
             {/* Headline */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight tracking-tight mb-6">
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight tracking-tight mb-6">
               Your GitHub commits are{' '}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">
                 worth money.

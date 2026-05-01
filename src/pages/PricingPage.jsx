@@ -361,7 +361,7 @@ function ClaimCard({ plan, onCta, ctaLoading = false }) {
         <p className={'mt-1 text-sm ' + (highlighted ? 'text-indigo-200' : 'text-slate-500')}>{description}</p>
       </div>
       <div className="mb-6">
-        <span className={'font-extrabold text-4xl tracking-tight ' + (highlighted ? 'text-white' : 'text-slate-900')}>{price}</span>
+        <span className={'font-extrabold text-3xl sm:text-4xl tracking-tight ' + (highlighted ? 'text-white' : 'text-slate-900')}>{price}</span>
         <span className={'ml-2 text-sm font-medium ' + (highlighted ? 'text-indigo-200' : 'text-slate-500')}>{period}</span>
       </div>
       <ul className="flex-1 space-y-3 mb-5">
@@ -875,7 +875,7 @@ export default function PricingPage() {
               <p className="mt-1 text-sm text-indigo-200">Everything you need to file SR&amp;ED — flat fee, keep your full refund.</p>
             </div>
             <div className="my-5 pb-5 border-b border-indigo-500">
-              <span className="font-extrabold text-4xl tracking-tight text-white">$999</span>
+              <span className="font-extrabold text-3xl sm:text-4xl tracking-tight text-white">$999</span>
               <span className="ml-2 text-sm font-medium text-indigo-200">per fiscal year</span>
               <p className="text-xs text-indigo-300 mt-1.5">One-time flat fee — no percentage of your refund</p>
             </div>
@@ -917,7 +917,7 @@ export default function PricingPage() {
               <p className="mt-1 text-sm text-slate-600">Add SR&amp;ED as a service and earn $300 per client you refer.</p>
             </div>
             <div className="my-5 pb-5 border-b border-emerald-200">
-              <span className="font-extrabold text-4xl tracking-tight text-slate-900">Custom</span>
+              <span className="font-extrabold text-3xl sm:text-4xl tracking-tight text-slate-900">Custom</span>
               <span className="ml-2 text-sm font-medium text-slate-500">pricing</span>
               <div className="mt-2.5 inline-flex items-center gap-2 bg-emerald-100 border border-emerald-200 rounded-lg px-3 py-1.5">
                 <TrendingUp size={13} className="text-emerald-600 flex-shrink-0" />
