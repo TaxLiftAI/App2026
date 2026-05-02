@@ -55,31 +55,12 @@ if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
 // ── Bootstrap database (runs migrations + seed on first start) ────────────────
 const db = require('./db')
 
-// ── SMTP connectivity check at startup ────────────────────────────────────────
-// Logs immediately so Railway shows SMTP status without waiting for a scan.
-;(function checkSmtp() {
-  const host = process.env.SMTP_HOST
-  const user = process.env.SMTP_USER
-  const pass = process.env.SMTP_PASS
-  const port = process.env.SMTP_PORT || '(not set — defaults to 587)'
-  if (!host || !user || !pass) {
-    console.warn(`[startup/smtp] ⚠️  SMTP not configured — emails will NOT be sent.`)
-    console.warn(`[startup/smtp]    Set in Railway: SMTP_HOST=${host||'MISSING'} SMTP_USER=${user||'MISSING'} SMTP_PASS=${pass?'set':'MISSING'} SMTP_PORT=${port}`)
-    return
-  }
-  console.log(`[startup/smtp] ✅ SMTP configured — host=${host} port=${port} user=${user}`)
-  // Full connection verify (async — result appears in logs a few seconds after boot)
-  const nodemailer = require('nodemailer')
-  const t = nodemailer.createTransport({
-    host, port: parseInt(port, 10) || 587,
-    secure: parseInt(port, 10) === 465,
-    auth:   { user, pass },
-    family: 4,
-  })
-  t.verify()
-    .then(() => console.log(`[startup/smtp] ✅ SMTP connection verified OK`))
-    .catch(err => console.error(`[startup/smtp] ❌ SMTP verify FAILED: ${err.message} — check SMTP_HOST/PORT/USER/PASS in Railway`))
-})()
+// ── Email config check at startup ─────────────────────────────────────────────
+if (process.env.RESEND_API_KEY) {
+  console.log(`[startup/email] ✅ Resend configured — key=${process.env.RESEND_API_KEY.slice(0,8)}… from=${process.env.EMAIL_FROM||'hello@taxlift.ai'}`)
+} else {
+  console.warn('[startup/email] ⚠️  RESEND_API_KEY not set — scan alert emails will NOT be sent. Add it in Railway → Variables.')
+}
 
 // ── Email drip runs as a separate Railway cron job (server/drip-cron.js) ──────
 // Do NOT call startDripScheduler() here — running it in the web process causes
@@ -215,6 +196,64 @@ app.use(`${V}/webhooks/github`, (req, _res, next) => {
   next()
 })
 app.use(`${V}/webhooks`, require('./routes/webhooks'))
+
+// ── Email diagnostic endpoint (admin only) ───────────────────────────────────
+// GET  /api/v1/admin/email-test          — check config
+// POST /api/v1/admin/email-test?to=x@y  — fire a real test email via Resend
+app.get(`${V}/admin/email-test`, (req, res) => {
+  res.json({
+    resend_configured: !!process.env.RESEND_API_KEY,
+    resend_key_prefix: process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.slice(0, 10) + '…' : null,
+    email_from:   process.env.EMAIL_FROM   || 'hello@taxlift.ai (default)',
+    alert_to:     process.env.ALERT_TO     || 'hello@taxlift.ai (default)',
+    scan_alert_to: process.env.SCAN_ALERT_TO || 'info@taxlift.ai (default)',
+  })
+})
+
+app.post(`${V}/admin/email-test`, async (req, res) => {
+  const to = req.query.to || process.env.ALERT_TO || 'hello@taxlift.ai'
+  const { alertNewScan } = require('./lib/alertEmail')
+  try {
+    await alertNewScan({
+      email:           'test@taxlift-diagnostic.ai',
+      estimatedCredit: 82000,
+      clusterCount:    4,
+      repoCount:       2,
+      repos:           ['taxliftai/app', 'taxliftai/scanner'],
+    })
+    // Override SCAN_ALERT_TO for this one-off direct test
+    const https = require('https')
+    const key   = process.env.RESEND_API_KEY
+    if (!key) return res.status(500).json({ error: 'RESEND_API_KEY not set — check Railway Variables' })
+
+    const body = JSON.stringify({
+      from:    process.env.EMAIL_FROM || 'hello@taxlift.ai',
+      to:      [to],
+      subject: '✅ TaxLift email diagnostic — Resend is working',
+      text:    `This is a test email sent at ${new Date().toISOString()}. If you received this, Resend is configured correctly.`,
+      html:    `<p style="font-family:Arial;padding:24px"><strong>✅ Resend is working!</strong><br><br>Sent at ${new Date().toISOString()}<br>From: ${process.env.EMAIL_FROM || 'hello@taxlift.ai'}<br>To: ${to}</p>`,
+    })
+
+    await new Promise((resolve, reject) => {
+      const r = https.request({
+        hostname: 'api.resend.com', path: '/emails', method: 'POST',
+        headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+      }, resp => {
+        let d = ''
+        resp.on('data', c => d += c)
+        resp.on('end', () => {
+          if (resp.statusCode >= 200 && resp.statusCode < 300) resolve(JSON.parse(d))
+          else reject(new Error(`Resend ${resp.statusCode}: ${d}`))
+        })
+      })
+      r.on('error', reject)
+      r.write(body); r.end()
+    }).then(data => res.json({ ok: true, message: `Test email sent to ${to}`, resend_id: data.id }))
+      .catch(err => res.status(500).json({ ok: false, error: err.message }))
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message })
+  }
+})
 
 // ── Health check (/healthz for Railway liveness probe) ───────────────────────
 // Returns 200 when the server and database are both reachable.
