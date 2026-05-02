@@ -66,20 +66,32 @@ const STEPS = [
   {
     number: '01',
     icon: Link2,
-    title: 'Connect your tools',
-    body:  'Authorize GitHub, Jira, or your CI/CD pipeline in under 2 minutes. TaxLift reads your engineering history — nothing is stored on our servers.',
+    title: 'Connect GitHub or Jira',
+    body:  'Authorize your repos in under 2 minutes. TaxLift reads commit metadata and issue summaries — never your source code. Nothing is stored on our servers.',
   },
   {
     number: '02',
     icon: Sparkles,
-    title: 'We scan for SR&ED signal',
-    body:  'Our heuristic engine detects technological uncertainty, systematic investigation, and advancement across 60+ SR&ED keyword patterns.',
+    title: 'TaxLift scans for SR&ED signal',
+    body:  'Our engine detects technological uncertainty, systematic experimentation, and advancement across your commit history using 60+ CRA-aligned heuristics.',
   },
   {
     number: '03',
+    icon: CheckCircle2,
+    title: 'You review and approve clusters',
+    body:  'Takes about 20 minutes. You see exactly which commits qualified and why. Approve, edit, or reject any cluster before anything is generated.',
+  },
+  {
+    number: '04',
     icon: Package,
-    title: 'CPA gets a ready-to-file package',
-    body:  'T661-ready narratives, T2 financial schedule, developer hours breakdown, and a tamper-evident evidence chain — all in one shareable PDF.',
+    title: 'Your CPA receives a ready-to-file package',
+    body:  'T661-ready narratives, expenditure schedule, developer hours breakdown, and a tamper-evident evidence chain — one shareable PDF your CPA can review and sign off on.',
+  },
+  {
+    number: '05',
+    icon: DollarSign,
+    title: 'File with CRA, receive your refund',
+    body:  'Your CPA files the T661 with your T2 corporate return. CRA processes refundable credits — typically within 4–6 months of filing. TaxLift takes nothing from your refund.',
   },
 ]
 
@@ -908,32 +920,56 @@ export default function MarketingPage() {
           <div className="text-center mb-14">
             <p className="text-indigo-600 text-sm font-semibold uppercase tracking-widest mb-2">How it works</p>
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
-              From code to credit in three steps
+              From code to refund — five clear steps
             </h2>
+            <p className="mt-3 text-gray-500 max-w-xl mx-auto text-sm">
+              TaxLift handles steps 1–4. Your CPA handles step 5. You keep 100% of the refund.
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-            {/* connecting line (desktop) */}
-            <div className="hidden md:block absolute top-10 left-1/3 right-1/3 h-px bg-gradient-to-r from-indigo-200 via-indigo-400 to-indigo-200" />
-
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 relative">
             {STEPS.map((step, i) => {
               const Icon = step.icon
               return (
                 <div key={step.number} className="relative flex flex-col items-center text-center">
-                  {/* step number */}
-                  <div className="relative z-10 w-20 h-20 bg-white border-2 border-indigo-200 rounded-2xl flex flex-col items-center justify-center shadow-md mb-5">
-                    <span className="text-[10px] font-bold text-indigo-400 leading-none">{step.number}</span>
-                    <Icon size={22} className="text-indigo-600 mt-1" />
+                  <div className="relative z-10 w-16 h-16 bg-white border-2 border-indigo-200 rounded-2xl flex flex-col items-center justify-center shadow-md mb-4">
+                    <span className="text-[9px] font-bold text-indigo-400 leading-none">{step.number}</span>
+                    <Icon size={18} className="text-indigo-600 mt-1" />
                   </div>
-                  <h3 className="font-bold text-gray-900 text-base mb-2">{step.title}</h3>
-                  <p className="text-sm text-gray-500 leading-relaxed max-w-xs">{step.body}</p>
-                  {/* arrow between steps (mobile) */}
+                  <h3 className="font-bold text-gray-900 text-sm mb-1.5">{step.title}</h3>
+                  <p className="text-xs text-gray-500 leading-relaxed">{step.body}</p>
                   {i < STEPS.length - 1 && (
-                    <ChevronRight size={20} className="text-indigo-300 mt-4 md:hidden" />
+                    <ChevronRight size={16} className="text-indigo-300 mt-3 sm:hidden" />
                   )}
                 </div>
               )
             })}
+          </div>
+
+          {/* CRA trust / defensibility strip */}
+          <div className="mt-14 rounded-2xl border border-indigo-100 bg-indigo-50 px-6 py-6 sm:px-10 sm:py-7 flex flex-col sm:flex-row items-start sm:items-center gap-5">
+            <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <ShieldCheck size={20} className="text-indigo-600" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-bold text-gray-900 mb-1">How we handle CRA defensibility</p>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Every narrative TaxLift generates is structured to the T661 Part 2 standard and aligned with
+                CRA's <span className="font-medium text-gray-800">IC86-4R3 guidelines</span>. Claims are drafted
+                in the language CRA expects: technological uncertainty, systematic investigation, and scientific
+                or technological advancement — not marketing copy. Your CPA reviews, adjusts, and signs off on
+                everything before filing. TaxLift does not file on your behalf.
+              </p>
+            </div>
+            <a
+              href="/TaxLift_Sample_T661_Package.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-shrink-0 inline-flex items-center gap-2 bg-white border border-indigo-200 hover:border-indigo-400 text-indigo-700 font-semibold text-sm px-4 py-2.5 rounded-xl transition-colors shadow-sm"
+            >
+              <FileText size={14} />
+              View sample T661
+            </a>
           </div>
         </div>
       </section>
@@ -1090,23 +1126,28 @@ export default function MarketingPage() {
           <div className="lg:grid lg:grid-cols-2 lg:gap-16 lg:items-center">
             {/* Left: copy */}
             <div>
-              <p className="text-indigo-400 text-sm font-semibold uppercase tracking-widest mb-3">For CPAs & SR&ED consultants</p>
+              <p className="text-indigo-400 text-sm font-semibold uppercase tracking-widest mb-3">For CPAs &amp; SR&amp;ED practitioners</p>
               <h2 className="text-3xl sm:text-4xl font-bold text-white mb-5">
-                Turn every client into a{' '}
+                TaxLift makes you{' '}
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">
-                  recurring revenue stream
+                  look smarter
                 </span>
+                {' '}— not replaceable
               </h2>
               <p className="text-slate-300 text-base leading-relaxed mb-8">
-                Refer your tech clients to TaxLift and earn a <strong className="text-white">$300 flat commission</strong> per client — paid when the T661 package is delivered, not when CRA processes the claim. Your firm's name on every deliverable, independent CPA login, annotation rights, and a published methodology you can cite in any CRA audit.
+                TaxLift is not a competitor. It does the engineering documentation your clients can't produce
+                themselves — then hands you a complete, annotatable package to review, adjust, and file under
+                your own professional judgment. You stay in control of the claim. Your client gets a faster,
+                more thorough result. And you earn a{' '}
+                <strong className="text-white">$300 flat referral fee</strong> per client, paid when the package is delivered.
               </p>
 
               <div className="space-y-4 mb-8">
                 {[
-                  { icon: Link2,      text: 'Your own CPA login — see all referred clients in one dashboard' },
-                  { icon: DollarSign, text: '$300 flat commission per client — paid at T661 delivery, not CRA processing' },
-                  { icon: Package,    text: 'Annotate, approve, or flag narratives before anything is filed' },
-                  { icon: BarChart2,  text: 'Published SR&ED methodology (IC86-4R3 aligned) to defend any audit' },
+                  { icon: Pencil,     text: 'Full annotation rights — edit, flag, or override any narrative before filing. You sign off, nothing gets filed without your approval.' },
+                  { icon: Link2,      text: 'Your own CPA login — one dashboard for all referred clients. See status, credit estimates, and audit readiness at a glance.' },
+                  { icon: ShieldCheck,text: 'IC86-4R3 aligned methodology with a published framework you can cite in any CRA audit. The evidence chain is yours to use.' },
+                  { icon: DollarSign, text: '$300 flat referral fee per client — paid at package delivery, not CRA processing. No percentage, no ambiguity.' },
                 ].map(item => {
                   const Icon = item.icon
                   return (
