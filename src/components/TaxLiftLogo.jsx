@@ -29,19 +29,20 @@ export default function TaxLiftLogo({ variant = 'light', size = 'md', iconOnly =
         aria-hidden="true"
         style={{ flexShrink: 0 }}
       >
-        <rect width="48" height="48" rx="11" fill="#4f46e5" />
-        {/* Bar 1 — short */}
-        <rect x="8"  y="30" width="8" height="11" rx="2" fill="white" opacity="0.5" />
-        {/* Bar 2 — medium */}
-        <rect x="20" y="24" width="8" height="17" rx="2" fill="white" opacity="0.72" />
-        {/* Bar 3 — tall */}
-        <rect x="32" y="18" width="8" height="23" rx="2" fill="white" />
-        {/* Upward arrow above bar 3 */}
+        {/* Icon bg — brighter blue matching brand screenshot */}
+        <rect width="48" height="48" rx="11" fill="#5B6EF5" />
+        {/* Bar 1 — short, fully white */}
+        <rect x="8"  y="30" width="8" height="11" rx="2" fill="white" />
+        {/* Bar 2 — medium, fully white */}
+        <rect x="20" y="22" width="8" height="19" rx="2" fill="white" />
+        {/* Bar 3 — tall, fully white */}
+        <rect x="32" y="16" width="8" height="25" rx="2" fill="white" />
+        {/* Upward arrow / chevron above bar 3 */}
         <path
-          d="M30 19 L36 11 L42 19"
+          d="M30 17 L36 9 L42 17"
           fill="none"
           stroke="white"
-          strokeWidth="2.5"
+          strokeWidth="2.8"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
@@ -52,7 +53,7 @@ export default function TaxLiftLogo({ variant = 'light', size = 'md', iconOnly =
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
           <span style={{
             fontSize: s.text,
-            fontWeight: 500,
+            fontWeight: 700,
             color: wordmarkColor,
             letterSpacing: '-0.03em',
             lineHeight: 1,
@@ -62,7 +63,7 @@ export default function TaxLiftLogo({ variant = 'light', size = 'md', iconOnly =
           </span>
           <span style={{
             fontSize: s.ai,
-            fontWeight: 500,
+            fontWeight: 600,
             color: aiColor,
             letterSpacing: '0.05em',
             lineHeight: 1,
