@@ -478,6 +478,12 @@ db.exec(`CREATE INDEX IF NOT EXISTS idx_build_runs_tenant   ON build_runs(tenant
 db.exec(`CREATE INDEX IF NOT EXISTS idx_build_runs_commit   ON build_runs(commit_sha)`)
 db.exec(`CREATE INDEX IF NOT EXISTS idx_build_runs_cluster  ON build_runs(cluster_id)`)
 
+// ── Hot-path indexes (email lookups, status filters) ──────────────────────────
+db.exec(`CREATE INDEX IF NOT EXISTS idx_drip_emails_email_status      ON drip_emails(email, status)`)
+db.exec(`CREATE INDEX IF NOT EXISTS idx_free_scans_email              ON free_scans(email)`)
+db.exec(`CREATE INDEX IF NOT EXISTS idx_leads_email                   ON leads(email)`)
+db.exec(`CREATE INDEX IF NOT EXISTS idx_user_drip_emails_email_status ON user_drip_emails(email, status)`)
+
 // ── Additive migrations for existing databases ────────────────────────────────
 // CREATE TABLE IF NOT EXISTS won't add new columns to an existing table.
 // Use ALTER TABLE … ADD COLUMN (idempotent via try/catch) for every new column.

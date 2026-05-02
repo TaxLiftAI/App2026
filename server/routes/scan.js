@@ -31,7 +31,7 @@ const { scanLimiter }       = require('../middleware/rateLimiter')
  *   user_id         string   (optional — if user happens to be logged in)
  * }
  */
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const { isValidEmail } = require('../utils/validators')
 
 router.post('/free', scanLimiter, (req, res) => {
   try {
@@ -49,7 +49,7 @@ router.post('/free', scanLimiter, (req, res) => {
     console.log(`[scan/free] hit — email=${email || 'none'} repos=${repos.length} credit=${estimated_credit} clusters=${clusters.length} teamSize=${team_size} hours=${hours_total}`)
 
     // Validate email format before any drip scheduling
-    if (email && !EMAIL_RE.test(email)) {
+    if (email && !isValidEmail(email)) {
       return res.status(400).json({ message: 'Invalid email address' })
     }
 
@@ -122,16 +122,36 @@ router.post('/free', scanLimiter, (req, res) => {
 /**
  * GET /api/scan/free/:id
  * Retrieve a scan by ID (used for auto-associating scan with new user account).
+ * Returns only non-sensitive fields to callers whose email matches the scan,
+ * or who are authenticated admins.
  */
 router.get('/free/:id', (req, res) => {
   try {
-    const row = db.prepare('SELECT * FROM free_scans WHERE id = ?').get(req.params.id)
+    const row = db.prepare('SELECT id, email, estimated_credit, commit_count, cluster_count, hours_total, created_at, repos_json, clusters_json, user_id FROM free_scans WHERE id = ?').get(req.params.id)
     if (!row) return res.status(404).json({ message: 'Scan not found' })
-    res.json({
-      ...row,
-      repos:    JSON.parse(row.repos_json    ?? '[]'),
-      clusters: JSON.parse(row.clusters_json ?? '[]'),
-    })
+
+    // Allow: authenticated admin, or token-authenticated owner, or email param matches
+    const callerEmail = req.user?.email ?? req.query.email ?? ''
+    const isAdmin     = req.user?.role === 'admin'
+    const isOwner     = row.email && callerEmail.toLowerCase() === row.email.toLowerCase()
+
+    const payload = {
+      id:              row.id,
+      estimated_credit: row.estimated_credit,
+      commit_count:    row.commit_count,
+      cluster_count:   row.cluster_count,
+      hours_total:     row.hours_total,
+      created_at:      row.created_at,
+      repos:           JSON.parse(row.repos_json    ?? '[]'),
+      clusters:        JSON.parse(row.clusters_json ?? '[]'),
+    }
+    // Only expose email and user_id to owners or admins
+    if (isAdmin || isOwner) {
+      payload.email   = row.email
+      payload.user_id = row.user_id
+    }
+
+    res.json(payload)
   } catch (err) {
     console.error('[scan/free/:id] error:', err.message)
     res.status(500).json({ message: 'Failed to retrieve scan' })

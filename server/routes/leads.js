@@ -7,10 +7,12 @@
  */
 const router    = require('express').Router()
 const db        = require('../db')
-const { requireAuth }  = require('../middleware/auth')
-const { v4: uuidv4 }   = require('../utils/uuid')
-const { alertNewLead } = require('../lib/alertEmail')
-const { scheduleDrip } = require('../lib/emailDrip')
+const { requireAuth }    = require('../middleware/auth')
+const { leadsLimiter }   = require('../middleware/rateLimiter')
+const { v4: uuidv4 }     = require('../utils/uuid')
+const { isValidEmail }   = require('../utils/validators')
+const { alertNewLead }   = require('../lib/alertEmail')
+const { scheduleDrip }   = require('../lib/emailDrip')
 
 // ── Middleware: require admin role ─────────────────────────────────────────────
 function requireAdmin(req, res, next) {
@@ -24,7 +26,7 @@ function requireAdmin(req, res, next) {
 router.post('/', (req, res) => {
   const { email, name = '', company = '', plan_interest = '', source = 'marketing' } = req.body ?? {}
 
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (!email || !isValidEmail(email)) {
     return res.status(400).json({ message: 'A valid email address is required' })
   }
 
@@ -91,7 +93,7 @@ router.post('/', (req, res) => {
 // ── POST /api/leads/unsubscribe — public, marks email as unsubscribed ──────────
 // Called by one-click unsubscribe (RFC 8058) and the /unsubscribe page.
 // Cancels all pending drip emails for the address. CASL-required.
-router.post('/unsubscribe', (req, res) => {
+router.post('/unsubscribe', leadsLimiter, (req, res) => {
   const email = (req.body?.email ?? req.query?.email ?? '').toLowerCase().trim()
   if (!email) return res.status(400).json({ message: 'email required' })
 
@@ -111,7 +113,7 @@ router.post('/unsubscribe', (req, res) => {
 })
 
 // ── GET /api/leads/unsubscribe — used by one-click unsubscribe link in email ──
-router.get('/unsubscribe', (req, res) => {
+router.get('/unsubscribe', leadsLimiter, (req, res) => {
   const email = (req.query?.email ?? '').toLowerCase().trim()
   if (!email) return res.redirect(`${process.env.FRONTEND_URL || 'https://taxlift.ai'}/unsubscribe`)
   try {
@@ -203,15 +205,25 @@ router.get('/', requireAuth, requireAdmin, (req, res) => {
   const total = db.prepare(countSql).get(...args).n
   const rows  = db.prepare(dataSql).all(...args, limit, offset)
 
-  // Compute summary stats for the admin dashboard header
+  // Compute summary stats — use a CTE so free_scans is scanned only once
   const statsRows = db.prepare(`
+    WITH fs_agg AS (
+      SELECT email,
+             MAX(estimated_credit) as estimated_credit,
+             MAX(cluster_count)    as cluster_count,
+             MAX(commit_count)     as commit_count,
+             MAX(id)               as scan_id,
+             MAX(created_at)       as scanned_at
+      FROM free_scans
+      GROUP BY email
+    )
     SELECT
       COUNT(DISTINCT l.id) as total_leads,
       COUNT(DISTINCT CASE WHEN l.source = 'free_scan' OR fs_agg.scan_id IS NOT NULL THEN l.id END) as scan_leads,
       COUNT(DISTINCT CASE WHEN COALESCE(fs_agg.estimated_credit, 0) >= 100000 THEN l.id END) as hot_leads,
       COALESCE(MAX(fs_agg.estimated_credit), 0) as top_credit
     FROM leads l
-    LEFT JOIN (${scanSubquery}) fs_agg ON fs_agg.email = l.email
+    LEFT JOIN fs_agg ON fs_agg.email = l.email
   `).get()
 
   res.json({

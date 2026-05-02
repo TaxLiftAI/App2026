@@ -9,49 +9,50 @@
  * A setInterval loop runs every 15 minutes and sends any pending emails
  * whose send_after timestamp has passed.
  *
- * SMTP config (all optional — falls back to log-only mode if absent):
- *   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS
- *   EMAIL_FROM defaults to hello@taxlift.ai
+ * Email config:
+ *   RESEND_API_KEY  — required for delivery (set in Railway Variables)
+ *   EMAIL_FROM      — defaults to hello@taxlift.ai
  */
 
-const nodemailer = require('nodemailer')
+const https      = require('https')
 const db         = require('../db')
 const { v4: makeId } = require('../utils/uuid')
 
-const EMAIL_FROM   = process.env.EMAIL_FROM   || 'hello@taxlift.ai'
-const SMTP_HOST    = process.env.SMTP_HOST
-const SMTP_PORT    = parseInt(process.env.SMTP_PORT || '587', 10)
-const SMTP_USER    = process.env.SMTP_USER
-const SMTP_PASS    = process.env.SMTP_PASS
-const FRONTEND_URL = (process.env.FRONTEND_URL || 'https://taxlift.ai').replace(/\/$/, '')
+const EMAIL_FROM     = process.env.EMAIL_FROM     || 'hello@taxlift.ai'
+const RESEND_API_KEY = process.env.RESEND_API_KEY
+const FRONTEND_URL   = (process.env.FRONTEND_URL || 'https://taxlift.ai').replace(/\/$/, '')
 
-// ── Transporter ────────────────────────────────────────────────────────────────
-const dns = require('dns').promises
-
-let _transporter = null
-let _smtpHost    = SMTP_HOST
-
-// Pre-resolve to IPv4 — Railway defaults to IPv6; Hostinger SMTP is IPv4-only
-;(async () => {
-  if (!SMTP_HOST) return
-  try {
-    const addrs = await dns.resolve4(SMTP_HOST)
-    if (addrs && addrs[0]) { _smtpHost = addrs[0] }
-  } catch { /* use hostname */ }
-})()
-
-function getTransporter() {
-  if (_transporter) return _transporter
-  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) return null
-
-  _transporter = nodemailer.createTransport({
-    host:   _smtpHost,
-    port:   SMTP_PORT,
-    secure: SMTP_PORT === 465,
-    auth:   { user: SMTP_USER, pass: SMTP_PASS },
-    tls:    { servername: SMTP_HOST },
+// ── Send via Resend HTTP API (works on Railway — no SMTP port blocks) ──────────
+function sendEmail({ to, subject, html, text }) {
+  return new Promise((resolve, reject) => {
+    if (!RESEND_API_KEY) {
+      console.warn(`[emailDrip] RESEND_API_KEY not set — set it in Railway. Would have sent to ${to}: ${subject}`)
+      return resolve()
+    }
+    const body = JSON.stringify({ from: EMAIL_FROM, to: [to], subject, html, text })
+    const req  = https.request({
+      hostname: 'api.resend.com', path: '/emails', method: 'POST',
+      headers: {
+        'Authorization':  `Bearer ${RESEND_API_KEY}`,
+        'Content-Type':   'application/json',
+        'Content-Length': Buffer.byteLength(body),
+      },
+    }, res => {
+      let d = ''
+      res.on('data', c => { d += c })
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          console.log(`[emailDrip] Sent "${subject}" → ${to}`)
+          resolve()
+        } else {
+          reject(new Error(`Resend ${res.statusCode}: ${d}`))
+        }
+      })
+    })
+    req.on('error', reject)
+    req.write(body)
+    req.end()
   })
-  return _transporter
 }
 
 // ── Shared HTML layout ─────────────────────────────────────────────────────────
@@ -344,7 +345,7 @@ async function sendDripEmail(row) {
   // Fetch original scan data to personalise emails
   let scanData = { scan_id: row.scan_id, repos: [], clusters: [], estimated_credit: 0, commit_count: 0 }
   try {
-    const scan = db.prepare('SELECT * FROM free_scans WHERE id = ?').get(row.scan_id)
+    const scan = db.prepare('SELECT id, email, repos_json, clusters_json, estimated_credit, commit_count FROM free_scans WHERE id = ?').get(row.scan_id)
     if (scan) {
       scanData = {
         scan_id:          scan.id,
@@ -362,27 +363,9 @@ async function sendDripEmail(row) {
   else if (row.sequence_step === 2) mail = buildEmail2(scanData)
   else                               mail = buildEmail3(scanData)
 
-  const transport = getTransporter()
-
-  if (!transport) {
-    // No SMTP config — log only
-    console.log(`[emailDrip] [LOG-ONLY] Would send step ${row.sequence_step} to ${row.email}: "${mail.subject}"`)
-    db.prepare(`UPDATE drip_emails SET status = 'skipped', sent_at = ? WHERE id = ?`)
-      .run(new Date().toISOString(), row.id)
-    return
-  }
-
-  const unsubUrl = `${FRONTEND_URL}/unsubscribe?email=${encodeURIComponent(row.email)}&type=scan`
-  await transport.sendMail({
-    from:    `TaxLift <${EMAIL_FROM}>`,
-    to:      row.email,
-    subject: mail.subject,
-    html:    mail.html,
-    headers: {
-      'List-Unsubscribe':      `<${unsubUrl}>, <mailto:${EMAIL_FROM}?subject=unsubscribe>`,
-      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-    },
-  })
+  // Strip HTML tags to produce a readable plain-text fallback
+  const plainText = mail.html.replace(/<[^>]+>/g, ' ').replace(/\s{2,}/g, ' ').trim()
+  await sendEmail({ to: row.email, subject: mail.subject, html: mail.html, text: plainText })
 
   db.prepare(`UPDATE drip_emails SET status = 'sent', sent_at = ? WHERE id = ?`)
     .run(new Date().toISOString(), row.id)
@@ -432,8 +415,8 @@ function startDripScheduler() {
     processUserDripEmails().catch(err => console.error('[userDrip] poll error:', err.message))
   }, POLL_INTERVAL_MS)
 
-  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
-    console.warn('[emailDrip] ⚠️  SMTP not configured (SMTP_HOST/SMTP_USER/SMTP_PASS missing) — emails will be logged but NOT delivered. Set these in Railway Variables.')
+  if (!RESEND_API_KEY) {
+    console.warn('[emailDrip] ⚠️  RESEND_API_KEY not set — emails will be logged but NOT delivered. Set it in Railway Variables.')
   }
   console.log(`[emailDrip] Scheduler started — polling every ${POLL_INTERVAL_MS / 60000} minutes`)
 }
@@ -655,26 +638,8 @@ async function sendUserDripEmail(row) {
   else if (row.sequence_step === 2) mail = buildUserEmail2(userData)
   else                               mail = buildUserEmail3(userData)
 
-  const transport = getTransporter()
-
-  if (!transport) {
-    console.log(`[userDrip] [LOG-ONLY] Would send step ${row.sequence_step} to ${row.email}: "${mail.subject}"`)
-    db.prepare(`UPDATE user_drip_emails SET status = 'skipped', sent_at = ? WHERE id = ?`)
-      .run(new Date().toISOString(), row.id)
-    return
-  }
-
-  const unsubUrl = `${FRONTEND_URL}/unsubscribe?email=${encodeURIComponent(row.email)}&type=user`
-  await transport.sendMail({
-    from:    `"TaxLift" <${EMAIL_FROM}>`,
-    to:      row.email,
-    subject: mail.subject,
-    html:    mail.html,
-    headers: {
-      'List-Unsubscribe':      `<${unsubUrl}>, <mailto:${EMAIL_FROM}?subject=unsubscribe>`,
-      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-    },
-  })
+  const plainText = mail.html.replace(/<[^>]+>/g, ' ').replace(/\s{2,}/g, ' ').trim()
+  await sendEmail({ to: row.email, subject: mail.subject, html: mail.html, text: plainText })
 
   db.prepare(`UPDATE user_drip_emails SET status = 'sent', sent_at = ? WHERE id = ?`)
     .run(new Date().toISOString(), row.id)

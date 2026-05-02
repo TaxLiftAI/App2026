@@ -93,10 +93,12 @@ export default function ScanRunningPage() {
   useEffect(() => {
     if (hasFired.current) return
     hasFired.current = true
-    runScan()
+    const controller = new AbortController()
+    runScan(controller.signal)
+    return () => controller.abort()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function runScan() {
+  async function runScan(signal) {
     const repos = JSON.parse(sessionStorage.getItem('taxlift_scan_repos') ?? '[]')
     const email = localStorage.getItem('taxlift_scan_email') ?? ''
     const token = getStoredToken('github')
@@ -132,7 +134,7 @@ export default function ScanRunningPage() {
           for (let page = 1; page <= 3; page++) {
             const res = await fetch(
               `https://api.github.com/repos/${repoFullName}/commits?per_page=100&page=${page}`,
-              { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github+json' } }
+              { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github+json' }, signal }
             )
             if (!res.ok) break
             const pageCommits = await res.json()

@@ -614,7 +614,7 @@ export default function DashboardPage() {
       method:      'PATCH',
       credentials: 'include',
       headers:     { 'Content-Type': 'application/json' },
-      body:        JSON.stringify({ user_id: currentUser.id }),
+      body:        JSON.stringify({}),
     }).catch(() => { /* fire-and-forget */ })
   }, [pendingScan, currentUser])
 

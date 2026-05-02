@@ -25,13 +25,8 @@ class ChunkErrorBoundary extends Component {
     )
     return { hasError: true, isChunkError }
   }
-  componentDidCatch(err) {
-    const isChunkError = (
-      err?.message?.includes('Failed to fetch dynamically imported module') ||
-      err?.message?.includes('Importing a module script failed') ||
-      err?.name === 'ChunkLoadError'
-    )
-    if (isChunkError && !sessionStorage.getItem('_chunk_reloaded')) {
+  componentDidCatch(_err) {
+    if (this.state.isChunkError && !sessionStorage.getItem('_chunk_reloaded')) {
       sessionStorage.setItem('_chunk_reloaded', '1')
       window.location.reload()
     }
