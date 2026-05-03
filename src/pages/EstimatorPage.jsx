@@ -854,6 +854,15 @@ export default function EstimatorPage() {
           <span className="hidden sm:inline">Average SR&ED claim: $187K</span>
           <span className="text-slate-700 hidden sm:inline">·</span>
           <span className="hidden sm:inline">Rated 4.9⭐ by SR&ED specialists</span>
+          <span className="text-slate-700 hidden sm:inline">·</span>
+          <span className="hidden sm:inline flex items-center gap-1.5">
+            <svg width="16" height="11" viewBox="0 0 900 600" xmlns="http://www.w3.org/2000/svg" className="inline-block rounded-sm" style={{display:'inline',verticalAlign:'middle'}}>
+              <rect width="900" height="600" fill="#D80621"/>
+              <rect x="225" width="450" height="600" fill="white"/>
+              <path d="M450 120 l30 90h95l-77 56 29 90-77-56-77 56 29-90-77-56h95z" fill="#D80621"/>
+            </svg>
+            <span style={{verticalAlign:'middle'}}>Proudly Canadian</span>
+          </span>
         </div>
       </div>
 
@@ -1643,6 +1652,18 @@ export default function EstimatorPage() {
         </div>
         {/* end results relative wrapper */}
         </div>
+      </div>
+
+      {/* Proudly Canadian badge */}
+      <div className="text-center pb-3 flex items-center justify-center">
+        <span className="inline-flex items-center gap-2.5 bg-red-950/50 border border-red-800/40 text-red-200 text-[11px] font-medium px-4 py-1.5 rounded-full">
+          <svg width="18" height="12" viewBox="0 0 900 600" xmlns="http://www.w3.org/2000/svg" className="rounded-sm flex-shrink-0">
+            <rect width="900" height="600" fill="#D80621"/>
+            <rect x="225" width="450" height="600" fill="white"/>
+            <path d="M450 110 l32 95h100l-81 59 31 95-82-60-82 60 31-95-81-59h100z" fill="#D80621"/>
+          </svg>
+          Proudly Canadian · Built for Canadian founders &amp; SR&amp;ED filers
+        </span>
       </div>
 
       {/* Footer */}
